@@ -5,132 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NOUB Sports | نوب سبورتس</title>
 
-    <!-- =========================================
-         1. CORE DEPENDENCIES (المكتبات الأساسية)
-    ========================================== -->
-    <!-- Telegram Web App SDK -->
+    <!-- Telegram & Supabase -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- =========================================
-         2. ASSETS & FONTS (الخطوط والأيقونات)
-    ========================================== -->
-    <!-- Fonts: Cairo (للنصوص العربية) & Orbitron (للأرقام والعناوين الرقمية) -->
+    <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
-    
-    <!-- FontAwesome (للأيقونات) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Changa:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- =========================================
-         3. STYLESHEETS (ملفات التنسيق)
-    ========================================== -->
-    <link rel="stylesheet" href="css/main.css">          <!-- التنسيقات العامة -->
-    <link rel="stylesheet" href="css/screens/onboarding.css"> <!-- تنسيق شاشة الصك -->
-    <!-- (سنضيف هنا ملفات الشاشات المستقبلية مثل home.css, arena.css) -->
-
+    <!-- CSS Links -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/screens/onboarding.css">
 </head>
 <body>
 
-    <!-- حاوية التطبيق الرئيسية (App Root) -->
     <div id="app">
         
-        <!-- =========================================
-             A. SPLASH SCREEN (شاشة التحميل)
-        ========================================== -->
+        <!-- A. Splash Screen (شاشة التحميل) -->
         <div id="splash-screen" class="screen active">
             <div class="logo-container">
-                <h1 class="glitch-text" data-text="NOUB">NOUB</h1>
-                <p class="subtitle">SPORTS ECOSYSTEM</p>
+                <h1 class="sport-title">NOUB</h1>
+                <p class="subtitle">SPORTS</p>
             </div>
             <div class="loader"></div>
-            <p class="loading-text">جاري الاتصال بالخورا...</p>
+            <!-- مصطلح رياضي بحت -->
+            <p class="loading-text">جاري دخول الملعب...</p>
         </div>
 
-        <!-- =========================================
-             B. MAIN HEADER (الشريط العلوي)
-             يظهر فقط بعد تسجيل الدخول
-        ========================================== -->
+        <!-- B. Main Header (شريط المعلومات) -->
         <header id="main-header" class="hidden">
             <div class="user-info">
-                <div class="user-rank-badge">
-                    <span class="rank-title">HAWI</span>
-                    <span class="rank-level">LVL.1</span>
+                <div class="user-avatar-small">
+                    <i class="fa-solid fa-user"></i>
                 </div>
-                <div class="user-details">
-                    <span class="user-name">ضيف</span>
-                    <span class="user-zone"><i class="fa-solid fa-location-dot"></i> الفسطاط</span>
+                <div class="user-text">
+                    <span class="user-name">كابتن جديد</span>
+                    <span class="user-zone">غير مسجل</span>
                 </div>
             </div>
-            <div class="wallet-info">
-                <span id="coin-balance">0</span> <i class="fa-solid fa-coins text-gold"></i>
+            <div class="wallet-badge">
+                <span id="coin-balance">0</span> 
+                <i class="fa-solid fa-coins text-gold"></i>
             </div>
         </header>
 
-        <!-- =========================================
-             C. CONTENT AREA (منطقة الشاشات المتغيرة)
-        ========================================== -->
+        <!-- C. Main Content -->
         <main id="main-content">
-
-            <!-- 1. شاشة الصك (Onboarding / Minting Studio) -->
+            
+            <!-- 1. شاشة الصك (التسجيل) -->
             <section id="view-onboarding" class="view-section hidden">
                 <div class="onboarding-header">
-                    <h2>اصنع هويتك</h2>
-                    <p>ابدأ رحلتك في عالم نوب سبورتس</p>
+                    <h2>بطاقة اللاعب</h2>
+                    <p>سجل بياناتك لتنزل الملعب</p>
                 </div>
 
-                <!-- استوديو الأفاتار (Avatar Generator) -->
                 <div class="avatar-studio">
                     <div class="avatar-preview">
-                        <!-- هنا سيتم رسم الأفاتار بالكود -->
                         <div id="avatar-display" class="avatar-placeholder">
-                            <i class="fa-solid fa-user-astronaut"></i>
+                            <i class="fa-solid fa-shirt"></i>
                         </div>
                     </div>
                     
-                    <!-- أزرار التحكم في الشكل -->
                     <div class="avatar-controls">
                         <div class="control-group">
                             <label>لون البشرة</label>
                             <div class="selector">
-                                <button onclick="window.changeAttr('skin', -1)"><i class="fa-solid fa-chevron-right"></i></button>
-                                <span id="label-skin" class="digital-number">1</span>
-                                <button onclick="window.changeAttr('skin', 1)"><i class="fa-solid fa-chevron-left"></i></button>
+                                <button onclick="window.changeAttr('skin', -1)">❮</button>
+                                <span id="label-skin">1</span>
+                                <button onclick="window.changeAttr('skin', 1)">❯</button>
                             </div>
                         </div>
                         <div class="control-group">
-                            <label>القميص</label>
+                            <label>طقم الفريق</label>
                             <div class="selector">
-                                <button onclick="window.changeAttr('kit', -1)"><i class="fa-solid fa-chevron-right"></i></button>
-                                <span id="label-kit" class="digital-number">1</span>
-                                <button onclick="window.changeAttr('kit', 1)"><i class="fa-solid fa-chevron-left"></i></button>
+                                <button onclick="window.changeAttr('kit', -1)">❮</button>
+                                <span id="label-kit">1</span>
+                                <button onclick="window.changeAttr('kit', 1)">❯</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- نموذج البيانات -->
                 <div class="player-form">
                     <div class="input-group">
-                        <label>اسم الشهرة (الكارت)</label>
-                        <input type="text" id="inp-name" placeholder="مثال: الحريف، الصخرة..." maxlength="15">
+                        <label>اسم الشهرة</label>
+                        <input type="text" id="inp-name" placeholder="مثال: تريكة، الحريف..." maxlength="15">
                     </div>
 
                     <div class="input-group">
-                        <label>المركز</label>
+                        <label>المركز في الملعب</label>
                         <select id="inp-position">
-                            <option value="FWD">مهاجم (FWD)</option>
-                            <option value="MID">خط وسط (MID)</option>
-                            <option value="DEF">مدافع (DEF)</option>
-                            <option value="GK">حارس مرمى (GK)</option>
+                            <option value="FWD">مهاجم (HGOOM)</option>
+                            <option value="MID">خط وسط (NOSS)</option>
+                            <option value="DEF">مدافع (DFA3)</option>
+                            <option value="GK">حارس (GOON)</option>
                         </select>
                     </div>
                     
                     <div class="input-group">
-                        <label>المنطقة (Hub)</label>
+                        <label>منطقتك (الملعب)</label>
                         <select id="inp-zone">
                             <option value="1">الفسطاط / المعادي</option>
                             <option value="2">مصر القديمة / المنيل</option>
@@ -139,88 +114,33 @@
                     </div>
                 </div>
 
-                <!-- زر الصك -->
-                <button id="btn-mint" class="btn-primary glitch-effect">
-                    صك الهوية (MINT) <i class="fa-solid fa-fingerprint"></i>
+                <button id="btn-mint" class="btn-action">
+                    إصدار البطاقة <i class="fa-solid fa-id-card"></i>
                 </button>
             </section>
 
-            <!-- 2. الشاشة الرئيسية (Home / Locker Room) - المستقبلية -->
-            <section id="view-home" class="view-section hidden">
-                <div class="empty-state">
-                    <i class="fa-solid fa-shirt"></i>
-                    <h3>غرفة الملابس</h3>
-                    <p>هنا سيظهر الكارت الخاص بك وإحصائياتك.</p>
-                </div>
-            </section>
-
-            <!-- 3. شاشة الساحة (Arena) - المستقبلية -->
-            <section id="view-arena" class="view-section hidden">
-                <div class="empty-state">
-                    <i class="fa-solid fa-trophy"></i>
-                    <h3>ساحة المباريات</h3>
-                    <p>المباريات المباشرة ونتائج المنطقة ستظهر هنا.</p>
-                </div>
-            </section>
-
-            <!-- 4. شاشة الكشاف (Scout) - المستقبلية -->
-            <section id="view-scout" class="view-section hidden">
-                <div class="empty-state">
-                    <i class="fa-solid fa-binoculars"></i>
-                    <h3>سوق اللاعبين</h3>
-                    <p>ابحث عن المواهب وكوّن فريقك.</p>
-                </div>
-            </section>
-
-            <!-- 5. شاشة الفريق (My Team) - المستقبلية -->
-            <section id="view-team" class="view-section hidden">
-                <div class="empty-state">
-                    <i class="fa-solid fa-users"></i>
-                    <h3>فريقي</h3>
-                    <p>إدارة أعضاء الفريق والتشكيلة.</p>
-                </div>
-            </section>
-
+            <!-- باقي الشاشات فارغة حالياً -->
+            <section id="view-home" class="view-section hidden"></section>
         </main>
 
-        <!-- =========================================
-             D. BOTTOM NAVIGATION (شريط التنقل)
-        ========================================== -->
+        <!-- D. Bottom Nav -->
         <nav id="bottom-nav" class="hidden">
             <button class="nav-item active" onclick="window.navigateTo('view-home')">
-                <i class="fa-solid fa-shirt"></i>
-                <span>هويتي</span>
+                <i class="fa-solid fa-address-card"></i>
+                <span>كارتي</span>
             </button>
-            
-            <button class="nav-item" onclick="window.navigateTo('view-arena')">
-                <i class="fa-solid fa-trophy"></i>
-                <span>الساحة</span>
+            <button class="nav-item" onclick="alert('قريباً')">
+                <i class="fa-solid fa-futbol"></i>
+                <span>المباريات</span>
             </button>
-            
-            <!-- زر الإجراء السريع (تسجيل ماتش) -->
-            <div class="nav-item action-wrapper">
-                <button class="action-btn" onclick="alert('قريباً: تسجيل مباراة')">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </div>
-
-            <button class="nav-item" onclick="window.navigateTo('view-scout')">
-                <i class="fa-solid fa-binoculars"></i>
+            <button class="nav-item" onclick="alert('قريباً')">
+                <i class="fa-solid fa-search"></i>
                 <span>الكشاف</span>
-            </button>
-            
-            <button class="nav-item" onclick="window.navigateTo('view-team')">
-                <i class="fa-solid fa-users"></i>
-                <span>فريقي</span>
             </button>
         </nav>
 
     </div>
-
-    <!-- =========================================
-         4. JAVASCRIPT MODULES (المنطق)
-    ========================================== -->
+    
     <script type="module" src="js/app.js"></script>
-
 </body>
 </html>
