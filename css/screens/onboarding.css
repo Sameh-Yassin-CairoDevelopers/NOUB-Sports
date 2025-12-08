@@ -1,0 +1,116 @@
+/* Minting Studio Styles */
+
+.view-section {
+    padding: 20px;
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 100px; /* مساحة للشريط السفلي */
+}
+
+.onboarding-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.onboarding-header h2 {
+    color: var(--color-gold);
+    font-family: var(--font-digital);
+    margin-bottom: 5px;
+}
+
+/* Avatar Preview */
+.avatar-studio {
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.avatar-preview {
+    height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.avatar-placeholder {
+    font-size: 80px;
+    color: var(--color-text-muted);
+    transition: all 0.3s ease;
+}
+
+/* Controls */
+.control-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.selector {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.selector button {
+    background: var(--color-bg-card);
+    color: var(--color-gold);
+    border: 1px solid var(--color-gold);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Forms */
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--color-gold);
+    font-size: 0.9rem;
+}
+
+.input-group input, .input-group select {
+    width: 100%;
+    padding: 12px;
+    background: var(--color-bg-card);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--color-text-main);
+    border-radius: 10px;
+    font-family: var(--font-main);
+    font-size: 1rem;
+}
+
+.input-group input:focus, .input-group select:focus {
+    border-color: var(--color-gold);
+    outline: none;
+}
+
+/* Mint Button */
+.btn-primary {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(45deg, var(--color-gold), #d97706);
+    color: #000;
+    font-weight: 800;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+    margin-top: 10px;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
