@@ -5,142 +5,170 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NOUB Sports | نوب سبورتس</title>
 
-    <!-- Telegram & Supabase -->
+    <!-- 1. Dependencies -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Fonts & Icons -->
+    <!-- 2. Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Changa:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- CSS Links -->
+    <!-- 3. Styles -->
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/screens/onboarding.css">
+    <!-- (سنضيف ملفات التنسيق الفرعية تباعاً في الأيام القادمة) -->
 </head>
 <body>
 
-    <div id="app">
-        
-        <!-- A. Splash Screen (شاشة التحميل) -->
-        <div id="splash-screen" class="screen active">
-            <div class="logo-container">
-                <h1 class="sport-title">NOUB</h1>
-                <p class="subtitle">SPORTS</p>
+    <div id="app-container">
+
+        <!-- A. SPLASH SCREEN (التحميل) -->
+        <div id="screen-splash" class="overlay-screen active" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; z-index:9999; background:var(--color-bg-deep);">
+            <div class="brand-logo" style="text-align:center;">
+                <h1 style="font-family:var(--font-digital); font-size:3rem; color:var(--color-gold-primary); letter-spacing:5px;">NOUB</h1>
+                <span style="color:var(--color-text-muted); letter-spacing:3px;">SPORTS</span>
             </div>
-            <div class="loader"></div>
-            <!-- مصطلح رياضي بحت -->
-            <p class="loading-text">جاري دخول الملعب...</p>
+            <div class="loader" style="margin-top:20px; color:var(--color-text-muted);">جاري الاتصال بالخورا...</div>
         </div>
 
-        <!-- B. Main Header (شريط المعلومات) -->
-        <header id="main-header" class="hidden">
-            <div class="user-info">
-                <div class="user-avatar-small">
+        <!-- B. GLOBAL HEADER (الثابت) -->
+        <header id="global-header" class="hidden" style="height:var(--header-height); background:var(--color-bg-surface); padding:0 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div class="profile-summary" style="display:flex; align-items:center; gap:10px;">
+                <div class="avatar-circle" style="width:40px; height:40px; background:#333; border-radius:50%; border:2px solid var(--color-gold-primary); display:flex; justify-content:center; align-items:center;">
                     <i class="fa-solid fa-user"></i>
                 </div>
-                <div class="user-text">
-                    <span class="user-name">كابتن جديد</span>
-                    <span class="user-zone">غير مسجل</span>
+                <div class="texts">
+                    <h3 id="display-name" style="font-size:0.9rem; margin:0;">ضيف</h3>
+                    <span id="display-zone" style="font-size:0.7rem; color:var(--color-text-muted);">غير مسجل</span>
                 </div>
             </div>
-            <div class="wallet-badge">
-                <span id="coin-balance">0</span> 
-                <i class="fa-solid fa-coins text-gold"></i>
+            <div class="currency-badge" style="background:rgba(212,175,55,0.1); padding:5px 12px; border-radius:20px; color:var(--color-gold-primary); font-weight:bold;">
+                <span id="display-balance" class="text-digital">0</span> عملة
             </div>
         </header>
 
-        <!-- C. Main Content -->
-        <main id="main-content">
-            
-            <!-- 1. شاشة الصك (التسجيل) -->
-            <section id="view-onboarding" class="view-section hidden">
-                <div class="onboarding-header">
-                    <h2>بطاقة اللاعب</h2>
-                    <p>سجل بياناتك لتنزل الملعب</p>
-                </div>
+        <!-- C. DYNAMIC CONTENT AREA (المتغير) -->
+        <main id="main-view" style="height:calc(100% - 150px); overflow-y:auto; padding:20px;">
 
-                <div class="avatar-studio">
-                    <div class="avatar-preview">
-                        <div id="avatar-display" class="avatar-placeholder">
-                            <i class="fa-solid fa-shirt"></i>
-                        </div>
-                    </div>
+            <!-- 1. شاشة التسجيل (Auth) -->
+            <section id="view-auth" class="hidden">
+                <div class="auth-container">
+                    <h2 style="color:var(--color-gold-primary); text-align:center; margin-bottom:5px;">إصدار الهوية</h2>
+                    <p style="color:var(--color-text-muted); text-align:center; font-size:0.8rem; margin-bottom:20px;">سجل بياناتك للانضمام للمجتمع</p>
                     
-                    <div class="avatar-controls">
-                        <div class="control-group">
-                            <label>لون البشرة</label>
-                            <div class="selector">
-                                <button onclick="window.changeAttr('skin', -1)">❮</button>
-                                <span id="label-skin">1</span>
-                                <button onclick="window.changeAttr('skin', 1)">❯</button>
-                            </div>
+                    <form id="form-register">
+                        
+                        <!-- 1. الاسم -->
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-size:0.9rem;">اسم الشهرة (الكارت)</label>
+                            <input type="text" id="reg-username" placeholder="الاسم في الملعب" required style="width:100%; padding:12px; background:var(--color-bg-input); border:1px solid #333; color:white; border-radius:8px;">
                         </div>
-                        <div class="control-group">
-                            <label>طقم الفريق</label>
-                            <div class="selector">
-                                <button onclick="window.changeAttr('kit', -1)">❮</button>
-                                <span id="label-kit">1</span>
-                                <button onclick="window.changeAttr('kit', 1)">❯</button>
-                            </div>
+
+                        <!-- 2. المنطقة -->
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-size:0.9rem;">المنطقة (Hub)</label>
+                            <select id="reg-zone" required style="width:100%; padding:12px; background:var(--color-bg-input); border:1px solid #333; color:white; border-radius:8px;">
+                                <option value="" disabled selected>اختر منطقتك...</option>
+                                <option value="1">الفسطاط / المعادي</option>
+                                <option value="2">مصر القديمة / المنيل</option>
+                                <option value="3">حلوان / التبين</option>
+                            </select>
                         </div>
-                    </div>
+
+                        <!-- 3. نوع النشاط (الإضافة الجديدة) -->
+                        <div class="form-group" style="margin-bottom:15px;">
+                            <label style="display:block; margin-bottom:5px; font-size:0.9rem;">صفتك الرياضية</label>
+                            <select id="reg-activity-type" required style="width:100%; padding:12px; background:var(--color-bg-input); border:1px solid #333; color:white; border-radius:8px;">
+                                <option value="" disabled selected>اختر صفتك...</option>
+                                <option value="YOUTH_CENTER">ألعب في مركز شباب الفسطاط</option>
+                                <option value="CLUB_MEMBER">ألعب في نادي الفسطاط</option>
+                                <option value="ACADEMY">تدريب حر / أكاديمية</option>
+                                <option value="PRO">ألعب في نادي كبير</option>
+                                <option value="FAN">أنا مشجع فقط</option>
+                                <option value="INACTIVE">متوقف حالياً</option>
+                            </select>
+                        </div>
+
+                        <!-- 4. المركز (يظهر/يختفي برمجياً) -->
+                        <div class="form-group" id="group-position" style="margin-bottom:20px;">
+                            <label style="display:block; margin-bottom:5px; font-size:0.9rem;">المركز</label>
+                            <select id="reg-position" style="width:100%; padding:12px; background:var(--color-bg-input); border:1px solid #333; color:white; border-radius:8px;">
+                                <option value="FWD">مهاجم (FWD)</option>
+                                <option value="MID">وسط (MID)</option>
+                                <option value="DEF">مدافع (DEF)</option>
+                                <option value="GK">حارس (GK)</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" id="btn-mint-action" style="width:100%; padding:15px; background:var(--color-gold-primary); color:black; font-weight:bold; border:none; border-radius:10px;">صك الهوية</button>
+                    </form>
                 </div>
-
-                <div class="player-form">
-                    <div class="input-group">
-                        <label>اسم الشهرة</label>
-                        <input type="text" id="inp-name" placeholder="مثال: تريكة، الحريف..." maxlength="15">
-                    </div>
-
-                    <div class="input-group">
-                        <label>المركز في الملعب</label>
-                        <select id="inp-position">
-                            <option value="FWD">مهاجم (HGOOM)</option>
-                            <option value="MID">خط وسط (NOSS)</option>
-                            <option value="DEF">مدافع (DFA3)</option>
-                            <option value="GK">حارس (GOON)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>منطقتك (الملعب)</label>
-                        <select id="inp-zone">
-                            <option value="1">الفسطاط / المعادي</option>
-                            <option value="2">مصر القديمة / المنيل</option>
-                            <option value="3">حلوان / التبين</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button id="btn-mint" class="btn-action">
-                    إصدار البطاقة <i class="fa-solid fa-id-card"></i>
-                </button>
             </section>
 
-            <!-- باقي الشاشات فارغة حالياً -->
-            <section id="view-home" class="view-section hidden"></section>
+            <!-- 2. الرئيسية (Home) -->
+            <section id="view-home" class="hidden">
+                <div style="text-align:center; margin-top:50px; color:#555;">
+                    <i class="fa-solid fa-shirt" style="font-size:3rem; margin-bottom:10px;"></i>
+                    <p>غرفة الملابس (قريباً)</p>
+                </div>
+            </section>
+
+            <!-- 3. الساحة (Arena) -->
+            <section id="view-arena" class="hidden">
+                <div style="text-align:center; margin-top:50px; color:#555;">
+                    <i class="fa-solid fa-trophy" style="font-size:3rem; margin-bottom:10px;"></i>
+                    <p>ساحة المباريات (قريباً)</p>
+                </div>
+            </section>
+
+            <!-- 4. الكشاف (Scout) -->
+            <section id="view-scout" class="hidden">
+                <div style="text-align:center; margin-top:50px; color:#555;">
+                    <i class="fa-solid fa-binoculars" style="font-size:3rem; margin-bottom:10px;"></i>
+                    <p>سوق اللاعبين (قريباً)</p>
+                </div>
+            </section>
+
+            <!-- 5. الفريق (Team) -->
+            <section id="view-team" class="hidden">
+                <div style="text-align:center; margin-top:50px; color:#555;">
+                    <i class="fa-solid fa-users" style="font-size:3rem; margin-bottom:10px;"></i>
+                    <p>إدارة الفريق (قريباً)</p>
+                </div>
+            </section>
+
         </main>
 
-        <!-- D. Bottom Nav -->
-        <nav id="bottom-nav" class="hidden">
-            <button class="nav-item active" onclick="window.navigateTo('view-home')">
-                <i class="fa-solid fa-address-card"></i>
-                <span>كارتي</span>
+        <!-- D. GLOBAL NAVIGATION (الثابت) -->
+        <nav id="global-navbar" class="hidden" style="position:fixed; bottom:0; width:100%; height:var(--navbar-height); background:var(--color-bg-surface); border-top:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-around; align-items:center; max-width:600px;">
+            <button class="nav-btn active" onclick="window.router('view-home')" style="background:none; border:none; color:var(--color-text-muted); display:flex; flex-direction:column; align-items:center; gap:4px; font-family:var(--font-primary); font-size:0.7rem;">
+                <i class="fa-solid fa-id-badge" style="font-size:1.4rem;"></i>
+                <span>هويتي</span>
             </button>
-            <button class="nav-item" onclick="alert('قريباً')">
-                <i class="fa-solid fa-futbol"></i>
-                <span>المباريات</span>
+            <button class="nav-btn" onclick="window.router('view-arena')" style="background:none; border:none; color:var(--color-text-muted); display:flex; flex-direction:column; align-items:center; gap:4px; font-family:var(--font-primary); font-size:0.7rem;">
+                <i class="fa-solid fa-futbol" style="font-size:1.4rem;"></i>
+                <span>الساحة</span>
             </button>
-            <button class="nav-item" onclick="alert('قريباً')">
-                <i class="fa-solid fa-search"></i>
+            <!-- زر الإجراء الرئيسي -->
+            <button class="nav-btn action-center" id="btn-main-action" style="background:var(--color-gold-primary); color:black; width:50px; height:50px; border-radius:50%; display:flex; justify-content:center; align-items:center; transform:translateY(-20px); border:5px solid var(--color-bg-deep); box-shadow:0 0 10px rgba(212,175,55,0.3);">
+                <i class="fa-solid fa-plus" style="font-size:1.5rem;"></i>
+            </button>
+            <button class="nav-btn" onclick="window.router('view-scout')" style="background:none; border:none; color:var(--color-text-muted); display:flex; flex-direction:column; align-items:center; gap:4px; font-family:var(--font-primary); font-size:0.7rem;">
+                <i class="fa-solid fa-users-viewfinder" style="font-size:1.4rem;"></i>
                 <span>الكشاف</span>
+            </button>
+            <button class="nav-btn" onclick="window.router('view-team')" style="background:none; border:none; color:var(--color-text-muted); display:flex; flex-direction:column; align-items:center; gap:4px; font-family:var(--font-primary); font-size:0.7rem;">
+                <i class="fa-solid fa-shield-halved" style="font-size:1.4rem;"></i>
+                <span>الفريق</span>
             </button>
         </nav>
 
     </div>
-    
-    <script type="module" src="js/app.js"></script>
+
+    <!-- JS ENTRY POINT -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- (ملاحظة: أنا وضعت بعض الـ Inline CSS في الـ HTML مؤقتاً لتظهر النتيجة فوراً اليوم دون الحاجة لإنشاء ملفات CSS فرعية، لكن الهيكل الأساسي يعتمد على الكلاسات) -->
 </body>
 </html>
