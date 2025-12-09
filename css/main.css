@@ -1,11 +1,31 @@
-/* 
-   NOUB SPORTS - Main Stylesheet
-   Entry Point for all styles
-*/
+/* =========================================
+   1. SYSTEM VARIABLES (الألوان والخطوط)
+========================================= */
+:root {
+    /* الألوان الأساسية - لوحة نوب سبورتس */
+    --bg-deep: #0f1014;       /* أسود حالك */
+    --bg-surface: #1c1e24;    /* رمادي غامق */
+    --bg-input: #0a0b0d;      /* خلفية الحقول */
+    
+    --gold-primary: #D4AF37;  /* الذهبي الفرعوني */
+    --gold-hover: #b5952f;
+    --text-main: #FFFFFF;
+    --text-muted: #888888;
+    
+    /* الأبعاد */
+    --header-height: 70px;
+    --navbar-height: 80px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
 
-@import url('base/variables.css');
+    /* الخطوط */
+    --font-cairo: 'Cairo', sans-serif;
+    --font-orbitron: 'Orbitron', sans-serif;
+}
 
-/* 1. Global Reset */
+/* =========================================
+   2. GLOBAL RESET (التصفير)
+========================================= */
 * {
     margin: 0;
     padding: 0;
@@ -14,34 +34,225 @@
     outline: none;
 }
 
-/* 2. Body Settings */
 body {
-    background-color: var(--color-bg-deep);
-    color: var(--color-text-main);
-    font-family: var(--font-primary);
-    font-size: 16px;
+    background-color: var(--bg-deep);
+    color: var(--text-main);
+    font-family: var(--font-cairo);
     height: 100vh;
-    overflow: hidden; /* لمنع السكرول العشوائي */
+    overflow: hidden;
     direction: rtl;
 }
 
-/* 3. Utilities */
+/* فئات المساعدة */
 .hidden { display: none !important; }
 .active { display: flex !important; }
-.text-gold { color: var(--color-gold-primary); }
-.text-digital { font-family: var(--font-digital); }
 
-/* 4. App Container */
+/* =========================================
+   3. APP LAYOUT (الهيكل)
+========================================= */
 #app-container {
+    position: relative;
     width: 100%;
     height: 100%;
-    position: relative;
-    max-width: 600px; /* لضمان شكل التطبيق على الديسك توب */
+    max-width: 600px; /* للهواتف والتابلت */
     margin: 0 auto;
-    background-color: var(--color-bg-deep);
-    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+    background: var(--bg-deep);
+    display: flex;
+    flex-direction: column;
 }
 
-/* (مؤقتاً لليوم الأول: تنسيق بسيط للعناصر حتى نكتب ملفات الـ components) */
-button { cursor: pointer; font-family: var(--font-primary); }
-input, select { font-family: var(--font-primary); }
+/* منطقة المحتوى المتغير */
+#main-view {
+    flex: 1;
+    position: relative;
+    overflow-y: auto;
+    padding-bottom: var(--navbar-height); /* مساحة للشريط السفلي */
+}
+
+/* الشاشات (Sections) */
+section {
+    width: 100%;
+    min-height: 100%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   4. SPLASH SCREEN (شاشة التحميل)
+========================================= */
+.overlay-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--bg-deep);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.brand-logo h1 {
+    font-family: var(--font-orbitron);
+    font-size: 3.5rem;
+    color: var(--gold-primary);
+    letter-spacing: 5px;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+    margin-bottom: 5px;
+}
+
+.brand-logo span {
+    font-size: 1rem;
+    color: var(--text-muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+.loading-bar {
+    width: 150px;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    margin-top: 30px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.loading-bar::after {
+    content: '';
+    display: block;
+    width: 40%;
+    height: 100%;
+    background: var(--gold-primary);
+    animation: loading 1s infinite ease-in-out;
+}
+
+@keyframes loading {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+}
+
+/* =========================================
+   5. AUTH SCREEN (شاشة التسجيل)
+========================================= */
+.auth-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.section-title {
+    color: var(--gold-primary);
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.section-desc {
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 0.9rem;
+    margin-bottom: 30px;
+}
+
+/* الحقول (Inputs) */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--bg-input);
+    border: 1px solid #333;
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-family: var(--font-cairo);
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus, .form-group select:focus {
+    border-color: var(--gold-primary);
+}
+
+/* زر الصك (Mint Button) */
+.btn-mint {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--gold-primary), #9e822b);
+    color: #000;
+    font-weight: bold;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+    transition: transform 0.2s;
+}
+
+.btn-mint:active {
+    transform: scale(0.98);
+}
+
+/* اختيار المركز (Radio Buttons) */
+.pos-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.pos-selector label {
+    position: relative;
+    cursor: pointer;
+    margin: 0;
+}
+
+.pos-selector input {
+    position: absolute;
+    opacity: 0;
+}
+
+.pos-selector span {
+    display: block;
+    padding: 10px;
+    background: var(--bg-input);
+    border: 1px solid #333;
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.pos-selector input:checked + span {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--gold-primary);
+    color: var(--gold-primary);
+    font-weight: bold;
+}
+
+/* =========================================
+   6. GLOBAL UI (الهيدر والنافبار - مخفيين في Auth)
+========================================= */
+/* سيتم إظهارهم وتنسيقهم في المرحلة القادمة */
+#global-header.hidden, #global-navbar.hidden {
+    display: none !important;
+}
