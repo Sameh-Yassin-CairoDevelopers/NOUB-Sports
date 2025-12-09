@@ -1,71 +1,83 @@
 /**
- * NOUB SPORTS - Main Entry Point (Day 1)
- * هذا الملف هو "المحرك المبدئي".
- * وظيفته الحالية: تهيئة التطبيق وإدارة التفاعلات البصرية الأولية.
+ * NOUB SPORTS - Main Entry Point (Day 1 - Fix)
+ * المحرك المبدئي - إدارة واجهة المستخدم
  */
 
 // 1. تعريف الثوابت (عناصر الشاشة)
+// التأكد من تطابق الـ IDs مع ملف index.html
 const DOM = {
     splash: document.getElementById('screen-splash'),
-    authView: document.getElementById('view-onboarding'),
+    
+    // تصحيح: الاسم في HTML هو view-auth وليس view-onboarding
+    authView: document.getElementById('view-auth'), 
+    
     activitySelect: document.getElementById('reg-activity-type'),
     positionGroup: document.getElementById('group-position'),
+    
     header: document.getElementById('global-header'),
     navbar: document.getElementById('global-navbar')
 };
 
 /**
  * دالة التشغيل الرئيسية (Init)
- * يتم استدعاؤها فور تحميل الصفحة
  */
 function initApp() {
     console.log("🚀 NOUB SPORTS System Started...");
 
-    // أ. تهيئة تليجرام (لضبط الألوان)
+    // أ. تهيئة تليجرام
     if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
         console.log("✅ Telegram WebApp Connected");
     }
 
-    // ب. محاكاة فحص الاتصال (سنستبدلها بـ Supabase غداً)
-    // حالياً: ننتظر ثانيتين ثم نظهر شاشة التسجيل
+    // ب. محاكاة التحميل
+    // ننتظر 1.5 ثانية ثم نظهر التطبيق
     setTimeout(() => {
         hideSplash();
-        showOnboarding();
-    }, 2000);
+        
+        // بما أننا لم نربط قاعدة البيانات بعد، سنفترض أن المستخدم جديد ونظهر شاشة التسجيل
+        showAuthScreen();
+    }, 1500);
 
-    // ج. تفعيل مراقب الأحداث (Event Listeners)
+    // ج. تفعيل التفاعلات
     setupEventListeners();
 }
 
 /**
- * إخفاء شاشة التحميل بأسلوب سلس
+ * إخفاء شاشة التحميل
  */
 function hideSplash() {
-    DOM.splash.style.opacity = '0';
-    setTimeout(() => {
-        DOM.splash.remove(); // إزالة العنصر تماماً من الـ DOM لتخفيف الحمل
-    }, 500);
+    if (DOM.splash) {
+        DOM.splash.style.opacity = '0';
+        setTimeout(() => {
+            DOM.splash.style.display = 'none'; // إخفاء كامل بدلاً من remove لتجنب أخطاء مستقبلية
+        }, 500);
+    }
 }
 
 /**
- * إظهار شاشة التسجيل (للمستخدم الجديد)
- * (غداً سنضع شرطاً هنا: لو مسجل يروح Home، لو جديد يجي هنا)
+ * إظهار شاشة التسجيل (Auth)
  */
-function showOnboarding() {
-    DOM.authView.classList.remove('hidden');
-    // في مرحلة التسجيل، نخفي الهيدر والنافبار (كما في التصميم)
-    DOM.header.classList.add('hidden');
-    DOM.navbar.classList.add('hidden');
+function showAuthScreen() {
+    if (DOM.authView) {
+        DOM.authView.classList.remove('hidden');
+        console.log("👤 Showing Auth Screen");
+    } else {
+        console.error("❌ Error: Auth View not found in HTML");
+    }
+
+    // إخفاء الهيدر والنافبار أثناء التسجيل (لأنه لم يسجل بعد)
+    if (DOM.header) DOM.header.classList.add('hidden');
+    if (DOM.navbar) DOM.navbar.classList.add('hidden');
 }
 
 /**
- * إعداد التفاعلات (المنطق الذي طلبته)
+ * إعداد التفاعلات (اللاعب vs المشجع)
  */
 function setupEventListeners() {
     
-    // منطق: لاعب vs مشجع
+    // منطق: إخفاء المركز للمشجعين
     if (DOM.activitySelect) {
         DOM.activitySelect.addEventListener('change', (e) => {
             const value = e.target.value;
@@ -74,14 +86,17 @@ function setupEventListeners() {
             // القائمة الممنوعة من اختيار "المركز"
             const nonPlayingRoles = ['FAN', 'INACTIVE'];
 
-            if (nonPlayingRoles.includes(value)) {
-                // إذا كان مشجعاً، نخفي خيار المركز
-                DOM.positionGroup.classList.add('hidden');
-                // ونلغي اختيار أي مركز سابق (للتنظيف)
-                document.getElementById('reg-position').value = ""; 
-            } else {
-                // إذا كان لاعباً، نظهر خيار المركز
-                DOM.positionGroup.classList.remove('hidden');
+            if (DOM.positionGroup) {
+                if (nonPlayingRoles.includes(value)) {
+                    // إذا كان مشجعاً، نخفي خيار المركز
+                    DOM.positionGroup.classList.add('hidden');
+                    // تنظيف القيمة
+                    const posInput = document.getElementById('reg-position');
+                    if (posInput) posInput.value = ""; 
+                } else {
+                    // إذا كان لاعباً، نظهر خيار المركز
+                    DOM.positionGroup.classList.remove('hidden');
+                }
             }
         });
     }
