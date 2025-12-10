@@ -1,9 +1,8 @@
 <!--
  * Filename: index.html
- * Version: NOUB SPORTS v2.0.0 (Stable Layout)
- * Description: The main entry point for the SPA. Contains the structural layout
- * (Header, Main Views, Bottom Navigation) and loads core dependencies.
- * Architecture: Mobile-First / Centralized Desktop View.
+ * Version: NOUB SPORTS v2.2.0 (Stable Production)
+ * Description: The main Single Page Application (SPA) container.
+ * Includes: Splash, Onboarding, Home, and Global Navigation (5 Buttons).
 -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -12,22 +11,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NOUB Sports | نوب سبورتس</title>
 
-    <!-- Core Dependencies -->
+    <!-- 1. Core Dependencies -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Fonts & Icons -->
+    <!-- 2. Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Changa:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6.4 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Stylesheet Aggregator -->
+    <!-- 3. Main Stylesheet -->
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
 
-    <!-- App Container (Centered on Desktop) -->
+    <!-- App Root Container -->
     <div id="app-container">
 
         <!-- A. SPLASH SCREEN -->
@@ -40,16 +40,15 @@
             <p class="loading-text">جاري تهيئة الملاعب...</p>
         </div>
 
-        <!-- B. GLOBAL HEADER -->
+        <!-- B. GLOBAL HEADER (Hidden by default) -->
         <header id="global-header" class="app-header hidden">
             <div class="profile-summary">
                 <div class="avatar-circle" id="header-avatar">
-                    <!-- Avatar injected via JS -->
                     <i class="fa-solid fa-user"></i>
                 </div>
                 <div class="user-texts">
                     <h3 id="header-name">كابتن جديد</h3>
-                    <span id="header-club" class="text-muted">لاعب حر</span>
+                    <span id="header-zone" class="text-muted">غير مسجل</span>
                 </div>
             </div>
             <div class="currency-badge">
@@ -63,11 +62,11 @@
             
             <!-- 1. AUTH VIEW (Onboarding) -->
             <section id="view-onboarding" class="view-section hidden">
-                <div class="auth-wrapper">
-                    <h2 class="section-title">بطاقة اللاعب</h2>
-                    <p class="section-desc">سجل بياناتك للانضمام للموسم</p>
+                <div class="auth-box">
+                    <h2 class="section-title text-gold">بطاقة اللاعب</h2>
+                    <p class="section-desc">سجل بياناتك للانضمام إلى الخورا المحلية</p>
 
-                    <!-- Avatar Studio Component -->
+                    <!-- Avatar Studio -->
                     <div class="avatar-studio">
                         <div class="avatar-preview">
                             <div id="auth-avatar-display" class="avatar-placeholder">
@@ -136,7 +135,7 @@
                                 </label>
                             </div>
                         </div>
-
+                        
                         <div class="form-group">
                             <label>النطاق الجغرافي</label>
                             <select id="inp-zone" required>
@@ -146,64 +145,61 @@
                         </div>
 
                         <button type="submit" id="btn-mint" class="btn-primary">
-                            <i class="fa-solid fa-fingerprint"></i> توثيق الهوية
+                            <i class="fa-solid fa-fingerprint"></i> صك الهوية
                         </button>
                     </form>
                 </div>
             </section>
 
-            <!-- 2. HOME VIEW (Locker Room) -->
+            <!-- 2. HOME VIEW (Locker Room) - Populated via JS -->
             <section id="view-home" class="view-section hidden">
-                <div class="view-placeholder">
-                    <h3>غرفة الملابس</h3>
-                    <p>جاري تحميل إحصائيات الموسم...</p>
-                </div>
+                <!-- Card will be injected here by homeCtrl.js -->
             </section>
 
-            <!-- 3. ARENA VIEW (Fixtures) -->
+            <!-- 3. ARENA VIEW -->
             <section id="view-arena" class="view-section hidden">
-                <div class="view-placeholder">
-                    <h3>ساحة المباريات</h3>
-                </div>
+                <div class="empty-state"><h3>الساحة</h3><p>قريباً</p></div>
             </section>
 
-            <!-- 4. SCOUT VIEW (Market) -->
+            <!-- 4. SCOUT VIEW -->
             <section id="view-scout" class="view-section hidden">
-                <div class="view-placeholder">
-                    <h3>الكشاف</h3>
-                </div>
+                <div class="empty-state"><h3>الكشاف</h3><p>قريباً</p></div>
             </section>
 
-            <!-- 5. TEAM VIEW (Squad) -->
+            <!-- 5. TEAM VIEW -->
             <section id="view-team" class="view-section hidden">
-                <div class="view-placeholder">
-                    <h3>قائمة الفريق</h3>
-                </div>
+                <div class="empty-state"><h3>الفريق</h3><p>قريباً</p></div>
             </section>
 
         </main>
 
-        <!-- D. BOTTOM NAVIGATION -->
+        <!-- D. GLOBAL NAVBAR (5 Buttons) -->
         <nav id="global-navbar" class="hidden">
-            <button class="nav-btn active" id="nav-home">
+            <!-- 1. Home -->
+            <button class="nav-btn active" id="nav-home" onclick="window.router('view-home')">
                 <i class="fa-solid fa-id-card"></i>
                 <span>هويتي</span>
             </button>
-            <button class="nav-btn" id="nav-arena">
+            
+            <!-- 2. Arena -->
+            <button class="nav-btn" id="nav-arena" onclick="window.router('view-arena')">
                 <i class="fa-solid fa-trophy"></i>
                 <span>الساحة</span>
             </button>
             
-            <!-- CENTRAL ACTION BUTTON (Big Circle) -->
+            <!-- 3. Action (Center) -->
             <button class="nav-btn action-center" id="nav-action">
                 <i class="fa-solid fa-plus"></i>
             </button>
 
-            <button class="nav-btn" id="nav-scout">
+            <!-- 4. Scout -->
+            <button class="nav-btn" id="nav-scout" onclick="window.router('view-scout')">
                 <i class="fa-solid fa-binoculars"></i>
                 <span>الكشاف</span>
             </button>
-            <button class="nav-btn" id="nav-team">
+
+            <!-- 5. Team -->
+            <button class="nav-btn" id="nav-team" onclick="window.router('view-team')">
                 <i class="fa-solid fa-users-line"></i>
                 <span>الفريق</span>
             </button>
