@@ -2,7 +2,7 @@
  * Filename: js/controllers/homeCtrl.js
  * Version: 2.2.0
  * Description: Controls the Home View (Locker Room).
- * Responsible for rendering the Player Card dynamically based on User Data.
+ * Updates Header AND Renders the Player Card dynamically.
  */
 
 export class HomeController {
@@ -25,7 +25,7 @@ export class HomeController {
     updateHeader(user) {
         const nameEl = document.getElementById('header-name');
         const balanceEl = document.getElementById('header-balance');
-        const zoneEl = document.getElementById('header-zone');
+        const zoneEl = document.getElementById('header-zone'); // Correct ID matched
 
         if (nameEl) nameEl.textContent = user.username;
         if (balanceEl) balanceEl.textContent = user.balance;
@@ -45,15 +45,15 @@ export class HomeController {
         const homeView = document.getElementById('view-home');
         if (!homeView) return;
 
-        // Default Stats (Simulation for MVP)
-        // In Day 3, we will fetch real stats from 'cards' table
+        // Default Stats (Simulation for Day 1)
+        // This confirms the UI layout before DB binding
         const stats = {
             rating: 60,
             pac: 65, sho: 55, pas: 60, dri: 58, def: 50, phy: 62,
-            pos: 'FWD' // This should come from DB
+            pos: 'FWD'
         };
 
-        // Constructing the Card HTML (Neo-Pharaonic Design)
+        // Constructing the Card HTML (Matches css/components/cards.css)
         homeView.innerHTML = `
             <div class="card-container fade-in">
                 
