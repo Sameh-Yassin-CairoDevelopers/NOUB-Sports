@@ -1,0 +1,9 @@
+{
+  "name": "NOUB Sports",
+  "short_name": "NOUB",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1014",
+  "theme_color": "#D4AF37",
+  "orientation": "portrait"
+}
