@@ -24,6 +24,7 @@
 
 /* 4. Views Layer */
 @import url('views/splash.css');
+@import url('views/auth.css');
 @import url('views/onboarding.css');
 @import url('views/home.css');
 @import url('views/arena.css');
