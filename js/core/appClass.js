@@ -1,62 +1,56 @@
 /*
  * Filename: js/core/appClass.js
- * Version: 2.0.0
- * Description: The main Application Controller. Orchestrates services,
- * manages global state, and handles the initial loading sequence.
+ * Version: 2.1.0 (Fix: Controller Activation + Splash Removal)
  */
 
 import { Router } from './router.js';
 import { TelegramService } from './telegram.js';
 import { State } from './state.js';
-// ملاحظة: سيتم استيراد الخدمات (Services) في الجزء الثالث
-// import { AuthServices } from '../services/authService.js'; 
+// هام: استيراد المتحكم
+import { OnboardingController } from '../controllers/onboardingCtrl.js';
 
 export class App {
     constructor() {
         this.router = new Router();
         this.telegram = new TelegramService();
         this.state = new State();
-        // this.auth = new AuthServices(); // سنفعلها في الجزء القادم
+        // تفعيل المتحكم فوراً
+        this.onboardingCtrl = new OnboardingController();
     }
 
-    /**
-     * Main Initialization Loop
-     */
     async init() {
         console.log("🚀 NOUB SPORTS System Init...");
 
-        // 1. Setup Telegram Environment
+        // 1. Setup Telegram
         this.telegram.init();
 
-        // 2. Simulate Loading / Database Connection Check
-        // (سيتم استبدال هذا بفحص حقيقي في الجزء القادم)
+        // 2. Simulate Loading
         await this.simulateSystemCheck();
 
-        // 3. Routing Decision (Logic)
+        // 3. Routing & Splash Removal
         this.handleRouting();
     }
 
-    /**
-     * Temporary simulation for splash screen delay
-     */
     simulateSystemCheck() {
         return new Promise(resolve => setTimeout(resolve, 1500));
     }
 
-    /**
-     * Determines which screen to show based on user state
-     */
     handleRouting() {
         const splash = document.getElementById('screen-splash');
         
-        // Hide Splash
+        // أ. إزالة شاشة التحميل تماماً (لأنها كانت تغطي الأزرار وتمنع الضغط)
         if(splash) {
             splash.style.opacity = '0';
-            setTimeout(() => splash.classList.remove('active'), 500);
+            setTimeout(() => {
+                splash.style.display = 'none'; // إخفاء نهائي
+                splash.classList.remove('active');
+            }, 500);
         }
 
-        // Logic: If Logged In -> Home, Else -> Onboarding
-        // حالياً نذهب للتسجيل مباشرة لأننا لم نكتب خدمة الـ Auth بعد
+        // ب. الذهاب لشاشة التسجيل
         this.router.navigate('view-onboarding');
+        
+        // ج. إعادة تهيئة المتحكم للتأكد من ربط الأزرار
+        this.onboardingCtrl.init();
     }
 }
