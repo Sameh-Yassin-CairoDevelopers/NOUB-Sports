@@ -1,0 +1,31 @@
+/*
+ * Filename: css/main.css
+ * Version: 2.0.0
+ * Description: The main stylesheet aggregator. Imports all partials.
+ */
+
+/* 1. Base Layer */
+@import url('base/variables.css');
+@import url('base/reset.css');
+@import url('base/typography.css');
+
+/* 2. Layout Layer */
+@import url('layout/header.css');
+@import url('layout/navbar.css');
+@import url('layout/grid.css');
+
+/* 3. Components Layer */
+@import url('components/buttons.css');
+@import url('components/inputs.css');
+@import url('components/cards.css');
+@import url('components/modals.css');
+@import url('components/loaders.css');
+@import url('components/toasts.css');
+
+/* 4. Views Layer */
+@import url('views/splash.css');
+@import url('views/auth.css');
+@import url('views/home.css');
+@import url('views/arena.css');
+@import url('views/scout.css');
+@import url('views/team.css');

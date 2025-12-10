@@ -1,0 +1,26 @@
+:root {
+    /* --- Color Palette --- */
+    --bg-primary: #0f1014;       /* Deep Black */
+    --bg-surface: #1a1c23;       /* Dark Grey */
+    --bg-input: #0d0e11;         /* Input Background */
+
+    --gold-main: #D4AF37;        /* Pharaonic Gold */
+    --gold-hover: #b5952f;
+    --gold-dim: #8a7020;
+
+    --text-main: #ffffff;
+    --text-muted: #9ca3af;
+    
+    --success: #10b981;
+    --danger: #ef4444;
+
+    /* --- Dimensions --- */
+    --header-height: 65px;
+    --nav-height: 80px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    /* --- Fonts --- */
+    --font-primary: 'Cairo', sans-serif;
+    --font-sport: 'Changa', sans-serif;
+}

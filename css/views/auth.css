@@ -1,0 +1,13 @@
+.auth-wrapper { padding: 20px; }
+.avatar-studio {
+    background: var(--bg-surface); border-radius: 20px;
+    padding: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);
+}
+.avatar-preview {
+    height: 100px; display: flex; justify-content: center; align-items: center;
+    border-bottom: 1px dashed #333; margin-bottom: 15px; padding-bottom: 10px;
+}
+.avatar-placeholder { font-size: 60px; color: var(--text-muted); }
+.control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.selector { display: flex; align-items: center; gap: 10px; background: var(--bg-input); padding: 4px; border-radius: 8px; }
+.selector span { width: 20px; text-align: center; font-size: 0.9rem; }

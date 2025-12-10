@@ -1,0 +1,4 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+body { background: var(--bg-primary); color: var(--text-main); font-family: var(--font-primary); height: 100vh; width: 100vw; overflow: hidden; direction: rtl; }
+.hidden { display: none !important; }
+.active { display: flex !important; }

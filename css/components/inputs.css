@@ -1,0 +1,26 @@
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 0.85rem; }
+
+input[type="text"], select {
+    width: 100%; padding: 12px;
+    background: var(--bg-input); border: 1px solid #333;
+    border-radius: var(--radius-md);
+    color: white; font-family: var(--font-primary); font-size: 1rem;
+    appearance: none;
+}
+input:focus, select:focus { border-color: var(--gold-main); }
+
+/* Radio Grid for Position */
+.radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.radio-card { position: relative; cursor: pointer; }
+.radio-card input { position: absolute; opacity: 0; }
+.radio-card span {
+    display: block; padding: 10px;
+    background: var(--bg-input); border: 1px solid #333;
+    border-radius: var(--radius-md); text-align: center;
+    color: var(--text-muted); transition: 0.2s; font-size: 0.9rem;
+}
+.radio-card input:checked + span {
+    background: rgba(212,175,55,0.15); border-color: var(--gold-main);
+    color: var(--gold-main); font-weight: bold;
+}

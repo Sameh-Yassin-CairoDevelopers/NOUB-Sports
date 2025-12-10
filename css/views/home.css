@@ -1,0 +1,5 @@
+.view-placeholder {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 300px; color: var(--text-muted);
+}
+.view-placeholder h3 { color: var(--gold-main); margin-bottom: 10px; }
