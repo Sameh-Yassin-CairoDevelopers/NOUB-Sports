@@ -1,7 +1,4 @@
 
-    SUPABASE_URL: '', // ضع الرابط هنا
-    SUPABASE_KEY: '', // ضع مفتاح Anon/Public هنا
-
 /*
  * Filename: js/config/supabase.js
  * Version: 2.0.0
