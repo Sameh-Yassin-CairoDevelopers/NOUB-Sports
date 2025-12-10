@@ -1,29 +1,157 @@
+/*
+ * Filename: css/layout/navbar.css
+ * Version: 2.2.0 (3D & Responsive Fix)
+ * Description: Styles for the bottom navigation bar with 3D depth and floating action button.
+ */
+
 #global-navbar {
-    position: fixed; bottom: 0; width: 100%; height: var(--nav-height);
-    background: var(--bg-surface); border-top: 1px solid rgba(255,255,255,0.05);
-    display: flex; justify-content: space-around; align-items: flex-end; /* لضبط المحاذاة مع الزر العائم */
-    padding-bottom: 10px; z-index: 1000;
+    /* 1. التثبيت والأبعاد */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--nav-height);
+    z-index: 1000;
+
+    /* 2. نظام التوزيع المرن (Flexbox) */
+    display: flex;
+    justify-content: space-between; /* توزيع المسافات بالتساوي */
+    align-items: flex-end; /* محاذاة العناصر للأسفل */
+    padding-bottom: 12px; /* مسافة من الأسفل للأيقونات */
+    padding-left: 10px;
+    padding-right: 10px;
+
+    /* 3. تأثير الـ 3D والزجاج (The 3D Glass Look) */
+    background: linear-gradient(to top, #15171e 0%, rgba(26, 28, 35, 0.95) 100%);
+    backdrop-filter: blur(12px); /* تغبيش الخلفية */
+    -webkit-backdrop-filter: blur(12px);
+    
+    /* الحافة العلوية المضيئة (Bevel Effect) */
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    
+    /* الظل العميق للرفع عن الصفحة */
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
 }
 
+/* -------------------------------------------
+   Standard Navigation Buttons (4 Buttons)
+------------------------------------------- */
 .nav-btn {
-    background: none; border: none; color: var(--text-muted);
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    font-family: var(--font-primary); font-size: 0.7rem;
-    width: 20%; cursor: pointer; transition: color 0.2s;
+    /* المرونة: يأخذ مساحة متساوية */
+    flex: 1; 
+    min-width: 0; /* يمنع الزر من تجاوز مساحته المحددة */
+    
+    /* المظهر */
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    
+    /* الترتيب الداخلي */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    
+    /* النصوص */
+    font-family: var(--font-primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    
+    /* تأثيرات الانتقال */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
-.nav-btn i { font-size: 1.4rem; transition: transform 0.2s; }
-.nav-btn.active { color: var(--gold-main); }
-.nav-btn.active i { transform: translateY(-3px); }
+/* أيقونات الأزرار العادية */
+.nav-btn i {
+    font-size: 1.4rem;
+    transition: transform 0.3s, text-shadow 0.3s;
+    /* ظل خفيف للأيقونة لتعزيز الـ 3D */
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+}
 
-/* The Central Action Button */
-.nav-btn.action-center {
-    width: 60px; height: 60px;
-    background: var(--gold-main); color: #000;
+/* الحالة النشطة (Active State) */
+.nav-btn.active {
+    color: var(--gold-main);
+}
+
+.nav-btn.active i {
+    transform: translateY(-5px); /* يرتفع للأعلى قليلاً */
+    text-shadow: 0 0 15px rgba(212, 175, 55, 0.6); /* وهج ذهبي */
+}
+
+/* نقطة مضيئة تحت الزر النشط */
+.nav-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    width: 6px;
+    height: 6px;
+    background-color: var(--gold-main);
     border-radius: 50%;
-    transform: translateY(-25px); /* رفع الزر للأعلى */
-    border: 6px solid var(--bg-primary); /* حافة لدمجه مع الخلفية */
-    display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    box-shadow: 0 0 10px var(--gold-main);
+}
+
+/* -------------------------------------------
+   The Floating Action Button (The Center Orb)
+------------------------------------------- */
+.nav-btn.action-center {
+    /* أبعاد ثابتة للزر الدائري */
+    flex: 0 0 65px; 
+    height: 65px;
+    
+    /* الشكل */
+    border-radius: 50%;
+    
+    /* الرفع للأعلى (ليخرج من الشريط) */
+    transform: translateY(-35px);
+    
+    /* الخلفية: تدرج لوني يعطي شكل الكرة الذهبية */
+    background: radial-gradient(circle at 30% 30%, var(--gold-light), var(--gold-main));
+    
+    /* الحدود: حافة سميكة بلون الخلفية لعمل "قطع" وهمي في الشريط */
+    border: 6px solid var(--bg-primary); 
+    
+    /* التوسيط */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    /* الظلال الـ 3D القوية */
+    box-shadow: 
+        0 10px 25px rgba(212, 175, 55, 0.3), /* ظل خارجي ملون */
+        inset 0 2px 5px rgba(255, 255, 255, 0.4), /* لمعة علوية */
+        inset 0 -5px 10px rgba(0, 0, 0, 0.2); /* ظل سفلي داخلي */
+    
+    z-index: 1100;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* أيقونة الزر العائم */
+.nav-btn.action-center i {
     font-size: 1.8rem;
+    color: #1a1a1a; /* لون داكن للتباين مع الذهبي */
+    filter: drop-shadow(0 1px 1px rgba(255,255,255,0.3));
+}
+
+/* تأثير الضغط (Click Effect) */
+.nav-btn.action-center:active {
+    transform: translateY(-30px) scale(0.95); /* ينضغط للأسفل */
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
+}
+
+/* -------------------------------------------
+   Responsive Adjustments (تحسينات الشاشات الكبيرة)
+------------------------------------------- */
+@media (min-width: 600px) {
+    #global-navbar {
+        /* في الشاشات العريضة، نحدد العرض الأقصى ونوسط الشريط */
+        max-width: 600px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 20px 20px 0 0; /* تدوير الحواف العلوية */
+        border-left: 1px solid rgba(255,255,255,0.05);
+        border-right: 1px solid rgba(255,255,255,0.05);
+    }
 }
