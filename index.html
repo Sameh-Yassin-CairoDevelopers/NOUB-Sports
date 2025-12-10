@@ -1,7 +1,7 @@
 <!--
  * Filename: index.html
- * Version: NOUB SPORTS v2.2.0
- * Description: The App Container. Contains the 5-Button Navbar & Dynamic Views.
+ * Version: NOUB SPORTS v2.2.0 (Stable & Clean)
+ * Description: The main Single Page Application (SPA) container.
 -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -10,21 +10,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NOUB Sports | نوب سبورتس</title>
 
-    <!-- Dependencies -->
+    <!-- 1. Core Dependencies -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Assets -->
+    <!-- 2. Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Changa:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Main CSS -->
+    <!-- 3. Main Stylesheet -->
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
 
+    <!-- App Root Container -->
     <div id="app-container">
 
         <!-- A. SPLASH SCREEN -->
@@ -54,15 +55,16 @@
             </div>
         </header>
 
-        <!-- C. MAIN CONTENT -->
+        <!-- C. DYNAMIC VIEWS CONTAINER -->
         <main id="main-content">
             
-            <!-- 1. AUTH VIEW -->
+            <!-- 1. AUTH VIEW (Onboarding) -->
             <section id="view-onboarding" class="view-section hidden">
                 <div class="auth-box">
                     <h2 class="section-title text-gold">بطاقة اللاعب</h2>
-                    <p class="section-desc">سجل بياناتك للانضمام للمجتمع</p>
+                    <p class="section-desc">سجل بياناتك للانضمام إلى الخورا المحلية</p>
 
+                    <!-- Avatar Studio -->
                     <div class="avatar-studio">
                         <div class="avatar-preview">
                             <div id="auth-avatar-display" class="avatar-placeholder">
@@ -89,11 +91,13 @@
                         </div>
                     </div>
 
+                    <!-- Registration Form -->
                     <form id="form-register">
                         <div class="form-group">
                             <label>اسم الشهرة</label>
                             <input type="text" id="inp-name" placeholder="الاسم في الملعب" required maxlength="15">
                         </div>
+
                         <div class="form-group">
                             <label>نوع النشاط</label>
                             <select id="inp-activity" required>
@@ -104,43 +108,63 @@
                                 <option value="FAN">أنا مشجع فقط</option>
                             </select>
                         </div>
+
+                        <!-- Dynamic Position Field -->
                         <div class="form-group hidden" id="group-position">
-                            <label>المركز</label>
+                            <label>المركز التكتيكي</label>
                             <div class="radio-grid">
-                                <label class="radio-card"><input type="radio" name="pos" value="FWD"><span>مهاجم</span></label>
-                                <label class="radio-card"><input type="radio" name="pos" value="MID"><span>وسط</span></label>
-                                <label class="radio-card"><input type="radio" name="pos" value="DEF"><span>دفاع</span></label>
-                                <label class="radio-card"><input type="radio" name="pos" value="GK"><span>حارس</span></label>
+                                <label class="radio-card">
+                                    <input type="radio" name="pos" value="FWD">
+                                    <span>مهاجم</span>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="pos" value="MID">
+                                    <span>وسط</span>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="pos" value="DEF">
+                                    <span>مدافع</span>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="pos" value="GK">
+                                    <span>حارس</span>
+                                </label>
                             </div>
                         </div>
+                        
                         <div class="form-group">
-                            <label>المنطقة</label>
+                            <label>النطاق الجغرافي</label>
                             <select id="inp-zone" required>
                                 <option value="1">الفسطاط / المعادي</option>
                                 <option value="2">مصر القديمة / المنيل</option>
                             </select>
                         </div>
-                        <button type="submit" id="btn-mint" class="btn-primary">صك الهوية</button>
+
+                        <button type="submit" id="btn-mint" class="btn-primary">
+                            <i class="fa-solid fa-fingerprint"></i> صك الهوية
+                        </button>
                     </form>
                 </div>
             </section>
 
-            <!-- 2. HOME VIEW (Where the card appears) -->
-            <section id="view-home" class="view-section hidden"></section>
+            <!-- 2. HOME VIEW -->
+            <section id="view-home" class="view-section hidden">
+                <!-- Card injected via JS -->
+            </section>
 
             <!-- 3. ARENA VIEW -->
             <section id="view-arena" class="view-section hidden">
-                <div class="empty-state"><h3>الساحة</h3></div>
+                <div class="empty-state"><h3>الساحة</h3><p>قريباً</p></div>
             </section>
 
             <!-- 4. SCOUT VIEW -->
             <section id="view-scout" class="view-section hidden">
-                <div class="empty-state"><h3>الكشاف</h3></div>
+                <div class="empty-state"><h3>الكشاف</h3><p>قريباً</p></div>
             </section>
 
             <!-- 5. TEAM VIEW -->
             <section id="view-team" class="view-section hidden">
-                <div class="empty-state"><h3>الفريق</h3></div>
+                <div class="empty-state"><h3>الفريق</h3><p>قريباً</p></div>
             </section>
 
         </main>
@@ -153,6 +177,7 @@
             <button class="nav-btn" id="nav-arena" onclick="window.router('view-arena')">
                 <i class="fa-solid fa-trophy"></i><span>الساحة</span>
             </button>
+            <!-- Center Action -->
             <button class="nav-btn action-center" id="nav-action">
                 <i class="fa-solid fa-plus"></i>
             </button>
@@ -166,6 +191,7 @@
 
     </div>
 
+    <!-- JS Entry Point -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
