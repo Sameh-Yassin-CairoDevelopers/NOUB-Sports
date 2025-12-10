@@ -1,19 +1,43 @@
-/**
- * NOUB Sports - Configuration File
- * يحتوي على ثوابت النظام ومفاتيح الاتصال
+/*
+ * Filename: js/config/constants.js
+ * Version: 2.0.0
+ * Description: Stores immutable game constants, ENUMS, and configuration limits.
+ * Centralizes magic strings to avoid typos in logic.
  */
 
-export const CONFIG = {
-    // 1. Supabase Connection Keys
-    // تجدها في: Project Settings -> API
-    SUPABASE_URL: 'https://oxunjrytoqqazgzuoutb.supabase.co', // ضع الرابط هنا
-    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94dW5qcnl0b3FxYXpnenVvdXRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMjAwOTAsImV4cCI6MjA4MDc5NjA5MH0.pxPp2-9rM5T6jTXDKCIjQGI7vg3_gHcsit2-R6Obxyg', // ضع مفتاح Anon/Public هنا
-
-    // 2. Game Settings
-    APP_VERSION: '1.0.0',
-    DEFAULT_ZONE_ID: 1, // الفسطاط
+export const GAME_CONFIG = {
+    APP_VERSION: '2.0.0',
     ANIMATION_SPEED: 300, // ms
     
-    // 3. Telegram Config
-    TELEGRAM_BOT_USERNAME: 'NoubSportsBot' // اسم البوت الخاص بك
+    // Limits for Avatar Generation
+    AVATAR_LIMITS: {
+        SKIN: 3,
+        KIT: 3,
+        HAIR: 5
+    },
+
+    // Activity Types (كما طلبتها)
+    ACTIVITY_TYPES: {
+        YOUTH_CENTER: 'YOUTH_CENTER', // مركز شباب
+        CLUB_MEMBER: 'CLUB_MEMBER',   // عضو نادي
+        ACADEMY: 'ACADEMY',           // أكاديمية / حر
+        PRO: 'PRO',                   // نادي كبير
+        FAN: 'FAN',                   // مشجع
+        INACTIVE: 'INACTIVE'          // متوقف
+    },
+
+    // Positions
+    POSITIONS: {
+        FWD: 'FWD',
+        MID: 'MID',
+        DEF: 'DEF',
+        GK: 'GK'
+    },
+
+    // Zones (يمكن توسيعها لاحقاً من قاعدة البيانات)
+    ZONES: {
+        1: 'الفسطاط / المعادي',
+        2: 'مصر القديمة',
+        3: 'حلوان'
+    }
 };
