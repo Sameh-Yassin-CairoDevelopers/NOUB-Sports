@@ -1,18 +1,22 @@
 /*
  * Filename: js/core/appClass.js
- * Version: 4.0.0 (MASTER STABLE)
+ * Version: 4.2.0 (Diamond Release)
  * Description: The Central Nervous System of the Application.
  * 
- * ARCHITECTURAL RESPONSIBILITIES:
- * 1. Bootstrapping: Initializes core services (Telegram, State).
- * 2. Auth Guard: Acts as the gatekeeper, checking session validity before rendering.
- * 3. Router Orchestration: Manages view transitions and Navbar states.
- * 4. Controller binding: Lazily or Eagerly loads module controllers based on user interaction.
+ * ACADEMIC NOTE:
+ * This class follows the 'Front Controller' pattern. It handles the initial request,
+ * performs common tasks (Auth check, Environment setup), and delegates rendering 
+ * to specific View Controllers.
+ * 
+ * CORE FLOW:
+ * 1. Constructor -> Instantiate Services & Controllers.
+ * 2. init() -> Setup Telegram -> Check Auth -> Route.
+ * 3. handleRouting() -> Manage Global UI State (Header/Nav visibility).
  */
 
 import { Router } from './router.js';
 import { TelegramService } from './telegram.js';
-import { State } from './state.js';
+import { state } from './state.js'; // Singleton Instance
 import { AuthService } from '../services/authService.js';
 
 // --- Module Controllers Imports ---
@@ -25,19 +29,18 @@ import { ScoutController } from '../controllers/scoutCtrl.js';
 export class App {
     
     /**
-     * Constructor: Initializes Core Dependencies.
-     * Does NOT trigger network calls here (moved to init).
+     * Initialize Core Dependencies.
+     * We instantiate controllers early to ensure they are ready for event binding.
      */
     constructor() {
-        // Core Utilities
+        // 1. Core Utilities
         this.router = new Router();
         this.telegram = new TelegramService();
-        this.state = new State();
         
-        // Services
+        // 2. Data Services
         this.auth = new AuthService();
         
-        // View Controllers (Instantiated to be ready)
+        // 3. View Controllers
         this.homeCtrl = new HomeController();
         this.teamCtrl = new TeamController();
         this.arenaCtrl = new ArenaController();
@@ -46,32 +49,32 @@ export class App {
 
     /**
      * Main Entry Point.
-     * Executed once DOMContentLoaded event fires.
+     * Executed once when DOM is ready.
      */
     async init() {
-        console.log("🚀 System Boot Sequence Initiated...");
+        console.log("🚀 System Boot Sequence Initiated (v4.2)...");
         
-        // 1. Initialize Environment (Telegram Colors/Haptics)
+        // A. Initialize Environment (Telegram Colors/Haptics)
         this.telegram.init();
 
         try {
-            // 2. Authentication Check (Critical Path)
-            // Checks both Telegram ID and Persistent Email Sessions
+            // B. Authentication Check (Critical Path)
+            // Checks both Telegram ID and Persistent Email Sessions via AuthService
             const user = await this.auth.checkUser();
             
-            // 3. Decide Route
+            // C. Decide Route based on Auth Result
             this.handleRouting(user);
             
         } catch (error) {
             console.error("⛔ Critical Boot Error:", error);
-            // Fail-safe: Redirect to Onboarding on error
+            // Fail-safe: Redirect to Onboarding on error to prevent white screen
             this.handleRouting(null);
         }
     }
 
     /**
      * Routing Logic Engine.
-     * Decides whether to show the App (Home) or the Gate (Onboarding).
+     * Controls the visibility of Splash, Header, Navbar, and Views.
      * @param {Object|null} user - The authenticated User Model or null.
      */
     handleRouting(user) {
@@ -80,7 +83,7 @@ export class App {
         const header = document.getElementById('global-header');
         const navbar = document.getElementById('global-navbar');
         
-        // A. Dismiss Splash Screen (Smooth Fade)
+        // 1. Dismiss Splash Screen (Smooth Fade Out)
         if(splash) {
             splash.style.opacity = '0';
             setTimeout(() => {
@@ -90,34 +93,35 @@ export class App {
         }
 
         if (user) {
-            // --- PATH: AUTHENTICATED USER ---
+            // --- PATH A: AUTHENTICATED USER ---
             console.log(`✅ Session Validated: ${user.username}`);
             
-            // 1. Persist User State
-            this.state.setUser(user);
+            // 2. Persist User in Global State
+            state.setUser(user);
             
-            // 2. Initial Render (Home Dashboard)
+            // 3. Initial Render (Home Dashboard)
             this.homeCtrl.render(user);
             this.router.navigate('view-home');
             
-            // 3. Unlock UI Shell
+            // 4. Unlock Global UI Shell
             if(header) header.classList.remove('hidden');
             if(navbar) navbar.classList.remove('hidden');
 
-            // 4. Bind Global Navigation Events (The "Wiring")
+            // 5. Bind Global Navigation Events (Wiring Tabs to Logic)
             this.bindModuleTriggers();
 
         } else {
-            // --- PATH: GUEST / NEW USER ---
+            // --- PATH B: GUEST / NEW USER ---
             console.log("🆕 No Session Found -> Redirecting to Onboarding");
             
             // 1. Navigate to Auth Screen
             this.router.navigate('view-onboarding');
             
             // 2. Initialize Auth Logic
+            // We create a new instance to ensure fresh form state
             new OnboardingController(); 
             
-            // 3. Lock UI Shell (Focus Mode)
+            // 3. Lock UI Shell (Focus Mode for Registration)
             if(header) header.classList.add('hidden');
             if(navbar) navbar.classList.add('hidden');
         }
@@ -125,31 +129,37 @@ export class App {
 
     /**
      * Binds Navigation Bar buttons to their respective Controllers.
-     * Ensures data is refreshed ("Pulled") every time a tab is visited.
+     * Ensures data is refreshed ("Pulled") every time a tab is clicked.
      */
     bindModuleTriggers() {
-        // 1. Home Tab
+        // 1. Home Tab -> Refresh Header & Card
         document.getElementById('nav-home')?.addEventListener('click', () => {
-            const currentUser = this.state.getUser();
+            const currentUser = state.getUser();
             if (currentUser) this.homeCtrl.render(currentUser);
         });
 
-        // 2. Arena Tab (Fixes "Coming Soon" issue)
+        // 2. Arena Tab -> Load Matches
         document.getElementById('nav-arena')?.addEventListener('click', () => {
             console.log("🏟️ Module Load: Arena");
             this.arenaCtrl.init(); // Triggers data fetch
         });
 
-        // 3. Scout Tab (Fixes "Coming Soon" issue)
+        // 3. Scout Tab -> Load Market
         document.getElementById('nav-scout')?.addEventListener('click', () => {
             console.log("🔍 Module Load: Scout");
             this.scoutCtrl.init(); // Triggers data fetch
         });
 
-        // 4. Team Tab (Fixes Login Loop issue)
+        // 4. Team Tab -> Load Roster/Dashboard
         document.getElementById('nav-team')?.addEventListener('click', () => {
             console.log("🛡️ Module Load: Team");
             this.teamCtrl.init(); // Triggers data fetch
+        });
+        
+        // 5. Action Button -> (Placeholder for future Quick Actions)
+        document.getElementById('nav-action')?.addEventListener('click', () => {
+             console.log("⚡ Quick Action Triggered");
+             // Future: Open Quick Match Modal
         });
     }
 }
