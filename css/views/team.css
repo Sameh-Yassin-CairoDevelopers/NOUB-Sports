@@ -1,0 +1,211 @@
+/*
+ * Filename: css/views/team.css
+ * Version: 3.0.0
+ * Description: Styles for Team Management View.
+ * Covers: Create Team Form, Dashboard Header, Stats, and Action Buttons.
+ */
+
+/* 1. View Container Adjustment */
+#view-team {
+    padding: 20px;
+    padding-bottom: 110px; /* Extra space for Navbar */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 2. Creation Form (Empty State) */
+.team-creation-box {
+    background-color: var(--bg-surface);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 20px;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin-top: 20px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.empty-state-icon {
+    font-size: 3.5rem;
+    color: var(--gold-main);
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.2));
+}
+
+.team-creation-box h3 {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.team-creation-box p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+/* 3. Logo Color Picker */
+.color-picker-row {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    background: var(--bg-input);
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid #333;
+}
+
+input[type="color"] {
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    background: none;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+input[type="color"]:hover {
+    transform: scale(1.1);
+}
+
+.hint-text {
+    display: block;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--gold-dim);
+    margin-top: 6px;
+    margin-right: 5px;
+}
+
+/* 4. Team Dashboard Header */
+.team-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    animation: slideUp 0.4s ease-out;
+}
+
+.team-header-card {
+    position: relative;
+    border-radius: 24px;
+    padding: 30px 20px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden;
+}
+
+/* Logo Circle inside Header */
+.team-logo-circle {
+    width: 90px; height: 90px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 50%;
+    margin: 0 auto 15px auto;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 2.5rem;
+    border: 4px solid #fff;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+}
+
+.team-header-card h2 {
+    font-family: var(--font-sport);
+    font-size: 2.2rem;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.status-badge.warning { color: #fbbf24; border-color: #fbbf24; }
+.status-badge.success { color: #34d399; border-color: #34d399; }
+
+/* 5. Stats Row */
+.team-stats-row {
+    display: flex;
+    background: var(--bg-surface);
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.t-stat {
+    flex: 1;
+    text-align: center;
+    border-left: 1px solid rgba(255,255,255,0.05);
+}
+.t-stat:last-child { border-left: none; }
+
+.t-stat .val {
+    display: block;
+    font-family: var(--font-orbitron);
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+.t-stat .lbl {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* 6. Action Grid */
+.team-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.action-card {
+    background: var(--bg-input);
+    border: 1px solid #333;
+    padding: 20px;
+    border-radius: 16px;
+    color: var(--text-muted);
+    font-family: var(--font-primary);
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.action-card i { font-size: 1.5rem; color: var(--gold-main); }
+.action-card span { font-size: 0.9rem; font-weight: bold; }
+
+.action-card:hover {
+    background: #222;
+    border-color: var(--gold-main);
+    transform: translateY(-2px);
+}
+
+.action-card.danger i { color: var(--danger); }
+.action-card.danger:hover { border-color: var(--danger); }
+
+/* 7. Roster Section */
+.roster-section { margin-top: 15px; }
+.roster-section h4 {
+    color: var(--gold-main);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 8px;
+}
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
