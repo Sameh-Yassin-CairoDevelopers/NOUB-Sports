@@ -1,11 +1,8 @@
 /*
  * Filename: js/services/notificationService.js
- * Version: 3.0.0 (Day 4 - Engagement)
- * Description: Manages User Notifications.
- * Responsibilities:
- *  - Fetch inbox.
- *  - Mark as read.
- *  - Handle Actions: Approve Mint Request (and generate card), Accept Match Invite.
+ * Version: 3.0.0 (Day 4 - Batch 5)
+ * Description: Manages the Inbox (Mint Requests & Match Verifications).
+ * Acts as the 'Action Center' for Captains and Players.
  */
 
 import { supabase } from '../core/supabaseClient.js';
@@ -13,100 +10,152 @@ import { supabase } from '../core/supabaseClient.js';
 export class NotificationService {
 
     /**
-     * Get unread notifications for a user.
+     * Fetches all pending actions for the user.
+     * Aggregates data from 'mint_requests' and 'matches'.
+     * @param {string} userId - Current User UUID.
      */
-    async getNotifications(userId) {
-        const { data, error } = await supabase
-            .from('notifications')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(50);
+    async getPendingActions(userId) {
+        console.log("🔔 Fetching Notifications...");
+        
+        const actions = [];
 
-        if (error) throw error;
-        return data;
-    }
+        // 1. Fetch Mint Requests (Incoming)
+        const { data: mintReqs, error: mintError } = await supabase
+            .from('mint_requests')
+            .select(`
+                id, message, created_at,
+                requester:users!requester_id (username)
+            `)
+            .eq('target_player_id', userId)
+            .eq('status', 'PENDING');
 
-    /**
-     * Mark notification as read.
-     */
-    async markAsRead(notifId) {
-        await supabase
-            .from('notifications')
-            .update({ is_read: true })
-            .eq('id', notifId);
+        if (!mintError && mintReqs) {
+            mintReqs.forEach(req => {
+                actions.push({
+                    type: 'MINT_REQUEST',
+                    id: req.id,
+                    title: 'طلب توقيع كارت',
+                    desc: `${req.requester.username} يطلب نسخة موقعة منك.`,
+                    time: req.created_at
+                });
+            });
+        }
+
+        // 2. Fetch Match Verifications (For Captains)
+        const { data: matchReqs, error: matchError } = await supabase
+            .from('matches')
+            .select(`
+                id, score_a, score_b, played_at,
+                team_a:teams!team_a_id (name),
+                team_b:teams!team_b_id (name)
+            `)
+            .eq('verifier_id', userId)
+            .eq('status', 'PENDING_VERIFICATION');
+
+        if (!matchError && matchReqs) {
+            matchReqs.forEach(match => {
+                actions.push({
+                    type: 'MATCH_VERIFY',
+                    id: match.id,
+                    title: 'تأكيد نتيجة مباراة',
+                    desc: `${match.team_a.name} (${match.score_a}) - (${match.score_b}) ${match.team_b.name}`,
+                    time: match.played_at
+                });
+            });
+        }
+
+        // Sort by newest
+        return actions.sort((a, b) => new Date(b.time) - new Date(a.time));
     }
 
     /**
      * ACTION: Approve a Social Mint Request.
-     * This logic sits here because it's triggered from the Notification View.
-     * 
-     * 1. Update request status to APPROVED.
-     * 2. Mint the GIFT Card for the requester.
+     * Logic:
+     * 1. Mark Request as APPROVED.
+     * 2. Clone the Player's Genesis Card as a GIFT for the Requester.
      */
-    async approveMintRequest(requestId) {
-        console.log(`🎁 Social Mint: Approving Request ${requestId}`);
-
-        // A. Get Request Details
-        const { data: reqData, error: fetchError } = await supabase
+    async approveMint(requestId, userId) {
+        // A. Get Request Data
+        const { data: req } = await supabase
             .from('mint_requests')
             .select('*')
             .eq('id', requestId)
             .single();
 
-        if (fetchError || !reqData) throw new Error("طلب غير موجود.");
+        if (!req) throw new Error("الطلب غير موجود");
 
-        // B. Update Status
+        // B. Get Genesis Card Data (To copy visuals)
+        const { data: genesis } = await supabase
+            .from('cards')
+            .select('*')
+            .eq('owner_id', userId)
+            .eq('type', 'GENESIS')
+            .single();
+
+        if (!genesis) throw new Error("لا تملك كارتاً أصلياً لتنسخه.");
+
+        // C. Mint the Gift Card
+        // Transaction: Insert Card + Update Request
+        const { error } = await supabase
+            .from('cards')
+            .insert([{
+                owner_id: req.requester_id,     // The fan owns it now
+                subject_id: userId,             // It's a picture of YOU
+                display_name: genesis.display_name,
+                activity_type: 'FAN',           // Gifts are passive
+                position: genesis.position,
+                visual_dna: genesis.visual_dna,
+                stats: genesis.stats,           // Snapshot of stats
+                minted_by: userId,              // Signed by You
+                type: 'GIFT',
+                is_verified: true
+            }]);
+
+        if (error) throw error;
+
+        // D. Close Request
         await supabase
             .from('mint_requests')
             .update({ status: 'APPROVED' })
             .eq('id', requestId);
 
-        // C. Fetch The Star Player Data (Source of the card)
-        // We need to copy visual_dna from the star (target_player_id)
-        const { data: starCard } = await supabase
-            .from('cards')
-            .select('*')
-            .eq('owner_id', reqData.target_player_id)
-            .eq('type', 'GENESIS')
-            .single();
-
-        if (!starCard) throw new Error("لا يمكن العثور على الكارت الأصلي.");
-
-        // D. Mint the GIFT Card
-        // Logic: Owner becomes the Requester, but Subject remains the Star.
-        const { error: mintError } = await supabase
-            .from('cards')
-            .insert([{
-                owner_id: reqData.requester_id,   // The Fan gets it
-                subject_id: reqData.target_player_id, // It's a picture of the Star
-                display_name: starCard.display_name,
-                
-                activity_type: 'FAN', // Gift cards don't play matches
-                visual_dna: starCard.visual_dna, // Same look
-                stats: starCard.stats, // Snapshot of stats
-                
-                type: 'GIFT',
-                minted_by: reqData.target_player_id, // Signed by Star
-                is_verified: true,
-                
-                // Serial Number Logic: Count existing cards + 1
-                // (Simplified for MVP, usually requires atomic increment)
-                serial_number: Math.floor(Math.random() * 1000) + 2 
-            }]);
-
-        if (mintError) throw mintError;
-
         return true;
     }
 
     /**
-     * ACTION: Reject Request
+     * ACTION: Reject Mint
      */
-    async rejectMintRequest(requestId) {
+    async rejectMint(requestId) {
         await supabase
             .from('mint_requests')
             .update({ status: 'REJECTED' })
             .eq('id', requestId);
+    }
+
+    /**
+     * ACTION: Confirm Match Result
+     * Logic: Update match status -> Triggers (DB Side) will handle points.
+     */
+    async confirmMatch(matchId) {
+        const { error } = await supabase
+            .from('matches')
+            .update({ status: 'CONFIRMED' })
+            .eq('id', matchId);
+
+        if (error) throw error;
+        return true;
+    }
+
+    /**
+     * ACTION: Reject Match
+     */
+    async rejectMatch(matchId) {
+        const { error } = await supabase
+            .from('matches')
+            .update({ status: 'REJECTED' })
+            .eq('id', matchId);
+        
+        if (error) throw error;
+        return true;
     }
 }
