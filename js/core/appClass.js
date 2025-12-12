@@ -1,17 +1,21 @@
 /*
  * Filename: js/core/appClass.js
- * Version: 3.1.0
- * Description: The Central Application Controller.
- * Manages Auth Check, Routing, and Controller Initialization.
+ * Version: 3.2.0 (FINAL INTEGRATED)
+ * Description: Main Application Controller.
+ * Initializes all controllers and handles routing logic.
  */
 
 import { Router } from './router.js';
 import { TelegramService } from './telegram.js';
 import { State } from './state.js';
 import { AuthService } from '../services/authService.js';
+
+// Import All Controllers
 import { OnboardingController } from '../controllers/onboardingCtrl.js';
 import { HomeController } from '../controllers/homeCtrl.js';
-import { TeamController } from '../controllers/teamCtrl.js'; // [NEW]
+import { TeamController } from '../controllers/teamCtrl.js';
+import { ScoutController } from '../controllers/scoutCtrl.js';
+import { ArenaController } from '../controllers/arenaCtrl.js';
 
 export class App {
     constructor() {
@@ -20,20 +24,22 @@ export class App {
         this.state = new State();
         this.auth = new AuthService();
         
-        // Load Controllers
+        // Instantiate Controllers
         this.homeCtrl = new HomeController();
         this.teamCtrl = new TeamController(); 
+        this.scoutCtrl = new ScoutController();
+        this.arenaCtrl = new ArenaController();
     }
 
     async init() {
-        console.log("🚀 System Init...");
+        console.log("🚀 NOUB SPORTS: System Boot...");
         this.telegram.init();
 
         try {
             const user = await this.auth.checkUser();
             this.handleRouting(user);
         } catch (error) {
-            console.error("Auth Error:", error);
+            console.error("Boot Error:", error);
             this.handleRouting(null);
         }
     }
@@ -45,19 +51,18 @@ export class App {
         
         if(splash) {
             splash.style.opacity = '0';
-            setTimeout(() => {
-                splash.style.display = 'none';
-                splash.classList.remove('active');
+            setTimeout(() => { 
+                splash.style.display = 'none'; 
+                splash.classList.remove('active'); 
             }, 500);
         }
 
         if (user) {
-            console.log(`✅ Welcome ${user.username}`);
+            console.log(`✅ Logged in as: ${user.username}`);
             this.state.setUser(user);
             
-            // Initial Views Render
+            // Initial Render
             this.homeCtrl.render(user);
-            
             this.router.navigate('view-home');
             
             if(header) header.classList.remove('hidden');
@@ -66,9 +71,9 @@ export class App {
             this.bindNavigationEvents();
 
         } else {
-            console.log("🆕 New User");
+            console.log("🆕 Guest Mode -> Onboarding");
             this.router.navigate('view-onboarding');
-            new OnboardingController(); 
+            new OnboardingController(); // Init Auth Logic
             
             if(header) header.classList.add('hidden');
             if(navbar) navbar.classList.add('hidden');
@@ -76,15 +81,22 @@ export class App {
     }
 
     bindNavigationEvents() {
-        // Team Tab Refresh
-        document.getElementById('nav-team')?.addEventListener('click', () => {
-            this.teamCtrl.init(); 
-        });
-
-        // Home Tab Refresh
+        // 1. Home
         document.getElementById('nav-home')?.addEventListener('click', () => {
-            const user = this.state.getUser();
-            if(user) this.homeCtrl.render(user);
+            const u = this.state.getUser();
+            if(u) this.homeCtrl.render(u);
+        });
+        // 2. Arena
+        document.getElementById('nav-arena')?.addEventListener('click', () => {
+            this.arenaCtrl.init();
+        });
+        // 3. Scout
+        document.getElementById('nav-scout')?.addEventListener('click', () => {
+            this.scoutCtrl.init();
+        });
+        // 4. Team
+        document.getElementById('nav-team')?.addEventListener('click', () => {
+            this.teamCtrl.init();
         });
     }
 }
