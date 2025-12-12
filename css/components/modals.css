@@ -1,0 +1,76 @@
+/*
+ * Filename: css/components/modals.css
+ * Version: 3.0.0
+ * Description: Styles for Overlay Modals (Notifications & Alerts).
+ */
+
+/* 1. Modal Overlay (Background) */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+    display: flex; justify-content: center; align-items: flex-end; /* Bottom Sheet style */
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* 2. Modal Content (The Box) */
+.modal-box {
+    background: var(--bg-surface);
+    width: 100%; max-width: 500px;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    border-top: 2px solid var(--gold-dim);
+    padding: 25px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+}
+
+.modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+
+.modal-header h3 { color: var(--gold-main); font-size: 1.2rem; }
+.close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+
+/* 3. Notification List */
+.notif-list { display: flex; flex-direction: column; gap: 10px; }
+
+.notif-card {
+    background: var(--bg-input);
+    border: 1px solid #333;
+    padding: 15px;
+    border-radius: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+}
+
+.notif-info { display: flex; gap: 12px; align-items: center; }
+.notif-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(212,175,55,0.1); color: var(--gold-main);
+    display: flex; justify-content: center; align-items: center;
+    font-size: 1.2rem;
+}
+
+.notif-text h4 { font-size: 0.95rem; margin-bottom: 3px; color: #fff; }
+.notif-text p { font-size: 0.8rem; color: var(--text-muted); }
+
+/* 4. Action Buttons (Accept/Reject) */
+.notif-actions {
+    display: flex; gap: 10px; margin-top: 5px;
+}
+
+.btn-accept, .btn-reject {
+    flex: 1; padding: 8px; border-radius: 8px;
+    border: none; cursor: pointer; font-weight: bold; font-size: 0.8rem;
+}
+
+.btn-accept { background: var(--success); color: #000; }
+.btn-reject { background: rgba(255,255,255,0.1); color: var(--text-muted); border: 1px solid #444; }
+
+/* Empty State */
+.empty-notif { text-align: center; color: var(--text-muted); padding: 30px; }
