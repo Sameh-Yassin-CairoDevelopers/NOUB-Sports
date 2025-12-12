@@ -1,8 +1,8 @@
 /*
  * Filename: js/controllers/onboardingCtrl.js
- * Version: 2.2.0
- * Description: Controls the Onboarding View interactions.
- * Handles Avatar customization, Form inputs, and Minting submission.
+ * Version: 3.3.0 (HOTFIX)
+ * Description: Controls Onboarding View.
+ * FIX: Calls 'registerUserTelegram' instead of 'registerUser'.
  */
 
 import { AvatarEngine } from '../utils/avatarEngine.js';
@@ -17,39 +17,26 @@ export class OnboardingController {
         this.init();
     }
 
-    /**
-     * Initialize the controller logic
-     */
     init() {
-        console.log("🎮 Onboarding Controller Initialized");
+        console.log("🎮 Onboarding Controller Active");
         this.bindEvents();
     }
 
-    /**
-     * Bind all DOM events for this view
-     */
     bindEvents() {
-        // 1. Avatar Control Buttons (Skin & Kit)
-        const btnSkinNext = document.getElementById('btn-skin-next');
-        const btnSkinPrev = document.getElementById('btn-skin-prev');
-        const btnKitNext = document.getElementById('btn-kit-next');
-        const btnKitPrev = document.getElementById('btn-kit-prev');
+        // 1. Avatar Controls
+        document.getElementById('btn-skin-next')?.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('skin', 1); });
+        document.getElementById('btn-skin-prev')?.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('skin', -1); });
+        document.getElementById('btn-kit-next')?.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('kit', 1); });
+        document.getElementById('btn-kit-prev')?.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('kit', -1); });
 
-        if (btnSkinNext) btnSkinNext.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('skin', 1); });
-        if (btnSkinPrev) btnSkinPrev.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('skin', -1); });
-        if (btnKitNext) btnKitNext.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('kit', 1); });
-        if (btnKitPrev) btnKitPrev.addEventListener('click', (e) => { e.preventDefault(); this.avatarEngine.change('kit', -1); });
-
-        // 2. Activity Type Logic (Player vs Fan)
+        // 2. Activity Type Logic
         const activitySelect = document.getElementById('inp-activity');
         const posGroup = document.getElementById('group-position');
         
         if (activitySelect) {
             activitySelect.addEventListener('change', (e) => {
                 const val = e.target.value;
-                const hiddenRoles = ['FAN', 'INACTIVE'];
-                
-                if (hiddenRoles.includes(val) || val === '') {
+                if (val === 'FAN' || val === '' || val === 'INACTIVE') {
                     posGroup.classList.add('hidden');
                 } else {
                     posGroup.classList.remove('hidden');
@@ -57,67 +44,79 @@ export class OnboardingController {
             });
         }
 
-        // 3. Form Submission (Minting)
-        const form = document.getElementById('form-register');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleMint(e));
+        // 3. Tab Switching
+        const tabTg = document.getElementById('tab-tg');
+        const tabEmail = document.getElementById('tab-email');
+        if (tabTg && tabEmail) {
+            tabTg.addEventListener('click', (e) => this.switchTab(e, 'panel-tg'));
+            tabEmail.addEventListener('click', (e) => this.switchTab(e, 'panel-email'));
         }
+
+        // 4. Form Submissions
+        // Main Form (Default is Telegram Mint)
+        document.getElementById('form-register')?.addEventListener('submit', (e) => this.handleTelegramMint(e));
+        
+        // Email Buttons (If present in HTML)
+        document.getElementById('btn-login')?.addEventListener('click', () => this.handleEmailLogin());
+        document.getElementById('btn-signup')?.addEventListener('click', () => this.handleEmailSignup());
+    }
+
+    switchTab(e, panelId) {
+        document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        // Logic to switch panels (Requires panel-tg and panel-email divs in HTML)
+        // For MVP Day 4, we might default to TG form.
     }
 
     /**
-     * Handles the Minting Process
-     * @param {Event} e - Submit Event
+     * HANDLER: Telegram Minting (The Fix)
      */
-    async handleMint(e) {
+    async handleTelegramMint(e) {
         e.preventDefault();
-        
-        // UI Feedback
         const btn = document.getElementById('btn-mint');
-        const originalText = btn.textContent;
         btn.disabled = true;
         btn.textContent = "جاري الاتصال بالخورا...";
 
         // Collect Data
         const name = document.getElementById('inp-name').value;
         const zone = document.getElementById('inp-zone').value;
+        const activity = document.getElementById('inp-activity').value;
         
-        // Handle Position Radio Buttons
-        const posElement = document.querySelector('input[name="pos"]:checked');
-        const pos = posElement ? posElement.value : 'FAN';
-
-        // Check for Telegram ID (Real or needs generation)
-        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        const telegramId = tgUser ? tgUser.id.toString() : null;
+        // Position Logic
+        let pos = 'FAN';
+        if (!document.getElementById('group-position').classList.contains('hidden')) {
+            const posEl = document.querySelector('input[name="pos"]:checked');
+            pos = posEl ? posEl.value : 'FWD';
+        }
 
         try {
-            // Step A: Register the User in DB
-            const newUser = await this.authService.registerUser({
+            // FIX: Using registerUserTelegram instead of registerUser
+            // Because AuthService V3.2.0 split the logic.
+            const newUser = await this.authService.registerUserTelegram({
+                telegramId: null, // Service handles generation
                 username: name,
                 zoneId: parseInt(zone),
-                telegramId: telegramId // Service handles generation if null
-            });
-
-            // Step B: Mint the Player Card
-            await this.mintingService.mintCard({
-                ownerId: newUser.id,
-                name: name,
+                activityType: activity,
                 position: pos,
                 visualDna: this.avatarEngine.getConfig()
             });
 
-            // Success
+            // Note: registerUserTelegram inside AuthService ALREADY calls _mintGenesisCard internally.
+            // So we don't need to call mintingService manually here to avoid duplicates.
+            // But if we want to be safe, we rely on AuthService return.
+
             alert("تم صك الهوية بنجاح! جاري الدخول...");
-            
-            // Reload to trigger the main App Auth Check
             window.location.reload();
 
         } catch (err) {
-            console.error("Minting Failed:", err);
-            alert("حدث خطأ أثناء التسجيل: " + err.message);
-            
-            // Reset Button
+            console.error("Minting Error:", err);
+            alert("حدث خطأ: " + err.message);
             btn.disabled = false;
-            btn.textContent = originalText;
+            btn.textContent = "صك الهوية";
         }
     }
+
+    // Email Handlers (Optional for now)
+    async handleEmailLogin() { /* ... code from previous batch if needed ... */ }
+    async handleEmailSignup() { /* ... code from previous batch if needed ... */ }
 }
