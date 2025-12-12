@@ -5,7 +5,6 @@
  */
 
 import { NotificationService } from '../services/notificationService.js';
-import { State } from '../core/state.js';
 
 export class HomeController {
     constructor() {
@@ -177,3 +176,4 @@ export class HomeController {
         });
     }
 }
+
