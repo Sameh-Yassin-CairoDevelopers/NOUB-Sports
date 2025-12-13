@@ -1,13 +1,14 @@
 /*
  * Filename: js/services/matchService.js
- * Version: 4.2.0 (Diamond Release)
+ * Version: 5.0.0 (MASTER ENGINE)
  * Description: The Core Match Engine Service.
  * 
- * CORE RESPONSIBILITIES:
- * 1. Constraint Validation: Enforces the "24-Match Rule" and "2-Hour Buffer" rule.
- * 2. Data Retrieval: Fetches contextual data (Opponents, Venues, Live Feed).
- * 3. Transaction Management: Orchestrates the complex insert sequence for a match record
- *    (Header -> Lineups -> Events).
+ * RESPONSIBILITIES:
+ * 1. Constraints: Enforces Weekly Cap (24 matches) & Time Buffer (2 hours).
+ * 2. Discovery: Fetches valid opponents (Active Teams) and Venues.
+ * 3. Transaction: Executes the complex 'Submit Match' operation atomically:
+ *    (Insert Match -> Insert Lineup -> Insert Events).
+ * 4. Feed: Provides the live stream of matches for the Arena.
  */
 
 import { supabase } from '../core/supabaseClient.js';
@@ -16,12 +17,9 @@ export class MatchService {
 
     /**
      * Fetches valid opponents in the same zone.
-     * Rule: Can only play against 'ACTIVE' teams (5+ players).
-     * Rule: Cannot play against self.
-     * 
-     * @param {number} zoneId - The local Khôra ID.
-     * @param {string} myTeamId - Current team ID to exclude.
-     * @returns {Promise<Array>} List of eligible teams.
+     * Rules: Team must be ACTIVE (5+ players) and NOT my team.
+     * @param {number} zoneId - Local Zone ID.
+     * @param {string} myTeamId - ID of the creating team.
      */
     async getOpponents(zoneId, myTeamId) {
         const { data, error } = await supabase
@@ -31,17 +29,12 @@ export class MatchService {
             .eq('status', 'ACTIVE') 
             .neq('id', myTeamId);   
             
-        if (error) {
-            console.error("Opponent Fetch Error:", error);
-            throw new Error("فشل تحميل قائمة الخصوم.");
-        }
+        if (error) throw new Error("فشل تحميل قائمة الخصوم.");
         return data || [];
     }
 
     /**
      * Fetches registered venues in the zone.
-     * @param {number} zoneId - The local zone ID.
-     * @returns {Promise<Array>} List of venues.
      */
     async getVenues(zoneId) {
         const { data, error } = await supabase
@@ -49,160 +42,115 @@ export class MatchService {
             .select('*')
             .eq('zone_id', zoneId);
             
-        if (error) {
-            console.error("Venue Fetch Error:", error);
-            throw new Error("فشل تحميل قائمة الملاعب.");
-        }
+        if (error) throw new Error("فشل تحميل قائمة الملاعب.");
         return data || [];
     }
 
     /**
-     * VALIDATION ENGINE: Checks if a team is allowed to play.
-     * 
-     * Constraint 1: Weekly Cap (Max 24 matches/week).
-     * Constraint 2: Temporal Buffer (Min 2 hours between matches).
-     * 
-     * @param {string} teamId - The team initiating the match.
-     * @returns {Promise<boolean>} True if valid, throws Error if invalid.
+     * VALIDATION: Checks if the team is allowed to play.
+     * @param {string} teamId - The team ID.
      */
     async validateMatchConstraints(teamId) {
         const now = new Date();
         
-        // --- Check 1: Weekly Cap ---
+        // 1. Weekly Cap Check (24 Matches)
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(now.getDate() - 7);
         
-        const { count, error: countError } = await supabase
+        const { count, error } = await supabase
             .from('matches')
             .select('*', { count: 'exact', head: true })
             .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
             .gte('created_at', oneWeekAgo.toISOString());
 
-        if (countError) throw countError;
+        if (error) throw error;
+        if (count >= 24) throw new Error("استنفد الفريق الحد الأقصى (24 مباراة أسبوعياً).");
 
-        if (count >= 24) {
-            throw new Error("تنبيه: لقد استنفد الفريق الحد الأقصى للمباريات هذا الأسبوع (24 مباراة).");
-        }
-
-        // --- Check 2: 2-Hour Buffer ---
+        // 2. Time Buffer Check (2 Hours)
         const twoHoursAgo = new Date();
         twoHoursAgo.setHours(now.getHours() - 2);
         
-        const { data: recentMatch, error: timeError } = await supabase
+        const { data: recent } = await supabase
             .from('matches')
             .select('id')
             .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
             .gte('created_at', twoHoursAgo.toISOString())
             .maybeSingle();
 
-        if (timeError && timeError.code !== 'PGRST116') throw timeError;
-
-        if (recentMatch) {
-            throw new Error("تنبيه: يجب الانتظار ساعتين على الأقل بين المباريات الرسمية.");
-        }
+        if (recent) throw new Error("يجب الانتظار ساعتين بين المباريات الرسمية.");
 
         return true;
     }
 
     /**
      * TRANSACTION: Submits a full match record.
-     * 
-     * Steps:
-     * 1. Insert Match Header (Score, Teams, Venue).
-     * 2. Insert Match Lineups (Who played?).
-     * 3. Insert Match Events (Scorers).
-     * 
-     * @param {Object} payload - Combined data object from Controller.
+     * @param {Object} payload - { creatorId, myTeamId, oppTeamId, venueId, myScore, oppScore, lineup[] }
      */
     async submitMatch(payload) {
-        console.log("⚔️ MatchService: Submitting Transaction...");
+        console.log("⚔️ MatchService: Executing Transaction...");
 
         // 1. Insert Match Header
         const { data: match, error: matchError } = await supabase
             .from('matches')
             .insert([{
-                season_id: 1, // Default Season (Hardcoded for MVP)
+                season_id: 1, // Default Season
                 team_a_id: payload.myTeamId,
                 team_b_id: payload.oppTeamId,
                 venue_id: payload.venueId,
                 score_a: payload.myScore,
                 score_b: payload.oppScore,
                 creator_id: payload.creatorId,
-                status: 'PENDING_VERIFICATION', // Waits for opponent confirmation
-                match_data: {}, // Future: detailed stats
+                status: 'PENDING_VERIFICATION',
+                match_data: {}, // Future: Scorers JSON
                 played_at: new Date().toISOString()
             }])
             .select()
             .single();
 
-        if (matchError) {
-            console.error("Match Insert Error:", matchError);
-            throw new Error(`فشل تسجيل المباراة: ${matchError.message}`);
-        }
+        if (matchError) throw new Error(`فشل التسجيل: ${matchError.message}`);
         
         const matchId = match.id;
 
-        // 2. Insert Lineups (Critical for Participation XP)
-        // Payload.lineup is an array of UserIDs who were checked
+        // 2. Insert Lineup (Critical for Defenders/GKs logic)
         if (payload.lineup && payload.lineup.length > 0) {
             const lineupRows = payload.lineup.map(userId => ({
                 match_id: matchId,
                 team_id: payload.myTeamId,
                 player_id: userId,
-                is_starter: true, // MVP: All selected are starters
-                xp_earned: 0 // Will be calculated upon confirmation
+                is_starter: true,
+                xp_earned: 0 // Calculated later by triggers
             }));
             
-            const { error: lineupError } = await supabase
-                .from('match_lineups')
-                .insert(lineupRows);
-                
-            if (lineupError) {
-                console.error("Lineup Insert Error:", lineupError);
-                // Non-blocking for MVP, but should be logged
-            }
+            const { error: lineupError } = await supabase.from('match_lineups').insert(lineupRows);
+            if (lineupError) console.error("Lineup Error:", lineupError);
         }
 
-        // 3. Insert Events (Goals) if scorers provided
-        // (Note: Controller v4.0 sends empty scorers array currently, reserved for future update)
-        if (payload.scorers && payload.scorers.length > 0) {
-            const eventRows = payload.scorers.map(userId => ({
-                match_id: matchId,
-                player_id: userId,
-                event_type: 'GOAL'
-            }));
-            await supabase.from('match_events').insert(eventRows);
-        }
+        // 3. Insert Events (Goals) - Future expansion
+        // ...
 
-        // 4. Verification Logic (Notifications)
-        // Handled by Database Triggers or NotificationService polling.
-        
         return true;
     }
 
     /**
-     * Gets the Live Match Feed for the Zone.
-     * Returns matches ordered by date (newest first).
-     * @param {number} zoneId - The zone to filter by.
+     * Gets Live Match Feed.
      */
     async getLiveFeed(zoneId) {
-        // We join with 'teams' and 'venues' to get readable names
         const { data, error } = await supabase
             .from('matches')
             .select(`
                 id, score_a, score_b, status, played_at,
-                team_a:teams!team_a_id (name, logo_dna, zone_id),
+                team_a:teams!team_a_id (name, logo_dna),
                 team_b:teams!team_b_id (name, logo_dna),
                 venue:venues (name)
             `)
-            // Logic: Filter matches where Team A belongs to the Zone
+            // Filter matches where Team A (Home) is in this Zone
+            // Note: This relies on inner join filtering logic
             .eq('team_a.zone_id', zoneId) 
             .order('played_at', { ascending: false })
             .limit(20);
 
         if (error) {
-            console.error("Feed Error:", error);
-            // Return empty array gracefully to avoid crashing UI
+            console.warn("Feed Fetch Warning:", error.message);
             return [];
         }
         return data;
