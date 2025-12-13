@@ -1,8 +1,8 @@
 /*
  * Filename: js/services/marketService.js
- * Version: 4.2.2 (MASTER ACADEMIC)
+ * Version: 4.3.0 (FIX: Inner Join Filtering)
  * Description: Service layer for Player Discovery & Scouting.
- * Handles complex joins to filter players by Zone, Activity, and Social Stats.
+ * FIX NOTES: Added '!inner' to relations to allow filtering by parent table columns.
  */
 
 import { supabase } from '../core/supabaseClient.js';
@@ -11,14 +11,14 @@ export class MarketService {
 
     /**
      * Fetches a list of players in the specified Zone.
-     * Applies filters to show only relevant 'GENESIS' cards (Main Identity).
+     * Uses INNER JOIN to strictly filter cards owned by users in that zone.
      * 
      * @param {number} zoneId - The Zone ID to filter by.
      * @param {string} currentUserId - To exclude self from results.
      * @returns {Promise<Array>} List of card objects with user details.
      */
     async getPlayersInZone(zoneId, currentUserId) {
-        // Explicit Join: cards -> users (via owner_id)
+        // CRITICAL FIX: Used '!inner' to allow filtering on 'users.current_zone_id'
         const { data, error } = await supabase
             .from('cards')
             .select(`
@@ -30,24 +30,20 @@ export class MarketService {
                 stats,
                 owner_id,
                 mint_count,
-                users!owner_id (
+                users!owner_id!inner (
                     current_zone_id,
                     reputation_score
                 )
             `)
-            .eq('users.current_zone_id', zoneId) // Filter by Zone
+            .eq('users.current_zone_id', zoneId) // This filter requires !inner
             .neq('owner_id', currentUserId)      // Exclude Self
             .eq('type', 'GENESIS')               // Only Main Cards
             .order('created_at', { ascending: false })
-            .limit(50); // Pagination Limit
+            .limit(50); 
 
         if (error) {
             console.error("Market Fetch Error:", error);
-            // Translate error for UI
-            if (error.code === 'PGRST200' || error.code === 'PGRST201') {
-                throw new Error("خطأ في هيكل البيانات (Ambiguous Join).");
-            }
-            throw new Error("فشل تحميل السوق. يرجى المحاولة لاحقاً.");
+            throw new Error("فشل تحميل السوق. تأكد من صحة البيانات.");
         }
 
         return data;
@@ -55,12 +51,10 @@ export class MarketService {
 
     /**
      * Retrieves 'Trending' players based on Social Mint Count.
-     * Used for the "Talk of the Town" section.
-     * 
      * @param {number} zoneId - The Zone ID.
-     * @returns {Promise<Array>} Top 5 players by mint_count.
      */
     async getTrendingPlayers(zoneId) {
+        // CRITICAL FIX: Used '!inner' here as well
         const { data, error } = await supabase
             .from('cards')
             .select(`
@@ -69,7 +63,7 @@ export class MarketService {
                 position,
                 visual_dna,
                 mint_count,
-                users!owner_id ( current_zone_id )
+                users!owner_id!inner ( current_zone_id )
             `)
             .eq('users.current_zone_id', zoneId)
             .order('mint_count', { ascending: false })
@@ -84,9 +78,7 @@ export class MarketService {
     }
 
     /**
-     * Searches for players by Name or Position.
-     * (Client-side filtering helper, or could be DB query).
-     * Currently MVP uses client-side filter in Controller.
+     * Client-side search helper
      */
     searchLocal(allPlayers, term) {
         if (!term) return allPlayers;
