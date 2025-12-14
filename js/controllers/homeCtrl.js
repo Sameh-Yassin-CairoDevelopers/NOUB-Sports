@@ -10,6 +10,7 @@
 
 import { NotificationService } from '../services/notificationService.js';
 import { state } from '../core/state.js'; // Correct Singleton Import
+import { AvatarEngine } from '../utils/avatarEngine.js';
 
 export class HomeController {
     constructor() {
@@ -60,41 +61,59 @@ export class HomeController {
     /**
      * Renders the Visual Card
      */
+/**
+     * Renders the Visual Card (FIFA-Style Shield with Layered Avatar).
+     * Uses AvatarEngine to compose the character layers and print name on shirt.
+     * @param {Object} user - The User Model containing visualDna and stats.
+     */
     renderPlayerCard(user) {
-        const stats = { 
-            rating: 60, 
-            pac: 65, sho: 55, pas: 60, 
-            dri: 58, def: 50, phy: 62, 
-            pos: 'FWD' 
+        // 1. Setup Stats (Fallback logic for new users)
+        // In the future, these will come directly from 'user.stats' JSONB from DB
+        const stats = {
+            rating: user.stats?.rating || 60,
+            pac: 65, 
+            sho: 55, 
+            pas: 60,
+            dri: 58, 
+            def: 50, 
+            phy: 62,
+            pos: user.position || 'FAN'
         };
-        
-        let visual = { skin: 1, kit: 1 };
-        if (user.visualDna) {
-            visual = typeof user.visualDna === 'string' ? JSON.parse(user.visualDna) : user.visualDna;
-        }
 
-        const skinColors = ['#F5C6A5', '#C68642', '#8D5524'];
-        const kitColors  = ['#EF4444', '#10B981', '#3B82F6'];
-        
-        const finalSkin = skinColors[(visual.skin || 1) - 1] || skinColors[0];
-        const finalKit  = kitColors[(visual.kit || 1) - 1] || kitColors[0];
+        // 2. Generate the Dynamic Avatar HTML
+        // This calls the static method we created in Batch (A)
+        // It creates: Shirt Layer + Head Layer + Text Layer (Name on Shirt)
+        const avatarHtml = AvatarEngine.generateAvatarHTML(user.visualDna, user.username);
 
+        // 3. Inject HTML into View Container
+        // Note: The structure matches css/components/cards.css (Shield Layout)
         this.viewContainer.innerHTML = `
             <div class="card-container fade-in">
+                
+                <!-- THE DIGITAL ASSET (SHIELD CARD) -->
                 <div class="player-card rarity-common">
+                    
+                    <!-- A. Top Info (Rating & Position) -->
                     <div class="card-top">
                         <div class="card-rating text-gold">${stats.rating}</div>
                         <div class="card-pos">${stats.pos}</div>
-                        <div class="card-flag"><i class="fa-solid fa-location-dot"></i></div>
-                    </div>
-                    <div class="card-image-area">
-                        <div class="avatar-display-large" style="color: ${finalSkin}; filter: drop-shadow(0 0 5px ${finalKit});">
-                            <i class="fa-solid fa-user-astronaut"></i>
+                        <div class="card-flag">
+                            <i class="fa-solid fa-location-dot"></i>
                         </div>
                     </div>
+                    
+                    <!-- B. Avatar Visualization (The Engine Output) -->
+                    <div class="card-image-area">
+                        ${avatarHtml}
+                    </div>
+
+                    <!-- C. Bottom Info (Name & Stats) -->
                     <div class="card-info">
                         <h2 class="player-name">${user.username}</h2>
+                        
                         <div class="separator-line"></div>
+
+                        <!-- Stats Matrix (English Labels as requested) -->
                         <div class="card-stats-grid">
                             <div class="stat-box"><span>${stats.pac}</span> PAC</div>
                             <div class="stat-box"><span>${stats.dri}</span> DRI</div>
@@ -105,6 +124,8 @@ export class HomeController {
                         </div>
                     </div>
                 </div>
+
+                <!-- D. Quick Actions (Below Card) -->
                 <div class="home-actions">
                     <button class="btn-action-secondary" onclick="alert('خدمة التعديل: قريباً')">
                         <i class="fa-solid fa-pen-nib"></i> تعديل المظهر
@@ -115,7 +136,6 @@ export class HomeController {
                 </div>
             </div>`;
     }
-
     /**
      * Injects Bell Icon & Logic
      */
@@ -272,3 +292,4 @@ export class HomeController {
         });
     }
 }
+
