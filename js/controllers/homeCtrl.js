@@ -84,6 +84,7 @@ export class HomeController {
         // This calls the static method we created in Batch (A)
         // It creates: Shirt Layer + Head Layer + Text Layer (Name on Shirt)
         const avatarHtml = AvatarEngine.generateAvatarHTML(user.visualDna, user.username);
+        const bgUrl = "https://images.unsplash.com/photo-1522770179533-24471fcdba45?q=80&w=1000&auto=format&fit=crop"; // صورة ملعب مظلم
 
         // 3. Inject HTML into View Container
         // Note: The structure matches css/components/cards.css (Shield Layout)
@@ -124,6 +125,7 @@ export class HomeController {
                         </div>
                     </div>
                 </div>
+                <div class="player-card rarity-common" style="background-image: url('${bgUrl}');">
 
                 <!-- D. Quick Actions (Below Card) -->
                 <div class="home-actions">
@@ -292,4 +294,5 @@ export class HomeController {
         });
     }
 }
+
 
