@@ -3,6 +3,7 @@
  * Description: General formatting utilities.
  */
 
+
 export const Helpers = {
     formatCurrency: (amount) => {
         return new Intl.NumberFormat('en-US').format(amount);
@@ -11,3 +12,4 @@ export const Helpers = {
         return dateObj.toLocaleDateString('ar-EG');
     }
 };
+
