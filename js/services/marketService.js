@@ -10,6 +10,8 @@
  * 4. Role Segmentation: Fetches Players vs Fans based on Activity Type.
  */
 
+
+
 import { supabase } from '../core/supabaseClient.js';
 
 export class MarketService {
@@ -141,3 +143,4 @@ export class MarketService {
         );
     }
 }
+
