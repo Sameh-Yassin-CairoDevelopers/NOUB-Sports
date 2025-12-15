@@ -1,74 +1,112 @@
 /*
  * Filename: css/views/scout.css
- * Version: 3.0.0
- * Description: Styles for the Market/Scouting View.
+ * Version: 5.0.0 (Filters Styling)
+ * Description: Styles for Scout View including Filter Pills.
  */
 
-/* 1. Container */
 #view-scout {
     padding: 20px;
     padding-bottom: 110px;
 }
 
-/* 2. Search Bar */
+/* 1. Header Area */
+.scout-header {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+/* Search Bar */
 .search-bar-wrapper {
     background: var(--bg-input);
     border: 1px solid #333;
     border-radius: 30px;
-    padding: 10px 20px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 20px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
-
 .search-bar-wrapper i { color: var(--gold-main); }
 .search-bar-wrapper input {
-    background: transparent; border: none; padding: 0; width: 100%; font-size: 1rem;
+    background: transparent; border: none; padding: 0; width: 100%; font-size: 1rem; color: #fff;
 }
-.search-bar-wrapper input:focus { border: none; box-shadow: none; }
 
-/* 3. Trending (Horizontal Scroll) */
-.trending-section { margin-bottom: 25px; }
-.trending-section h4 { color: var(--gold-main); margin-bottom: 10px; font-size: 0.9rem; }
+/* 2. Filter Pills */
+.filter-pills {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.pill {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    font-family: var(--font-primary);
+}
+
+.pill.active {
+    background: var(--gold-main);
+    color: #000;
+    border-color: var(--gold-main);
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+/* 3. Trending Section */
+.trending-section { margin-bottom: 30px; }
+.trending-section h4 { 
+    color: var(--gold-main); margin-bottom: 15px; font-size: 0.95rem; 
+    border-right: 3px solid var(--gold-main); padding-right: 10px;
+}
 
 .trending-scroll {
-    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;
-    scrollbar-width: none; /* Hide scrollbar */
+    display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;
+    scrollbar-width: none;
 }
 .trending-scroll::-webkit-scrollbar { display: none; }
 
 .mini-trend-card {
-    background: linear-gradient(135deg, #333, #111);
+    background: linear-gradient(145deg, #252525, #111);
     border: 1px solid var(--gold-dim);
-    border-radius: 12px;
-    padding: 10px;
-    min-width: 80px;
+    border-radius: 16px;
+    padding: 12px;
+    min-width: 90px;
     text-align: center;
     flex-shrink: 0;
 }
-.mini-trend-card span { display: block; font-size: 0.7rem; margin-top: 5px; color: #fff; }
+.mini-trend-card span { 
+    display: block; font-size: 0.75rem; margin-top: 8px; color: #fff; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
+}
 
-/* 4. Market Grid */
+/* 4. Main Grid */
 .market-grid-section h4 { color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem; }
 
 .market-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 Columns */
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
 }
 
-/* 5. Player Scout Card */
+/* 5. Scout Card */
 .scout-card {
     background: var(--bg-surface);
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 16px;
     padding: 15px;
     text-align: center;
-    position: relative;
     transition: transform 0.2s;
-    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
 .scout-card:hover {
@@ -82,29 +120,31 @@
 .scout-rating { font-family: var(--font-orbitron); font-size: 0.9rem; }
 
 .scout-avatar {
-    margin: 10px auto;
-    width: 50px; height: 50px;
-    background: #222; border-radius: 50%;
+    margin: 15px auto;
+    width: 60px; height: 60px;
+    background: #1a1a1a; border-radius: 50%;
     display: flex; justify-content: center; align-items: center;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     border: 2px solid rgba(255,255,255,0.1);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
 }
 
-.scout-info h5 { margin: 5px 0; font-size: 0.9rem; color: #fff; }
+.scout-info h5 { margin: 5px 0; font-size: 0.95rem; color: #fff; }
 .scout-tags span {
-    font-size: 0.6rem; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: var(--text-grey);
+    font-size: 0.65rem; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; color: var(--text-grey);
 }
 
 .btn-social-mint {
     width: 100%;
-    background: rgba(212,175,55,0.1);
+    background: transparent;
     color: var(--gold-main);
     border: 1px solid var(--gold-dim);
-    border-radius: 8px;
-    padding: 6px;
-    margin-top: 10px;
-    font-size: 0.75rem;
+    border-radius: 10px;
+    padding: 8px;
+    margin-top: 12px;
+    font-size: 0.8rem;
     cursor: pointer;
     font-weight: bold;
+    transition: all 0.2s;
 }
 .btn-social-mint:hover { background: var(--gold-main); color: #000; }
