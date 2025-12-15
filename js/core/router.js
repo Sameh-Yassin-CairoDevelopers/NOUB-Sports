@@ -5,6 +5,7 @@
  * and updates the state of the Global Navbar.
  */
 
+
 export class Router {
     constructor() {
         this.views = document.querySelectorAll('.view-section');
@@ -59,3 +60,4 @@ export class Router {
         }
     }
 }
+
