@@ -1,41 +1,43 @@
 /*
  * Filename: js/controllers/scoutCtrl.js
- * Version: 5.2.0 (MASTER FULL)
- * Description: Controller for the Scout/Market Module.
+ * Version: 5.2.0 (MASTER CONTROLLER)
+ * Description: Controls the Scout/Market View.
  * 
- * CAPABILITIES:
- * 1. Multi-Entity Discovery: Search for Players, Fans, AND Teams.
- * 2. Smart Filtering: Toggle between categories dynamically.
- * 3. Deep Dive Modal: detailed view with History, Market Value, and Stats.
- * 4. Social Minting: Direct integration with Notification System.
- * 5. Audio Feedback: Integrated SoundManager for all interactions.
+ * CORE RESPONSIBILITIES:
+ * 1. Layout: Renders Search, Filters (Role/Scope), and Trending rail.
+ * 2. Data Fetching: Orchestrates MarketService queries based on user selection.
+ * 3. Interaction: Handles Card Clicks -> Detail Modal -> Social Action.
+ * 4. UX: Sound feedback and loading states.
  */
 
 import { MarketService } from '../services/marketService.js';
 import { SocialService } from '../services/socialService.js';
 import { state } from '../core/state.js';
-import { supabase } from '../core/supabaseClient.js'; // Needed for direct Team fetch
 import { SoundManager } from '../utils/soundManager.js';
+import { AvatarEngine } from '../utils/avatarEngine.js';
 import { Helpers } from '../utils/helpers.js';
 
 export class ScoutController {
     
     constructor() {
+        // Initialize Services
         this.marketService = new MarketService();
         this.socialService = new SocialService();
+        
+        // DOM Targets
         this.viewContainer = document.getElementById('view-scout');
         
-        // Internal Cache
-        this.cachedData = []; 
-        this.currentFilter = 'PLAYER'; // Default Mode
+        // Internal State
+        this.cachedPlayers = [];
+        this.currentFilter = 'PLAYER'; // Default: Show Players
+        this.isGlobal = false;         // Default: Local Zone Only
     }
 
     /**
-     * Main Initialization (Triggered by Tab Click)
+     * Main Initialization (Triggered by Router)
      */
     async init() {
         console.log("🔍 ScoutCtrl: Initializing...");
-        SoundManager.play('click');
         
         const user = state.getUser();
         if (!user) {
@@ -43,18 +45,18 @@ export class ScoutController {
             return;
         }
 
-        // Show Loader
+        // Show Loading
         this.viewContainer.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
 
         try {
-            // 1. Fetch Trending (Always visible)
+            // 1. Fetch Trending Data (Always Local)
             const trending = await this.marketService.getTrendingPlayers(user.zoneId);
             
-            // 2. Render Layout
+            // 2. Render Static Layout
             this.renderLayout(trending);
             
-            // 3. Load Default List (Players)
-            await this.loadList(user.zoneId, 'PLAYER');
+            // 3. Load Default List
+            await this.loadList(user.zoneId, this.currentFilter, this.isGlobal);
 
         } catch (err) {
             console.error(err);
@@ -63,23 +65,35 @@ export class ScoutController {
     }
 
     /**
-     * Renders the Static Layout (Header, Search, Trending)
+     * Renders the Frame (Header, Filters, Trending)
      */
     renderLayout(trending) {
         this.viewContainer.innerHTML = `
             <div class="scout-container fade-in">
                 
-                <!-- A. Header & Search -->
+                <!-- A. Header & Controls -->
                 <div class="scout-header">
+                    
+                    <!-- Scope Toggles (Local vs Global) -->
+                    <div style="display:flex; justify-content:center; margin-bottom:15px;">
+                        <button class="scope-btn active" id="btn-scope-local">
+                            <i class="fa-solid fa-location-dot"></i> منطقتي
+                        </button>
+                        <button class="scope-btn" id="btn-scope-global">
+                            <i class="fa-solid fa-globe"></i> كل مصر
+                        </button>
+                    </div>
+
+                    <!-- Search Bar -->
                     <div class="search-bar-wrapper">
                         <i class="fa-solid fa-search"></i>
-                        <input type="text" id="inp-search" placeholder="ابحث عن لاعب أو فريق...">
+                        <input type="text" id="inp-search" placeholder="ابحث بالاسم أو المركز...">
                     </div>
                     
-                    <!-- Filter Pills (Added TEAMS) -->
+                    <!-- Filter Pills -->
                     <div class="filter-pills">
                         <button class="pill active" data-filter="PLAYER">
-                            <i class="fa-solid fa-person-running"></i> لاعبين
+                            <i class="fa-solid fa-running"></i> لاعبين
                         </button>
                         <button class="pill" data-filter="FAN">
                             <i class="fa-solid fa-users"></i> مشجعين
@@ -90,7 +104,7 @@ export class ScoutController {
                     </div>
                 </div>
 
-                <!-- B. Trending Section (Talk of the Town) -->
+                <!-- B. Trending Section -->
                 ${trending.length > 0 ? `
                     <div class="trending-section">
                         <h4>🔥 حديث المنطقة</h4>
@@ -100,123 +114,100 @@ export class ScoutController {
                     </div>
                 ` : ''}
 
-                <!-- C. Dynamic Grid -->
+                <!-- C. Main Grid -->
                 <div class="market-grid-section">
                     <h4 id="grid-title">النتائج</h4>
                     <div id="market-grid" class="market-grid">
                         <div class="loader-bar"></div>
                     </div>
                 </div>
-            </div>`;
+            </div>
+            
+            <!-- Inline Scope Styles (Specific to this view) -->
+            <style>
+                .scope-btn { 
+                    flex: 1; background:transparent; border:1px solid #333; color:#888; 
+                    padding:8px 15px; cursor:pointer; font-family:inherit; font-size:0.85rem; transition:0.2s;
+                }
+                .scope-btn:first-child { border-radius: 10px 0 0 10px; border-right:none; }
+                .scope-btn:last-child { border-radius: 0 10px 10px 0; }
+                .scope-btn.active { background:var(--gold-main); color:#000; font-weight:bold; border-color:var(--gold-main); }
+            </style>
+        `;
 
-        // Bind Search & Filter Events
-        this.bindLayoutEvents();
+        // Bind Events immediately after rendering
+        this.bindEvents();
     }
 
     /**
-     * Loads Data based on selected Filter
+     * Fetches Data and Refreshes the Grid
      */
-    async loadList(zoneId, filterType) {
+    async loadList(zoneId, filterType, isGlobal) {
         const grid = document.getElementById('market-grid');
         grid.innerHTML = '<div class="loader-bar"></div>';
-        this.currentFilter = filterType;
-
+        
         try {
-            let data = [];
+            // Fetch via Service
+            const data = await this.marketService.getPlayersInZone(zoneId, state.getUser().id, filterType, isGlobal);
             
-            if (filterType === 'TEAM') {
-                // Fetch Teams Logic (Inline for now to avoid altering Service file if not needed)
-                const { data: teams } = await supabase
-                    .from('teams')
-                    .select('*')
-                    .eq('zone_id', zoneId)
-                    .eq('status', 'ACTIVE'); // Only active teams
-                data = teams || [];
-            
-            } else {
-                // Fetch Players/Fans via MarketService
-                data = await this.marketService.getPlayersInZone(zoneId, state.getUser().id, filterType);
-            }
-
-            this.cachedData = data; // Cache for local search
+            this.cachedData = data; // Save for local search
             this.renderGrid(data);
 
         } catch (e) {
-            grid.innerHTML = '<p class="error-text">حدث خطأ في تحميل البيانات.</p>';
+            grid.innerHTML = '<p class="error-text">حدث خطأ في الاتصال.</p>';
         }
     }
 
     /**
-     * Renders the Grid Items based on type
+     * Renders Card Grid
      */
     renderGrid(items) {
         const grid = document.getElementById('market-grid');
         
-        if (!items.length) {
-            grid.innerHTML = '<p class="text-muted text-center" style="grid-column: span 2;">لا توجد نتائج متاحة.</p>';
+        if (!items || items.length === 0) {
+            grid.innerHTML = '<p class="text-muted text-center" style="grid-column: span 2;">لا توجد نتائج مطابقة.</p>';
             return;
         }
 
-        // Decide which render function to use
-        if (this.currentFilter === 'TEAM') {
-            grid.innerHTML = items.map(t => this.renderTeamCard(t)).join('');
-        } else {
-            grid.innerHTML = items.map(p => this.renderPlayerCard(p)).join('');
-        }
+        grid.innerHTML = items.map(p => this.renderPlayerCard(p)).join('');
         
-        // Re-bind Clicks
+        // CRITICAL: Bind Clicks to Cards after HTML injection
         this.bindGridEvents();
     }
 
     /**
-     * HTML: Player Card (Scout Version)
+     * HTML Generator: Scout Card
      */
     renderPlayerCard(p) {
+        // 1. Resolve Colors
         let visual = p.visual_dna || { skin: 1 };
         if (typeof visual === 'string') visual = JSON.parse(visual);
         const skinColors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
+        const skinHex = skinColors[(visual.skin || 1) - 1] || '#ccc';
         
-        // Prepare Data for Modal
+        // 2. Identify Role
+        const isFan = p.activity_type === 'FAN';
+        
+        // 3. Encode Payload for Modal
         const pDataSafe = encodeURIComponent(JSON.stringify(p));
 
         return `
-            <div class="scout-card player-mode" data-type="PLAYER" data-payload="${pDataSafe}">
+            <div class="scout-card" data-player="${pDataSafe}" style="cursor:pointer;">
                 <div class="scout-card-top">
                     <span class="scout-pos">${p.position || 'FAN'}</span>
-                    ${p.activity_type !== 'FAN' ? `<span class="scout-rating text-gold">${p.stats?.rating || 60}</span>` : ''}
+                    ${!isFan ? `<span class="scout-rating text-gold">${p.stats?.rating || 60}</span>` : ''}
                 </div>
+                
                 <div class="scout-avatar">
-                    <i class="fa-solid fa-user" style="color: ${skinColors[visual.skin - 1] || '#ccc'};"></i>
+                    <i class="fa-solid fa-user" style="color: ${skinHex};"></i>
                 </div>
+                
                 <div class="scout-info">
                     <h5>${p.display_name}</h5>
-                    <button class="btn-social-action">
-                        <i class="fa-solid fa-eye"></i> تفاصيل
-                    </button>
-                </div>
-            </div>`;
-    }
-
-    /**
-     * HTML: Team Card (New Feature)
-     */
-    renderTeamCard(t) {
-        // Logo colors
-        const c1 = t.logo_dna?.primary || '#333';
-        const c2 = t.logo_dna?.secondary || '#000';
-
-        return `
-            <div class="scout-card team-mode" style="border-left: 4px solid ${c1}">
-                <div class="scout-card-top">
-                    <span class="scout-pos">فريق</span>
-                    <span class="scout-rating text-gold">${t.total_matches || 0}م</span>
-                </div>
-                <div class="scout-avatar team-logo" style="background: linear-gradient(45deg, ${c1}, ${c2}); color: #fff; border-radius: 50%;">
-                    <i class="fa-solid fa-shield-cat"></i>
-                </div>
-                <div class="scout-info">
-                    <h5>${t.name}</h5>
-                    <div class="scout-tags"><span>${t.status}</span></div>
+                    <div class="scout-tags">
+                        <span>${isFan ? 'مشجع' : 'لاعب'}</span>
+                        <span style="font-size:0.6rem; color:var(--gold-main);">عرض</span>
+                    </div>
                 </div>
             </div>`;
     }
@@ -230,64 +221,68 @@ export class ScoutController {
     }
 
     /**
-     * Event Binding (Search & Filters)
+     * Event Binding: Search, Filters, Scope
      */
-    bindLayoutEvents() {
-        // Filter Pills
+    bindEvents() {
+        // 1. Scope Buttons (Local / Global)
+        document.getElementById('btn-scope-local').onclick = (e) => {
+            SoundManager.play('click');
+            this.isGlobal = false;
+            this.updateScopeUI(e.target);
+        };
+        document.getElementById('btn-scope-global').onclick = (e) => {
+            SoundManager.play('click');
+            this.isGlobal = true;
+            this.updateScopeUI(e.target);
+        };
+
+        // 2. Filter Pills (Player / Fan)
         document.querySelectorAll('.pill').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 SoundManager.play('click');
-                // UI Toggle
                 document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
+                e.target.classList.add('active');
                 
-                // Logic
-                const filter = e.currentTarget.dataset.filter;
-                this.loadList(state.getUser().zoneId, filter);
+                this.currentFilter = e.target.dataset.filter;
+                this.loadList(state.getUser().zoneId, this.currentFilter, this.isGlobal);
             });
         });
 
-        // Live Search
-        const input = document.getElementById('inp-search');
-        if (input) {
-            input.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                const filtered = this.cachedData.filter(item => {
-                    const name = item.display_name || item.name || '';
-                    return name.toLowerCase().includes(term);
-                });
-                this.renderGrid(filtered);
-            });
-        }
+        // 3. Search Input (Live Filter)
+        document.getElementById('inp-search')?.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = this.cachedData.filter(p => p.display_name.toLowerCase().includes(term));
+            this.renderGrid(filtered);
+        });
+    }
+
+    updateScopeUI(targetBtn) {
+        document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('active'));
+        targetBtn.classList.add('active');
+        this.loadList(state.getUser().zoneId, this.currentFilter, this.isGlobal);
     }
 
     /**
-     * Event Binding (Grid Clicks)
+     * Binds Click Events for Grid Items
      */
     bindGridEvents() {
-        document.querySelectorAll('.scout-card.player-mode').forEach(card => {
+        document.querySelectorAll('.scout-card').forEach(card => {
             card.addEventListener('click', () => {
-                const pData = JSON.parse(decodeURIComponent(card.dataset.payload));
+                const pData = JSON.parse(decodeURIComponent(card.dataset.player));
                 this.openPlayerDetailModal(pData);
             });
         });
-        // Future: Bind Team Click to show Team Details
     }
 
     /**
      * THE DEEP DIVE MODAL
-     * Shows: History, Market Value, Stats, Social Mint.
+     * Opens a detailed view of the player with 'Social Mint' action.
      */
     openPlayerDetailModal(player) {
         SoundManager.play('click');
         const modalId = 'modal-player-detail';
 
-        // 1. Calculate Fake Market Value (Viral Feature)
-        const rating = player.stats?.rating || 60;
-        const value = (rating * 1000) + (player.mint_count * 500); // 60,000 + popularity
-        const formattedValue = Helpers.formatCurrency(value);
-
-        // 2. Create Modal DOM
+        // 1. Create Modal DOM if missing
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
@@ -301,24 +296,27 @@ export class ScoutController {
                 </div>`);
         }
 
-        // 3. Render Content
+        // 2. Render Content
         const content = document.getElementById('player-detail-content');
         
-        // Colors
-        let visual = player.visual_dna || {skin:1};
-        if (typeof visual === 'string') visual = JSON.parse(visual);
-        const skinColor = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'][visual.skin - 1] || '#ccc';
+        // Generate Full Avatar using Engine
+        const avatarHtml = AvatarEngine.generateAvatarHTML(player.visual_dna, player.display_name);
+
+        // Fake Market Value Calc
+        const marketVal = ((player.stats?.rating || 60) * 1000) + ((player.mint_count || 1) * 500);
 
         content.innerHTML = `
             <div class="player-detail-header">
-                <div class="detail-avatar-large">
-                    <i class="fa-solid fa-user" style="color: ${skinColor}"></i>
+                <!-- Large Avatar -->
+                <div style="height:150px; margin-bottom:10px;">
+                    ${avatarHtml}
                 </div>
-                <h2 class="text-gold">${player.display_name}</h2>
+                
+                <h2 class="text-gold" style="margin-top:10px;">${player.display_name}</h2>
                 <span class="status-badge">${player.position || 'FAN'}</span>
                 
-                <div class="market-value-badge" style="margin-top:10px; font-size:0.9rem; color:var(--success);">
-                    <i class="fa-solid fa-chart-line"></i> القيمة: ${formattedValue} عملة
+                <div style="color:var(--success); font-weight:bold; margin-top:10px; font-family:var(--font-orbitron);">
+                    <i class="fa-solid fa-chart-line"></i> القيمة: ${Helpers.formatCurrency(marketVal)}
                 </div>
             </div>
 
@@ -328,42 +326,44 @@ export class ScoutController {
                     <div class="ds-item"><span class="ds-val">${player.stats?.matches || 0}</span><span class="ds-lbl">مباريات</span></div>
                     <div class="ds-item"><span class="ds-val text-gold">${player.stats?.rating || 60}</span><span class="ds-lbl">تقييم</span></div>
                 </div>
-            ` : '<p class="text-center text-muted">هذا المستخدم مشجع وفقط.</p>'}
+            ` : '<p class="text-center text-muted">بيانات المشجعين محدودة.</p>'}
 
-            <!-- Mocked History (Placeholder for now) -->
             <div class="history-section">
-                <h4>آخر النشاطات</h4>
-                <div class="history-list">
-                    <div class="history-card">
-                        <span>انضم إلى المجتمع</span>
-                        <span class="result-badge res-draw">${new Date(player.created_at).toLocaleDateString('ar-EG')}</span>
-                    </div>
-                </div>
+                <h4>الإجراءات</h4>
+                <button id="btn-modal-mint" class="btn-primary" style="margin-top:0;">
+                    <i class="fa-solid fa-signature"></i> طلب نسخة موقعة
+                </button>
             </div>
-
-            <!-- Social Action -->
-            <button id="btn-modal-mint" class="btn-primary" style="margin-top:20px;">
-                <i class="fa-solid fa-signature"></i> طلب كارت موقع
-            </button>
         `;
 
-        // 4. Show & Bind
-        document.getElementById(modalId).classList.remove('hidden');
-        
+        // 3. Show & Bind
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('hidden');
+
         document.getElementById('btn-modal-mint').onclick = () => {
             this.handleRequest(player.owner_id);
-            document.getElementById(modalId).classList.add('hidden');
+            modal.classList.add('hidden');
         };
     }
 
+    /**
+     * Logic: Send Mint Request
+     */
     async handleRequest(targetId) {
-        if (targetId === state.getUser().id) return alert("لا يمكن طلب كارت من نفسك.");
-        if (!confirm("تأكيد إرسال الطلب؟")) return;
+        const myId = state.getUser().id;
+        
+        if (targetId === myId) {
+            SoundManager.play('error');
+            alert("لا يمكنك طلب نسخة من نفسك.");
+            return;
+        }
+
+        if(!confirm("هل أنت متأكد من إرسال طلب توقيع؟")) return;
 
         try {
-            await this.socialService.requestMint(state.getUser().id, targetId);
+            await this.socialService.requestMint(myId, targetId);
             SoundManager.play('success');
-            alert("تم إرسال الطلب بنجاح!");
+            alert("تم إرسال الطلب بنجاح! ستصلك النسخة عند الموافقة.");
         } catch (e) {
             SoundManager.play('error');
             alert(e.message);
