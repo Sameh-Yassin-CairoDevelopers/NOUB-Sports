@@ -13,6 +13,8 @@
  * - Session Recovery: Automatically detects if the user is returning via Email Session or Telegram ID.
  */
 
+
+
 import { supabase } from '../core/supabaseClient.js';
 import { User } from '../models/User.js';
 
@@ -236,3 +238,4 @@ export class AuthService {
         }
     }
 }
+
