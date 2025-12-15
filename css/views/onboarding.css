@@ -1,191 +1,160 @@
 /*
  * Filename: css/views/onboarding.css
- * Description: تنسيق شاشة صك الهوية (Card Minting Studio)
+ * Version: 5.0.0 (Visual Upgrade)
+ * Description: Styles for Minting Studio.
+ * Updates: Enhanced Preview Area for Layered Avatars.
  */
 
-/* 1. الحاوية الرئيسية (توسيط وتنسيق) */
+/* 1. View Container */
 #view-onboarding {
-    justify-content: center; /* توسيط عمودي */
+    justify-content: center;
     align-items: center;
-    padding-bottom: 100px; /* مساحة كافية لتجنب تغطية النافبار */
+    padding-bottom: 100px;
 }
 
-/* 2. صندوق التسجيل (The Auth Box) */
+/* 2. Auth Box */
 .auth-box {
     background-color: var(--bg-surface);
-    border: 1px solid rgba(212, 175, 55, 0.15); /* إطار ذهبي خافت */
-    border-radius: 20px;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 24px;
     padding: 25px;
     width: 100%;
-    max-width: 400px; /* عرض مثالي للموبايل */
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* ظل عميق */
+    max-width: 400px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     position: relative;
     overflow: hidden;
 }
 
-/* تأثير لمعان خفيف في الخلفية */
-.auth-box::before {
-    content: '';
-    position: absolute;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    background: radial-gradient(circle, rgba(212,175,55,0.03) 0%, transparent 70%);
-    pointer-events: none;
+/* 3. Auth Tabs */
+.auth-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: rgba(0,0,0,0.3);
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
-/* 3. استوديو الأفاتار (The Card Look) */
+.btn-tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-primary);
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.btn-tab.active {
+    background: var(--gold-main);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+/* 4. Avatar Studio (The Fitting Room) */
 .avatar-studio {
-    background: #151515; /* خلفية داكنة لتباين الأفاتار */
-    border: 2px solid var(--gold-main); /* الإطار الملون المطلوب */
-    border-radius: 16px;
-    padding: 15px;
+    background: radial-gradient(circle, #252525 0%, #111 100%);
+    border: 2px solid var(--gold-dim);
+    border-radius: 20px;
+    padding: 20px;
     margin-bottom: 25px;
     position: relative;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.8); /* ظل داخلي للعمق */
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
 }
 
-/* منطقة عرض الأفاتار */
+/* Preview Area - Matches Card Dimensions Ratio */
 .avatar-preview {
-    height: 140px;
+    height: 200px; /* Taller to fit full bust */
     display: flex;
     justify-content: center;
     align-items: center;
-    border-bottom: 1px dashed #333;
-    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
     padding-bottom: 10px;
+    overflow: hidden; /* Keep avatar inside box */
+    position: relative;
 }
 
+/* The Placeholder is replaced by JS injection */
 .avatar-placeholder {
     font-size: 80px;
     color: var(--text-grey);
-    transition: all 0.3s ease;
-    filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+    opacity: 0.5;
 }
 
-/* 4. أزرار التحكم (الأسهم) */
-.avatar-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
+/* 5. Controls */
+.avatar-controls { display: flex; flex-direction: column; gap: 12px; }
 
 .control-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: rgba(255,255,255,0.03);
-    padding: 8px 12px;
-    border-radius: 10px;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
-.control-row label {
-    font-size: 0.85rem;
-    color: var(--text-muted);
+.control-row label { 
+    font-size: 0.85rem; color: var(--text-muted); font-weight: bold; 
 }
 
-.selector {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
+.selector { display: flex; align-items: center; gap: 15px; }
 
-/* تصميم أزرار الأسهم */
 .btn-control {
-    width: 32px; height: 32px;
-    background: var(--gold-main);
-    color: #000;
-    border: none;
+    width: 36px; height: 36px;
+    background: var(--bg-input);
+    color: var(--gold-main);
+    border: 1px solid var(--gold-dim);
     border-radius: 8px;
-    font-weight: bold;
-    font-family: monospace;
-    cursor: pointer;
+    font-weight: bold; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
-    transition: transform 0.1s, background 0.2s;
+    transition: 0.2s;
 }
-
-.btn-control:active {
-    transform: scale(0.9);
-    background: var(--gold-hover);
-}
+.btn-control:active { transform: scale(0.9); background: var(--gold-main); color: #000; }
 
 .selector span {
-    width: 20px;
-    text-align: center;
-    font-family: var(--font-orbitron);
-    color: var(--gold-main);
-    font-weight: bold;
+    width: 25px; text-align: center;
+    font-family: var(--font-orbitron); color: #fff; font-size: 1.1rem;
 }
 
-/* 5. الحقول والنماذج */
-.form-group {
-    margin-bottom: 15px;
-}
+/* 6. Forms */
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-grey); }
 
-.form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-    color: var(--text-grey);
-}
-
-input[type="text"], select {
-    width: 100%;
-    padding: 12px 15px;
-    background: var(--bg-input);
-    border: 1px solid #333;
-    border-radius: 12px;
-    color: white;
-    font-family: var(--font-cairo);
-    font-size: 1rem;
+input[type="text"], input[type="email"], input[type="password"], select {
+    width: 100%; padding: 14px;
+    background: var(--bg-input); border: 1px solid #333;
+    border-radius: 14px; color: white;
+    font-family: var(--font-cairo); font-size: 1rem;
     transition: border-color 0.3s;
 }
+input:focus, select:focus { border-color: var(--gold-main); outline: none; }
 
-input:focus, select:focus {
-    border-color: var(--gold-main);
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
-}
-
-/* 6. اختيار المركز (Radio Buttons) */
-.radio-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 أعمدة للمراكز */
-    gap: 8px;
-}
-
-.radio-card {
-    position: relative;
-    cursor: pointer;
-}
-
-.radio-card input {
-    position: absolute;
-    opacity: 0;
-}
-
+/* Radio Grid (Positions) */
+.radio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.radio-card { position: relative; cursor: pointer; }
+.radio-card input { position: absolute; opacity: 0; }
 .radio-card span {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 40px;
-    background: var(--bg-input);
-    border: 1px solid #333;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    color: var(--text-grey);
-    transition: all 0.2s;
+    display: flex; justify-content: center; align-items: center;
+    height: 45px; background: var(--bg-input);
+    border: 1px solid #333; border-radius: 10px;
+    font-size: 0.8rem; color: var(--text-grey); font-weight: bold;
+    transition: 0.2s;
 }
-
 .radio-card input:checked + span {
-    background: var(--gold-main);
-    color: #000;
-    border-color: var(--gold-main);
-    font-weight: bold;
-    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+    background: var(--gold-main); color: #000; border-color: var(--gold-main);
+    box-shadow: 0 4px 15px rgba(212,175,55,0.3);
 }
 
-/* 7. زر الصك الرئيسي */
-#btn-mint {
-    width: 100%;
-    margin-top: 15px;
-    font-family: var(--font-cairo);
+/* 7. Main Action Button */
+.btn-primary { 
+    width: 100%; margin-top: 20px; 
+    padding: 16px; font-size: 1.1rem; border-radius: 14px;
 }
