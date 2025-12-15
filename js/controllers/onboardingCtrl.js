@@ -1,10 +1,7 @@
 /*
  * Filename: js/controllers/onboardingCtrl.js
- * Version: 5.0.0 (Live Preview Edition)
- * Description: Controls Onboarding & Auth.
- * UPDATES: 
- * - Integrated AvatarEngine for Live Visual Preview.
- * - Live Name Typing on Shirt.
+ * Version: 5.2.0 (MERGED MASTER)
+ * Description: Controls Onboarding, Auth Tabs, Live Preview, and Registration.
  */
 
 import { AvatarEngine } from '../utils/avatarEngine.js';
@@ -15,7 +12,8 @@ export class OnboardingController {
     constructor() {
         this.avatarEngine = new AvatarEngine();
         this.authService = new AuthService();
-        // Bind local preview elements
+        
+        // References for Live Preview
         this.previewContainer = document.getElementById('auth-avatar-display');
         this.nameInput = document.getElementById('inp-name');
         
@@ -25,19 +23,18 @@ export class OnboardingController {
     init() {
         console.log("🎮 Onboarding Controller Active");
         this.bindEvents();
-        // Initial Render of default avatar
+        // Initial Visual Render
         this.updateLivePreview();
     }
 
     bindEvents() {
-        // 1. Avatar Controls
-        // Using arrow functions to preserve 'this' context and trigger update
+        // --- 1. Avatar Controls (Original Logic + Live Update) ---
         const bindControl = (id, type, dir) => {
             document.getElementById(id)?.addEventListener('click', (e) => {
                 e.preventDefault();
                 SoundManager.play('click');
                 this.avatarEngine.change(type, dir);
-                this.updateLivePreview(); // Refresh visual
+                this.updateLivePreview(); // Trigger visual update
             });
         };
 
@@ -46,14 +43,12 @@ export class OnboardingController {
         bindControl('btn-kit-next', 'kit', 1);
         bindControl('btn-kit-prev', 'kit', -1);
 
-        // 2. Live Name Preview (Type name -> Show on Shirt)
+        // --- 2. Live Name Typing (New) ---
         if (this.nameInput) {
-            this.nameInput.addEventListener('input', () => {
-                this.updateLivePreview();
-            });
+            this.nameInput.addEventListener('input', () => this.updateLivePreview());
         }
 
-        // 3. Activity Type Logic
+        // --- 3. Activity Type Logic (Original Logic) ---
         const activitySelect = document.getElementById('inp-activity');
         const posGroup = document.getElementById('group-position');
         
@@ -68,57 +63,55 @@ export class OnboardingController {
             });
         }
 
-        // 4. Tabs & Submit (Standard Logic)
+        // --- 4. Tab Switching (New) ---
         const tabTg = document.getElementById('tab-tg');
         const tabEmail = document.getElementById('tab-email');
+
         if (tabTg && tabEmail) {
             tabTg.addEventListener('click', (e) => this.switchTab(e, 'panel-tg'));
             tabEmail.addEventListener('click', (e) => this.switchTab(e, 'panel-email'));
         }
 
+        // --- 5. Submit Handlers ---
         document.getElementById('form-register')?.addEventListener('submit', (e) => this.handleTelegramMint(e));
         document.getElementById('btn-login')?.addEventListener('click', (e) => this.handleEmailLogin(e));
         document.getElementById('btn-signup')?.addEventListener('click', (e) => this.handleEmailSignup(e));
     }
 
     /**
-     * Updates the preview box using the shared AvatarEngine logic.
-     * This ensures what they see is exactly what they get on the card.
+     * Helper: Updates the Avatar Preview with Layers & Name
      */
     updateLivePreview() {
         if (!this.previewContainer) return;
-        
-        // Get current config state from engine
         const currentConfig = JSON.parse(this.avatarEngine.getConfig());
-        
-        // Get name (or default placeholder)
         const name = this.nameInput?.value || 'NOUB';
-
-        // Generate HTML
+        
+        // Use static generator for consistency
         const html = AvatarEngine.generateAvatarHTML(currentConfig, name);
         
-        // Inject (Replace the placeholder icon)
-        // We set parent's innerHTML to clear previous content
+        // Inject into DOM
         this.previewContainer.parentElement.innerHTML = html;
-        
-        // Re-assign container reference after innerHTML wipe
-        // (Not strictly needed if we target parent, but good practice)
-        // Note: The parent is .avatar-preview
+        // Re-assign reference as innerHTML wiped it
+        this.previewContainer = document.querySelector('.avatar-comp'); 
     }
 
+    /**
+     * UX: Switch Tabs
+     */
     switchTab(e, targetPanelId) {
         e.preventDefault();
         SoundManager.play('click');
         document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
+        e.currentTarget.classList.add('active');
+
         document.getElementById('panel-tg').classList.add('hidden');
         document.getElementById('panel-email').classList.add('hidden');
         document.getElementById(targetPanelId).classList.remove('hidden');
     }
 
-    // --- Auth Handlers (Same as previous stable version) ---
-    // Copied fully to ensure file completeness
-
+    /**
+     * Logic: Telegram Minting
+     */
     async handleTelegramMint(e) {
         e.preventDefault();
         const btn = document.getElementById('btn-mint');
@@ -149,19 +142,22 @@ export class OnboardingController {
             window.location.reload();
 
         } catch (err) {
-            console.error("Mint Error:", err);
+            console.error(err);
             alert("خطأ: " + err.message);
             this.setLoadingState(btn, false, "صك الهوية");
         }
     }
 
+    /**
+     * Logic: Email Login
+     */
     async handleEmailLogin(e) {
-        if(e) e.preventDefault();
+        e?.preventDefault();
         const btn = document.getElementById('btn-login');
         const email = document.getElementById('inp-email').value;
         const pass = document.getElementById('inp-pass').value;
 
-        if (!email || !pass) return alert("البيانات ناقصة");
+        if (!email || !pass) return alert("أدخل البيانات");
         this.setLoadingState(btn, true);
 
         try {
@@ -173,25 +169,28 @@ export class OnboardingController {
         }
     }
 
+    /**
+     * Logic: Email Signup
+     */
     async handleEmailSignup(e) {
-        if(e) e.preventDefault();
+        e?.preventDefault();
         const btn = document.getElementById('btn-signup');
         const email = document.getElementById('inp-email').value;
         const pass = document.getElementById('inp-pass').value;
         const name = document.getElementById('inp-email-name').value;
 
-        if (!email || !pass || !name) return alert("البيانات ناقصة");
+        if (!email || !pass || !name) return alert("أدخل البيانات");
         this.setLoadingState(btn, true);
 
         try {
             await this.authService.registerUserEmail(email, pass, {
                 username: name,
-                zoneId: 1, // Default
+                zoneId: 1, // Default Zone
                 activityType: 'PLAYER_FREE',
                 position: 'FWD',
                 visualDna: { skin: 1, kit: 1 }
             });
-            alert("تم التسجيل!");
+            alert("تم التسجيل! يمكنك الدخول.");
             window.location.reload();
         } catch (err) {
             alert("فشل التسجيل: " + err.message);
