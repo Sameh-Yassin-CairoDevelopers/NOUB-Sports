@@ -3,6 +3,7 @@
  * Description: Data model representing a Player/User entity.
  */
 
+
 export class User {
     constructor(data = {}) {
         this.id = data.id || null;
@@ -17,3 +18,4 @@ export class User {
         return this.role !== 'FAN' && this.role !== 'INACTIVE';
     }
 }
+
