@@ -1,90 +1,77 @@
 /*
  * Filename: js/controllers/scoutCtrl.js
- * Version: 4.2.0 (Diamond Release - Fixed)
- * Description: Controller for the Scouting/Market View.
+ * Version: 5.0.0 (UI Filters Added)
+ * Description: Controller for Scout/Market View.
  * 
- * CORE RESPONSIBILITIES:
- * 1. Data Fetching: Queries MarketService for players in the same zone.
- * 2. Trending Logic: Displays 'Talk of the Town' (High Mint Count players).
- * 3. Search/Filter: Client-side filtering logic.
- * 4. Social Interaction: Handlers for 'Request Mint' buttons.
- * 
- * FIX NOTES:
- * - Updated to use singleton 'state' instead of 'State' class.
+ * UPDATES:
+ * - Added Filter Tabs (Players vs Fans).
+ * - Live Search logic.
+ * - Social Minting integration.
  */
 
 import { MarketService } from '../services/marketService.js';
 import { SocialService } from '../services/socialService.js';
-import { state } from '../core/state.js'; // <--- التصحيح: استيراد النسخة الموحدة
-import { AvatarEngine } from '../utils/avatarEngine.js'; // For visuals
+import { state } from '../core/state.js'; 
 
 export class ScoutController {
-    
-    /**
-     * Constructor
-     */
     constructor() {
         this.marketService = new MarketService();
         this.socialService = new SocialService();
         this.viewContainer = document.getElementById('view-scout');
         
-        // No auto-init here. It is triggered by AppClass when tab is clicked.
+        // Cache data to avoid refetching on simple filters
+        this.cachedPlayers = [];
+        this.currentFilter = 'PLAYER'; // Default: Show Players
     }
 
     /**
-     * Main Init Logic
-     * Fetches fresh data every time the tab is opened.
+     * Main Init
      */
     async init() {
-        console.log("🔍 ScoutController: Initializing...");
-        
-        // 1. Get User from Singleton State
+        console.log("🔍 ScoutController: Loading...");
         const user = state.getUser();
-        
-        if (!user) {
-            this.viewContainer.innerHTML = `<div class="error-state">يجب تسجيل الدخول.</div>`;
-            return;
-        }
+        if (!user) return;
 
-        // 2. Show Loading
         this.viewContainer.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
 
         try {
-            // 3. Parallel Data Fetching
-            const [players, trending] = await Promise.all([
-                this.marketService.getPlayersInZone(user.zoneId, user.id),
-                this.marketService.getTrendingPlayers(user.zoneId)
-            ]);
-
-            // 4. Render View
-            this.renderView(players, trending);
+            // 1. Fetch Trending (Always same)
+            const trending = await this.marketService.getTrendingPlayers(user.zoneId);
             
-            // 5. Bind Interactive Events (Search & Buttons)
-            this.bindSearchEvents(players);
-            this.bindSocialEvents();
+            // 2. Initial Render (Structure)
+            this.renderLayout(trending);
+            
+            // 3. Load Default List (Players Only)
+            await this.loadList(user.zoneId, 'PLAYER');
 
         } catch (err) {
-            console.error("Scout Init Error:", err);
-            this.viewContainer.innerHTML = `<div class="error-state">حدث خطأ: ${err.message}</div>`;
+            this.viewContainer.innerHTML = `<div class="error-state">${err.message}</div>`;
         }
     }
 
     /**
-     * Renders the Full Scout UI
-     * @param {Array} players - List of players in zone
-     * @param {Array} trending - List of trending players
+     * Renders the static parts (Search, Filter Tabs, Trending)
      */
-    renderView(players, trending) {
+    renderLayout(trending) {
         this.viewContainer.innerHTML = `
             <div class="scout-container fade-in">
                 
-                <!-- Search Component -->
-                <div class="search-bar-wrapper">
-                    <i class="fa-solid fa-search"></i>
-                    <input type="text" id="inp-search" placeholder="ابحث عن لاعب أو مركز...">
+                <!-- 1. Search & Filter Bar -->
+                <div class="scout-header">
+                    <div class="search-bar-wrapper">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="inp-search" placeholder="ابحث بالاسم...">
+                    </div>
+                    
+                    <!-- Filter Toggles -->
+                    <div class="filter-pills">
+                        <button class="pill active" data-filter="PLAYER">لاعبين</button>
+                        <button class="pill" data-filter="FAN">مشجعين</button>
+                        <button class="pill" data-filter="ALL">الكل</button>
+                    </div>
                 </div>
 
-                <!-- Trending Section (Horizontal Scroll) -->
+                <!-- 2. Trending Section -->
                 ${trending.length > 0 ? `
                     <div class="trending-section">
                         <h4>🔥 حديث المنطقة</h4>
@@ -94,33 +81,69 @@ export class ScoutController {
                     </div>
                 ` : ''}
 
-                <!-- Main Grid Section -->
+                <!-- 3. Main Grid -->
                 <div class="market-grid-section">
-                    <h4>لاعبين في منطقتك (${players.length})</h4>
+                    <h4 id="grid-title">لاعبي المنطقة</h4>
                     <div id="market-grid" class="market-grid">
-                        ${players.length ? players.map(p => this.renderPlayerCard(p)).join('') : '<p class="text-muted">لا يوجد لاعبين مسجلين بعد.</p>'}
+                        <div class="loader-bar"></div>
                     </div>
                 </div>
             </div>
         `;
+
+        // Bind Events
+        this.bindEvents();
     }
 
     /**
-     * Generates HTML for a Single Player Card (Scout Version)
+     * Fetches and renders the grid list based on filter
+     */
+    async loadList(zoneId, filterType) {
+        const grid = document.getElementById('market-grid');
+        grid.innerHTML = '<div class="loader-bar"></div>'; // Local loading
+        
+        try {
+            const players = await this.marketService.getPlayersInZone(zoneId, state.getUser().id, filterType);
+            this.cachedPlayers = players; // Cache for search
+            this.renderGrid(players);
+        } catch (e) {
+            grid.innerHTML = '<p class="text-muted">حدث خطأ في التحميل.</p>';
+        }
+    }
+
+    /**
+     * Renders the Card Grid from array
+     */
+    renderGrid(players) {
+        const grid = document.getElementById('market-grid');
+        if (!players.length) {
+            grid.innerHTML = '<p class="text-muted text-center" style="grid-column: span 2;">لا توجد نتائج لهذا التصنيف.</p>';
+            return;
+        }
+        grid.innerHTML = players.map(p => this.renderPlayerCard(p)).join('');
+        
+        // Re-bind social buttons
+        document.querySelectorAll('.btn-social-mint').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleRequest(e.target.dataset.id));
+        });
+    }
+
+    /**
+     * HTML Generator for Scout Card
      */
     renderPlayerCard(p) {
-        // Resolve Visual DNA Colors
         let visual = p.visual_dna || { skin: 1 };
         if (typeof visual === 'string') visual = JSON.parse(visual);
-        
         const skinColors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
         const skinHex = skinColors[visual.skin - 1] || skinColors[0];
         
+        const isFan = p.activity_type === 'FAN';
+
         return `
-            <div class="scout-card" data-name="${p.display_name}" data-pos="${p.position}">
+            <div class="scout-card">
                 <div class="scout-card-top">
-                    <span class="scout-pos">${p.position || 'FAN'}</span>
-                    <span class="scout-rating text-gold">${p.stats?.rating || 60}</span>
+                    <span class="scout-pos">${isFan ? 'مشجع' : p.position}</span>
+                    ${!isFan ? `<span class="scout-rating text-gold">${p.stats?.rating || 60}</span>` : ''}
                 </div>
                 
                 <div class="scout-avatar">
@@ -130,10 +153,9 @@ export class ScoutController {
                 <div class="scout-info">
                     <h5>${p.display_name}</h5>
                     <div class="scout-tags">
-                        <span>${p.activity_type === 'FAN' ? 'مشجع' : 'لاعب'}</span>
+                        <span>${isFan ? 'مدرج الدرجة الأولى' : 'لاعب نشط'}</span>
                     </div>
                     
-                    <!-- Social Mint Action -->
                     <button class="btn-social-mint" data-id="${p.owner_id}">
                         <i class="fa-solid fa-signature"></i> طلب نسخة
                     </button>
@@ -142,9 +164,6 @@ export class ScoutController {
         `;
     }
 
-    /**
-     * Generates HTML for Mini Trending Card
-     */
     renderMiniCard(p) {
         return `
             <div class="mini-trend-card">
@@ -157,59 +176,35 @@ export class ScoutController {
     }
 
     /**
-     * Binds Search Input to Filter Logic
+     * Logic: Event Binding
      */
-    bindSearchEvents(allPlayers) {
-        const input = document.getElementById('inp-search');
-        const grid = document.getElementById('market-grid');
+    bindEvents() {
+        // Search Input
+        document.getElementById('inp-search')?.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = this.cachedPlayers.filter(p => p.display_name.toLowerCase().includes(term));
+            this.renderGrid(filtered);
+        });
 
-        if(input) {
-            input.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                
-                const filtered = allPlayers.filter(p => 
-                    (p.display_name && p.display_name.toLowerCase().includes(term)) || 
-                    (p.position && p.position.toLowerCase().includes(term))
-                );
-                
-                grid.innerHTML = filtered.length ? 
-                    filtered.map(p => this.renderPlayerCard(p)).join('') : 
-                    '<p class="text-muted text-center">لا توجد نتائج مطابقة.</p>';
-            });
-        }
-    }
-
-    /**
-     * Binds "Request Mint" Buttons
-     */
-    bindSocialEvents() {
-        document.querySelectorAll('.btn-social-mint').forEach(btn => {
+        // Filter Pills
+        document.querySelectorAll('.pill').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // Prevent bubbling if card is clickable later
-                e.stopPropagation(); 
-                this.handleRequest(e.target.closest('button').dataset.id);
+                // Update UI
+                document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Update Data
+                const filter = e.target.dataset.filter;
+                this.loadList(state.getUser().zoneId, filter);
             });
         });
     }
 
-    /**
-     * LOGIC: Send Mint Request
-     */
     async handleRequest(targetId) {
-        const currentUser = state.getUser();
-        if (targetId === currentUser.id) {
-            alert("لا يمكنك طلب نسخة من نفسك!");
-            return;
-        }
-
-        if(!confirm("هل تريد إرسال طلب للحصول على نسخة موقعة من هذا اللاعب؟")) return;
-        
-        try {
-            await this.socialService.requestMint(currentUser.id, targetId);
-            alert("تم إرسال الطلب بنجاح! ستصلك النسخة عند موافقة الكابتن.");
-        } catch (e) {
-            console.error(e);
-            alert("خطأ: " + e.message);
-        }
+        if(!confirm("إرسال طلب توقيع؟")) return;
+        try { 
+            await this.socialService.requestMint(state.getUser().id, targetId);
+            alert("تم إرسال الطلب!");
+        } catch (e) { alert(e.message); }
     }
 }
