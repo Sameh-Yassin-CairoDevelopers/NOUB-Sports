@@ -3,6 +3,7 @@
  * Description: Data model representing the Digital Asset (Card).
  */
 
+
 export class PlayerCard {
     constructor(data = {}) {
         this.id = data.id;
@@ -18,3 +19,4 @@ export class PlayerCard {
         return this.stats.rating >= 90 ? 'LEGEND' : (this.stats.rating >= 75 ? 'PRO' : 'HAWI');
     }
 }
+
