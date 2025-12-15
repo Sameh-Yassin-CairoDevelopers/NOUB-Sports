@@ -1,18 +1,20 @@
 /*
  * Filename: css/views/onboarding.css
- * Version: 5.0.0 (Visual Upgrade)
- * Description: Styles for Minting Studio.
- * Updates: Enhanced Preview Area for Layered Avatars.
+ * Version: 5.2.0 (MERGED MASTER)
+ * Description: Styles for Minting Studio & Auth Tabs.
+ * Contains: Auth Box, Tabs, Avatar Studio, Forms, Radio Grid.
  */
 
 /* 1. View Container */
 #view-onboarding {
+    display: flex;
     justify-content: center;
     align-items: center;
-    padding-bottom: 100px;
+    padding-bottom: 100px; /* Space for Navbar */
+    min-height: 100vh;
 }
 
-/* 2. Auth Box */
+/* 2. Auth Box (The Card Container) */
 .auth-box {
     background-color: var(--bg-surface);
     border: 1px solid rgba(212, 175, 55, 0.15);
@@ -25,7 +27,14 @@
     overflow: hidden;
 }
 
-/* 3. Auth Tabs */
+.auth-box::before {
+    content: '';
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(212,175,55,0.03) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+/* 3. Auth Tabs (Telegram vs Email) - NEW */
 .auth-tabs {
     display: flex;
     justify-content: center;
@@ -49,6 +58,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
 }
 
 .btn-tab.active {
@@ -57,7 +67,7 @@
     box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
 }
 
-/* 4. Avatar Studio (The Fitting Room) */
+/* 4. Avatar Studio (Enhanced for Layers) */
 .avatar-studio {
     background: radial-gradient(circle, #252525 0%, #111 100%);
     border: 2px solid var(--gold-dim);
@@ -68,63 +78,47 @@
     box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
 }
 
-/* Preview Area - Matches Card Dimensions Ratio */
 .avatar-preview {
-    height: 200px; /* Taller to fit full bust */
+    height: 180px; /* Taller for full effect */
     display: flex;
     justify-content: center;
     align-items: center;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     margin-bottom: 20px;
     padding-bottom: 10px;
-    overflow: hidden; /* Keep avatar inside box */
+    overflow: hidden;
     position: relative;
 }
 
-/* The Placeholder is replaced by JS injection */
-.avatar-placeholder {
-    font-size: 80px;
-    color: var(--text-grey);
-    opacity: 0.5;
-}
+/* Placeholder is removed by JS, but kept for safety */
+.avatar-placeholder { font-size: 80px; color: var(--text-grey); opacity: 0.5; }
 
-/* 5. Controls */
+/* 5. Controls (ORIGINAL STYLING PRESERVED) */
 .avatar-controls { display: flex; flex-direction: column; gap: 12px; }
 
 .control-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(255,255,255,0.03);
-    padding: 10px 15px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.05);
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.03); padding: 10px 15px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
 }
 
-.control-row label { 
-    font-size: 0.85rem; color: var(--text-muted); font-weight: bold; 
-}
+.control-row label { font-size: 0.85rem; color: var(--text-muted); font-weight: bold; }
 
 .selector { display: flex; align-items: center; gap: 15px; }
 
 .btn-control {
     width: 36px; height: 36px;
-    background: var(--bg-input);
-    color: var(--gold-main);
-    border: 1px solid var(--gold-dim);
-    border-radius: 8px;
+    background: var(--bg-input); color: var(--gold-main);
+    border: 1px solid var(--gold-dim); border-radius: 8px;
     font-weight: bold; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
     transition: 0.2s;
 }
 .btn-control:active { transform: scale(0.9); background: var(--gold-main); color: #000; }
 
-.selector span {
-    width: 25px; text-align: center;
-    font-family: var(--font-orbitron); color: #fff; font-size: 1.1rem;
-}
+.selector span { width: 25px; text-align: center; font-family: var(--font-orbitron); color: #fff; font-size: 1.1rem; }
 
-/* 6. Forms */
+/* 6. Forms & Inputs */
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-grey); }
 
@@ -137,24 +131,35 @@ input[type="text"], input[type="email"], input[type="password"], select {
 }
 input:focus, select:focus { border-color: var(--gold-main); outline: none; }
 
-/* Radio Grid (Positions) */
-.radio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+/* 7. Radio Grid (ORIGINAL STYLING PRESERVED) */
+.radio-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
 .radio-card { position: relative; cursor: pointer; }
 .radio-card input { position: absolute; opacity: 0; }
+
 .radio-card span {
     display: flex; justify-content: center; align-items: center;
     height: 45px; background: var(--bg-input);
     border: 1px solid #333; border-radius: 10px;
     font-size: 0.8rem; color: var(--text-grey); font-weight: bold;
-    transition: 0.2s;
+    transition: all 0.2s;
 }
+
 .radio-card input:checked + span {
-    background: var(--gold-main); color: #000; border-color: var(--gold-main);
+    background: var(--gold-main);
+    color: #000;
+    border-color: var(--gold-main);
     box-shadow: 0 4px 15px rgba(212,175,55,0.3);
 }
 
-/* 7. Main Action Button */
+/* 8. Main Action Button */
 .btn-primary { 
     width: 100%; margin-top: 20px; 
     padding: 16px; font-size: 1.1rem; border-radius: 14px;
+    background: linear-gradient(135deg, var(--gold-main), var(--gold-dim));
+    border: none; color: #000; font-weight: 800; cursor: pointer;
 }
