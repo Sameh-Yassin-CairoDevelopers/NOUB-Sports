@@ -58,43 +58,48 @@ export class HomeController {
         }
     }
 
-    /**
-     * Renders the Visual Card
-     */
 /**
-     * Renders the Visual Card (FIFA-Style Shield with Layered Avatar).
-     * Uses AvatarEngine to compose the character layers and print name on shirt.
-     * @param {Object} user - The User Model containing visualDna and stats.
+     * Renders the Player Card (Official Rectangular Design).
+     * Features: 
+     * - 3D Parallax Structure.
+     * - Layered Avatar (Body < Shirt < Name).
+     * - Local Background Image.
      */
     renderPlayerCard(user) {
-        // 1. Setup Stats (Fallback logic for new users)
-        // In the future, these will come directly from 'user.stats' JSONB from DB
-        const stats = {
-            rating: user.stats?.rating || 60,
-            pac: 65, 
-            sho: 55, 
-            pas: 60,
-            dri: 58, 
-            def: 50, 
-            phy: 62,
-            pos: user.position || 'FAN'
+        // 1. Setup Stats (Default Fallback for MVP)
+        const stats = { 
+            rating: user.stats?.rating || 60, 
+            pac: 65, sho: 55, pas: 60, 
+            dri: 58, def: 50, phy: 62, 
+            pos: user.position || 'FAN' 
         };
+        
+        // 2. Parse Visual DNA
+        let visual = { skin: 1, kit: 1 };
+        if (user.visualDna) {
+            visual = typeof user.visualDna === 'string' ? JSON.parse(user.visualDna) : user.visualDna;
+        }
 
-        // 2. Generate the Dynamic Avatar HTML
-        // This calls the static method we created in Batch (A)
-        // It creates: Shirt Layer + Head Layer + Text Layer (Name on Shirt)
-        const avatarHtml = AvatarEngine.generateAvatarHTML(user.visualDna, user.username);
-        const bgUrl = "https://images.unsplash.com/photo-1522770179533-24471fcdba45?q=80&w=1000&auto=format&fit=crop"; // صورة ملعب مظلم
+        // 3. Resolve Colors
+        const skinColors = ['#F5C6A5', '#C68642', '#8D5524']; // Light, Tan, Dark
+        const kitColors  = ['#EF4444', '#10B981', '#3B82F6']; // Red, Green, Blue
+        
+        const finalSkin = skinColors[(visual.skin || 1) - 1] || skinColors[0];
+        const finalKit  = kitColors[(visual.kit || 1) - 1] || kitColors[0];
 
-        // 3. Inject HTML into View Container
-        // Note: The structure matches css/components/cards.css (Shield Layout)
+        // 4. Define Background Image (Local Asset)
+        // Ensure you have the image at: assets/images/backgrounds/street-bg.webp
+        // If not found, CSS gradient will take over automatically.
+        const bgUrl = "assets/images/backgrounds/street-bg.webp";
+
+        // 5. Construct HTML
         this.viewContainer.innerHTML = `
             <div class="card-container fade-in">
                 
-                <!-- THE DIGITAL ASSET (SHIELD CARD) -->
-                <div class="player-card rarity-common">
+                <!-- THE CARD (Rectangular Shield) -->
+                <div class="player-card rarity-common" style="background-image: url('${bgUrl}');">
                     
-                    <!-- A. Top Info (Rating & Position) -->
+                    <!-- A. Top Info -->
                     <div class="card-top">
                         <div class="card-rating text-gold">${stats.rating}</div>
                         <div class="card-pos">${stats.pos}</div>
@@ -103,18 +108,54 @@ export class HomeController {
                         </div>
                     </div>
                     
-                    <!-- B. Avatar Visualization (The Engine Output) -->
+                    <!-- B. Avatar Layers (Fixed Z-Index) -->
                     <div class="card-image-area">
-                        ${avatarHtml}
+                        <div class="avatar-comp" style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                            
+                            <!-- Layer 1: Body (Skin) - Behind -->
+                            <i class="fa-solid fa-user" style="
+                                font-size: 110px; 
+                                color: ${finalSkin}; 
+                                position: absolute; 
+                                bottom: 45px; /* Moved up slightly */
+                                z-index: 1;
+                                filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+                            "></i>
+
+                            <!-- Layer 2: Shirt (Kit) - Front -->
+                            <i class="fa-solid fa-shirt" style="
+                                font-size: 130px; 
+                                color: ${finalKit}; 
+                                position: absolute; 
+                                bottom: -20px;
+                                z-index: 2;
+                                filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));
+                            "></i>
+
+                            <!-- Layer 3: Name on Shirt - Overlay -->
+                            <div class="shirt-text" style="
+                                position: absolute; 
+                                bottom: 35px; /* Centered on chest */
+                                z-index: 3;
+                                color: rgba(255,255,255,0.9); 
+                                font-family: 'Orbitron'; 
+                                font-size: 13px; 
+                                font-weight: bold;
+                                text-transform: uppercase;
+                                text-shadow: 0 1px 2px #000;
+                                letter-spacing: 1px;
+                            ">
+                                ${user.username || 'NOUB'}
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- C. Bottom Info (Name & Stats) -->
+                    <!-- C. Bottom Info (Stats) -->
                     <div class="card-info">
                         <h2 class="player-name">${user.username}</h2>
                         
                         <div class="separator-line"></div>
 
-                        <!-- Stats Matrix (English Labels as requested) -->
                         <div class="card-stats-grid">
                             <div class="stat-box"><span>${stats.pac}</span> PAC</div>
                             <div class="stat-box"><span>${stats.dri}</span> DRI</div>
@@ -125,9 +166,8 @@ export class HomeController {
                         </div>
                     </div>
                 </div>
-                <div class="player-card rarity-common" style="background-image: url('${bgUrl}');">
 
-                <!-- D. Quick Actions (Below Card) -->
+                <!-- D. Action Buttons (Clean & Separated) -->
                 <div class="home-actions">
                     <button class="btn-action-secondary" onclick="alert('خدمة التعديل: قريباً')">
                         <i class="fa-solid fa-pen-nib"></i> تعديل المظهر
@@ -136,7 +176,9 @@ export class HomeController {
                         <i class="fa-solid fa-share-nodes"></i> مشاركة
                     </button>
                 </div>
-            </div>`;
+
+            </div>
+        `;
     }
     /**
      * Injects Bell Icon & Logic
@@ -294,5 +336,6 @@ export class HomeController {
         });
     }
 }
+
 
 
