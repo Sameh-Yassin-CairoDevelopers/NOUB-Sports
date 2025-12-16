@@ -1,88 +1,102 @@
 /*
  * Filename: js/controllers/teamCtrl.js
- * Version: 4.2.0 (Diamond Release)
+ * Version: 5.4.0 (MASTER FULL)
  * Description: Controller for the Team Management Module.
  * 
- * CORE RESPONSIBILITIES:
- * 1. State Resolution: Determines if the user is a Free Agent or a Team Member.
- * 2. View Rendering: Swaps between "Create Team Form" and "Team Dashboard".
- * 3. Roster Management: Fetches and displays team members asynchronously.
- * 4. Deep Linking: Handles incoming invite links (start_param) to join teams.
+ * RESPONSIBILITIES:
+ * 1. State Resolution: Determines if user is Captain, Member, or Free Agent.
+ * 2. View Rendering: Renders Dashboard (for members) or Creation Form (for free agents).
+ * 3. Roster Management: Fetches and displays the team list with roles.
+ * 4. Deep Linking: Handles 'Join via Link' logic on initialization.
  */
 
 import { TeamService } from '../services/teamService.js';
-import { state } from '../core/state.js'; // Singleton State Import (CRITICAL FIX)
-import { AvatarEngine } from '../utils/avatarEngine.js'; // For rendering member visuals
+import { State } from '../core/state.js'; // Singleton
+import { AvatarEngine } from '../utils/avatarEngine.js'; // For rendering avatars
 
 export class TeamController {
     
     /**
-     * Constructor: Initializes dependencies and view references.
-     * Starts checking for invite links immediately.
+     * Constructor: Initializes dependencies and binds the view container.
      */
     constructor() {
         this.teamService = new TeamService();
         this.viewContainer = document.getElementById('view-team');
         
-        // Auto-check for invite links on load
+        // Check for invite links immediately upon load
         this.checkInviteParam();
     }
 
     /**
-     * Main Initialization Logic.
-     * Called by AppClass when the Team tab is clicked.
+     * Main Init Logic: Called when tab is clicked.
+     * Determines which view to show based on user's team status.
      */
     async init() {
         console.log("🛡️ TeamController: Refreshing View...");
         
-        // 1. Get User from Global State (Singleton)
-        const currentUser = state.getUser();
+        // 1. Validate User Session
+        const currentUser = State.getUser(); // Access singleton directly if exported as class, or use imported instance
+        // Note: Based on previous files, we import 'state' (lowercase). Fixing import below.
+    }
+}
+// FIX IMPORT: Re-writing the class with correct import from previous context
+import { state } from '../core/state.js';
+
+export class TeamController {
+    constructor() {
+        this.teamService = new TeamService();
+        this.viewContainer = document.getElementById('view-team');
+        this.checkInviteParam();
+    }
+
+    async init() {
+        console.log("🛡️ TeamController: Refreshing View...");
         
+        const currentUser = state.getUser();
         if (!currentUser) {
-            console.warn("⚠️ TeamCtrl: User session invalid.");
-            this.viewContainer.innerHTML = `<div class="error-state">جلسة المستخدم غير صالحة. يرجى إعادة التحميل.</div>`;
+            this.viewContainer.innerHTML = `<div class="error-state">يجب تسجيل الدخول للوصول إلى الفريق.</div>`;
             return;
         }
 
-        // 2. Show Loading State
         this.setLoading(true);
 
         try {
-            // 3. Fetch Team Status from DB
+            // 2. Fetch Team Data
             const myTeam = await this.teamService.getMyTeam(currentUser.id);
 
             if (myTeam) {
-                // Scenario A: User is in a team -> Render Dashboard
+                // Scenario A: User HAS a team -> Render Dashboard
                 console.log(`✅ Member of Team: ${myTeam.name}`);
                 this.renderTeamDashboard(myTeam);
                 this.loadRoster(myTeam.id);
             } else {
-                // Scenario B: User is free -> Render Create Form
-                console.log("ℹ️ Free Agent -> Create Mode");
-                this.renderCreateForm();
+                // Scenario B: User is FREE -> Render Create/Join View
+                console.log("ℹ️ User is Free Agent -> Show Create Form");
+                this.renderFreeAgentView();
             }
 
         } catch (err) {
-            console.error("TeamCtrl Error:", err);
-            this.viewContainer.innerHTML = `<div class="error-state">خطأ في الاتصال بالسيرفر. حاول لاحقاً.</div>`;
+            console.error("TeamCtrl Init Error:", err);
+            this.viewContainer.innerHTML = `<div class="error-state">حدث خطأ في تحميل بيانات الفريق.</div>`;
         }
     }
 
     /**
-     * VIEW: Renders the "Create Team" Form.
+     * VIEW 1: Free Agent View (Create New Team)
      */
-    renderCreateForm() {
+    renderFreeAgentView() {
         this.viewContainer.innerHTML = `
             <div class="team-creation-box fade-in">
                 <div class="empty-state-icon">
                     <i class="fa-solid fa-flag-checkered"></i>
                 </div>
-                <h3>أسس فريقك الخاص</h3>
-                <p>كن الكابتن، واجمع 5 لاعبين، وابدأ المنافسة في منطقتك.</p>
+                <h3>التحق بكيان رياضي</h3>
+                <p>يمكنك تأسيس فريقك الخاص وقيادته، أو البحث عن فريق للانضمام إليه.</p>
 
-                <form id="form-create-team">
+                <!-- Create Form -->
+                <form id="form-create-team" style="margin-top:20px;">
                     <div class="form-group">
-                        <label>اسم الفريق</label>
+                        <label>اسم الفريق الجديد</label>
                         <input type="text" id="inp-team-name" placeholder="مثال: صقور الفسطاط" required minlength="3" maxlength="20">
                     </div>
 
@@ -95,65 +109,33 @@ export class TeamController {
                     </div>
 
                     <button type="submit" class="btn-primary" id="btn-create-team">
-                        <i class="fa-solid fa-plus-circle"></i> إنشاء الكيان
+                        <i class="fa-solid fa-plus-circle"></i> تأسيس فريق
                     </button>
                 </form>
+
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:20px 0;">
+                
+                <button class="btn-action-secondary" style="width:100%; justify-content:center;" onclick="window.router('view-scout')">
+                    <i class="fa-solid fa-search"></i> البحث عن فرق في الكشاف
+                </button>
             </div>
         `;
 
-        // Bind Submit
+        // Bind Submit Event
         document.getElementById('form-create-team').addEventListener('submit', (e) => this.handleCreate(e));
     }
 
     /**
-     * LOGIC: Handles Team Creation
-     */
-    async handleCreate(e) {
-        e.preventDefault();
-        
-        const btn = document.getElementById('btn-create-team');
-        const name = document.getElementById('inp-team-name').value.trim();
-        const c1 = document.getElementById('inp-team-color1').value;
-        const c2 = document.getElementById('inp-team-color2').value;
-        
-        btn.disabled = true;
-        btn.textContent = "جاري التوثيق...";
-
-        try {
-            const user = state.getUser();
-            
-            // 1. Validate Name Uniqueness in Zone
-            const exists = await this.teamService.checkNameAvailability(name, user.zoneId);
-            if (exists) {
-                throw new Error("عذراً، هذا الاسم مستخدم بالفعل في منطقتك.");
-            }
-            
-            // 2. Execute Creation
-            await this.teamService.createTeam(user.id, name, user.zoneId, { primary: c1, secondary: c2 });
-            
-            alert("تم إنشاء الفريق بنجاح!");
-            
-            // 3. Refresh View
-            this.init(); 
-
-        } catch (err) {
-            alert("خطأ: " + err.message);
-            btn.disabled = false;
-            btn.textContent = "إنشاء الكيان";
-        }
-    }
-
-    /**
-     * VIEW: Renders the Team Dashboard (Header + Stats + Actions).
-     * @param {Object} team - Team Data Object
+     * VIEW 2: Team Dashboard (For Members/Captains)
      */
     renderTeamDashboard(team) {
         const isDraft = team.status === 'DRAFT';
-        
+        const isCaptain = team.my_role === 'CAPTAIN';
+
         this.viewContainer.innerHTML = `
             <div class="team-dashboard fade-in">
                 
-                <!-- Header Card -->
+                <!-- Team Header Card -->
                 <div class="team-header-card" style="background: linear-gradient(135deg, ${team.logo_dna.primary}, ${team.logo_dna.secondary});">
                     <div class="team-logo-circle">
                         <i class="fa-solid fa-shield-cat"></i>
@@ -163,8 +145,8 @@ export class TeamController {
                         ${isDraft ? 'تحت التأسيس (DRAFT)' : 'فريق جاهز (ACTIVE)'}
                     </span>
                 </div>
-                
-                <!-- Stats Row -->
+
+                <!-- Stats Summary -->
                 <div class="team-stats-row">
                     <div class="t-stat">
                         <span class="val">${team.total_matches || 0}</span>
@@ -180,26 +162,26 @@ export class TeamController {
                     </div>
                 </div>
 
-                <!-- Action Buttons (Role Based) -->
+                <!-- Action Buttons -->
                 <div class="team-actions-grid">
-                    ${team.my_role === 'CAPTAIN' ? `
+                    ${isCaptain ? `
                         <button class="action-card" id="btn-invite">
-                            <i class="fa-solid fa-user-plus text-gold"></i>
-                            <span>دعوة لاعب</span>
+                            <i class="fa-solid fa-link text-gold"></i>
+                            <span>نسخ رابط الدعوة</span>
                         </button>
                         <button class="action-card" onclick="alert('لوحة الإدارة: قريباً')">
                             <i class="fa-solid fa-cog"></i>
-                            <span>إدارة</span>
+                            <span>إدارة الفريق</span>
                         </button>
                     ` : `
                         <button class="action-card danger" id="btn-leave">
                             <i class="fa-solid fa-door-open"></i>
-                            <span>مغادرة</span>
+                            <span>مغادرة الفريق</span>
                         </button>
                     `}
                 </div>
 
-                <!-- Roster Section -->
+                <!-- Roster List Container -->
                 <div class="roster-section">
                     <h4>قائمة اللاعبين</h4>
                     <div id="roster-list-container">
@@ -209,8 +191,8 @@ export class TeamController {
             </div>
         `;
 
-        // Bind Actions
-        if (team.my_role === 'CAPTAIN') {
+        // Bind Dynamic Buttons
+        if (isCaptain) {
             document.getElementById('btn-invite').addEventListener('click', () => this.copyInviteLink(team.id));
         } else {
             document.getElementById('btn-leave').addEventListener('click', () => this.handleLeave(team.id));
@@ -218,7 +200,42 @@ export class TeamController {
     }
 
     /**
-     * LOGIC: Fetches and Renders the Roster List
+     * LOGIC: Handle Team Creation
+     */
+    async handleCreate(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btn-create-team');
+        const name = document.getElementById('inp-team-name').value.trim();
+        const c1 = document.getElementById('inp-team-color1').value;
+        const c2 = document.getElementById('inp-team-color2').value;
+        
+        btn.disabled = true;
+        btn.textContent = "جاري التوثيق...";
+
+        try {
+            const user = state.getUser();
+            
+            // Check Availability
+            const exists = await this.teamService.checkNameAvailability(name, user.zoneId);
+            if (exists) throw new Error("عذراً، هذا الاسم مستخدم بالفعل.");
+
+            // Create
+            const logoDna = { primary: c1, secondary: c2 };
+            await this.teamService.createTeam(user.id, name, user.zoneId, logoDna);
+
+            alert("تم تأسيس الفريق بنجاح!");
+            this.init(); // Reload View
+
+        } catch (err) {
+            alert("خطأ: " + err.message);
+            btn.disabled = false;
+            btn.textContent = "تأسيس فريق";
+        }
+    }
+
+    /**
+     * LOGIC: Fetch & Render Roster
      */
     async loadRoster(teamId) {
         const container = document.getElementById('roster-list-container');
@@ -240,8 +257,8 @@ export class TeamController {
                     <div class="member-info">
                         <div class="member-name">
                             ${m.name} 
-                            ${m.role === 'CAPTAIN' ? '<i class="fa-solid fa-crown text-gold"></i>' : ''}
-                            ${m.role === 'GK' ? '<i class="fa-solid fa-hands-holding-circle"></i>' : ''}
+                            ${m.role === 'CAPTAIN' ? '<i class="fa-solid fa-crown text-gold" title="كابتن"></i>' : ''}
+                            ${m.role === 'GK' ? '<i class="fa-solid fa-hands-holding-circle" title="حارس"></i>' : ''}
                         </div>
                         <div class="member-pos">${m.position} | ${m.rating}</div>
                     </div>
@@ -258,22 +275,14 @@ export class TeamController {
     }
 
     /**
-     * Helper: Maps Skin ID to Hex Color (Visual consistency)
-     */
-    getSkinColor(id) {
-        const colors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
-        return colors[id] || '#ccc';
-    }
-
-    /**
      * LOGIC: Leave Team
      */
     async handleLeave(teamId) {
-        if (!confirm("هل أنت متأكد من مغادرة الفريق؟ ستفقد تاريخك معه.")) return;
+        if (!confirm("هل أنت متأكد من مغادرة الفريق؟ ستفقد تاريخك.")) return;
         
         try {
             await this.teamService.leaveTeam(state.getUser().id, teamId);
-            alert("تمت المغادرة بنجاح.");
+            alert("تمت المغادرة.");
             window.location.reload();
         } catch (e) {
             alert(e.message);
@@ -281,7 +290,7 @@ export class TeamController {
     }
 
     /**
-     * LOGIC: Handle Deep Linking (Join via URL)
+     * LOGIC: Deep Link Handler (Join via URL)
      */
     async checkInviteParam() {
         const tgParams = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -290,24 +299,26 @@ export class TeamController {
             const teamId = tgParams.split('_')[1];
             const currentUser = state.getUser();
             
-            // Only join if user exists and confirms
-            if (currentUser && confirm("لقد تمت دعوتك للانضمام لهذا الفريق. هل تقبل؟")) {
-                try {
-                    await this.teamService.joinTeam(currentUser.id, teamId);
-                    alert("تم الانضمام بنجاح!");
-                    window.location.reload();
-                } catch (e) {
-                    alert("فشل الانضمام: " + e.message);
+            if (currentUser) {
+                // Confirm dialog is handled by browser, but we can do custom UI later
+                if (confirm("لقد تمت دعوتك للانضمام لهذا الفريق. هل تقبل؟")) {
+                    try {
+                        await this.teamService.joinTeam(currentUser.id, teamId);
+                        alert("تم الانضمام بنجاح!");
+                        window.location.reload();
+                    } catch (e) {
+                        alert("فشل الانضمام: " + e.message);
+                    }
                 }
             }
         }
     }
 
     /**
-     * LOGIC: Copy Invite Link
+     * Helper: Copy Invite Link
      */
     copyInviteLink(teamId) {
-        const botName = 'NoubSportsBot'; // Replace with your Bot Username
+        const botName = 'NoubSportsBot'; // Replace with real bot
         const link = `https://t.me/${botName}?start=join_${teamId}`;
         
         navigator.clipboard.writeText(link).then(() => {
@@ -318,11 +329,19 @@ export class TeamController {
     }
 
     /**
-     * Helper: Toggle Loading Spinner
+     * Helper: Loading Spinner
      */
     setLoading(isLoading) {
         if (isLoading) {
-            this.viewContainer.innerHTML = '<div style="text-align:center; padding:50px;"><div class="loader-bar"></div></div>';
+            this.viewContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:300px;"><div class="loader-bar"></div></div>';
         }
+    }
+
+    /**
+     * Helper: Skin Color Mapper
+     */
+    getSkinColor(id) {
+        const colors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
+        return colors[id] || '#ccc';
     }
 }
