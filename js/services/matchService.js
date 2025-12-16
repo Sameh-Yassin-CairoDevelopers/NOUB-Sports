@@ -1,51 +1,48 @@
 /*
  * Filename: js/services/matchService.js
- * Version: 5.1.0 (MASTER FULL)
- * Description: The Complete Match Engine Service.
+ * Version: 5.5.0 (MASTER ENGINE)
+ * Description: The Core Logic for Match Management.
  * 
- * CORE RESPONSIBILITIES:
- * 1. Data Fetching: Opponents, Venues, Live Feeds.
- * 2. Constraint Engine: Enforces 'Weekly Cap' and 'Time Buffer' rules.
- * 3. Transaction Manager: Handles complex multi-table inserts (Match + Lineup + Events).
- * 4. Consensus Manager: Handles the 'Handshake' (Verify/Reject) logic.
+ * ACADEMIC RESPONSIBILITIES:
+ * 1. Constraint Enforcement: Implements the "Anti-Fraud" rules (Weekly Caps, Time Buffers).
+ * 2. Data Transaction: Handles complex multi-table writes (Match Header -> Lineups -> Events).
+ * 3. Verification Logic: Manages the consensus mechanism between Captains.
+ * 4. Data Retrieval: Fetches contextual data (Opponents, Venues, Live Feed).
  */
 
 import { supabase } from '../core/supabaseClient.js';
 
 export class MatchService {
 
-    // ============================================================
-    // SECTION 1: PRE-MATCH DATA (التحضير)
-    // ============================================================
-
     /**
      * Fetches valid opponents in the same zone.
-     * Rules: 
-     * - Must be in same Zone.
-     * - Must be 'ACTIVE' (have 5+ players).
-     * - Cannot play against self.
+     * Rule: Can only play against 'ACTIVE' teams (5+ players).
+     * Rule: Cannot play against self.
      * 
      * @param {number} zoneId - The local Khôra ID.
-     * @param {string} myTeamId - ID of the creating team.
+     * @param {string} myTeamId - Current team ID to exclude.
      * @returns {Promise<Array>} List of eligible teams.
      */
     async getOpponents(zoneId, myTeamId) {
-        const { data, error } = await supabase
-            .from('teams')
-            .select('id, name, logo_dna')
-            .eq('zone_id', zoneId)
-            .eq('status', 'ACTIVE') 
-            .neq('id', myTeamId);   
+        try {
+            const { data, error } = await supabase
+                .from('teams')
+                .select('id, name, logo_dna')
+                .eq('zone_id', zoneId)
+                .eq('status', 'ACTIVE') 
+                .neq('id', myTeamId);   
             
-        if (error) {
-            console.error("Opponent Fetch Error:", error);
+            if (error) throw error;
+            return data || [];
+
+        } catch (error) {
+            console.error("MatchService: Opponent Fetch Error", error);
             throw new Error("فشل تحميل قائمة الخصوم.");
         }
-        return data || [];
     }
 
     /**
-     * Fetches registered venues in the zone.
+     * Fetches registered venues in the zone for GPS verification.
      * @param {number} zoneId - The local zone ID.
      * @returns {Promise<Array>} List of venues.
      */
@@ -56,19 +53,17 @@ export class MatchService {
             .eq('zone_id', zoneId);
             
         if (error) {
-            console.error("Venue Fetch Error:", error);
+            console.error("MatchService: Venue Fetch Error", error);
             throw new Error("فشل تحميل قائمة الملاعب.");
         }
         return data || [];
     }
 
-    // ============================================================
-    // SECTION 2: CONSTRAINT ENGINE (الحماية ومنع الغش)
-    // ============================================================
-
     /**
-     * Checks if a team is allowed to play a new match.
-     * Applies strict Anti-Fraud rules.
+     * VALIDATION ENGINE: Checks if a team is allowed to play.
+     * 
+     * Constraint 1: Weekly Cap (Max 24 matches/week).
+     * Constraint 2: Temporal Buffer (Min 2 hours between matches).
      * 
      * @param {string} teamId - The team initiating the match.
      * @returns {Promise<boolean>} True if valid, throws Error if invalid.
@@ -76,7 +71,7 @@ export class MatchService {
     async validateMatchConstraints(teamId) {
         const now = new Date();
         
-        // --- Rule A: Weekly Cap (Max 24 matches/week) ---
+        // --- Constraint 1: Weekly Cap (24 Matches) ---
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(now.getDate() - 7);
         
@@ -92,8 +87,8 @@ export class MatchService {
             throw new Error("تنبيه: لقد استنفد الفريق الحد الأقصى للمباريات هذا الأسبوع (24 مباراة).");
         }
 
-        // --- Rule B: Time Buffer (Min 2 hours between matches) ---
-        // Prevents spamming matches or playing two games at once.
+        // --- Constraint 2: 2-Hour Buffer ---
+        // Checks if the team played a match recently to prevent spam/overlap.
         const twoHoursAgo = new Date();
         twoHoursAgo.setHours(now.getHours() - 2);
         
@@ -101,45 +96,43 @@ export class MatchService {
             .from('matches')
             .select('id')
             .or(`team_a_id.eq.${teamId},team_b_id.eq.${teamId}`)
-            .gte('played_at', twoHoursAgo.toISOString()) // Check played_at time
+            .gte('played_at', twoHoursAgo.toISOString()) // Using played_at timestamp
             .maybeSingle();
 
         if (timeError && timeError.code !== 'PGRST116') throw timeError;
 
         if (recentMatch) {
-            throw new Error("تنبيه: الفريق في فترة راحة إجبارية. يجب الانتظار ساعتين بين المباريات.");
+            throw new Error("تنبيه: الفريق في فترة راحة إجبارية. يجب الانتظار ساعتين بين المباريات الرسمية.");
         }
 
         return true;
     }
 
-    // ============================================================
-    // SECTION 3: TRANSACTION (التسجيل والتنفيذ)
-    // ============================================================
-
     /**
-     * Submits a FULL match record.
-     * This acts as a Transaction: Header -> Lineup -> Events.
+     * TRANSACTION: Submits a full match record.
+     * This ensures Data Integrity by writing to multiple tables logically.
      * 
-     * @param {Object} payload - Combined data object from Controller.
+     * @param {Object} payload - Data Bundle containing:
+     *  { creatorId, myTeamId, oppTeamId, venueId, myScore, oppScore, lineup[] }
      * @returns {Promise<boolean>} True on success.
      */
     async submitMatch(payload) {
         console.log("⚔️ MatchService: Executing Submission Transaction...");
 
         // 1. Insert Match Header (The Main Record)
+        // Status defaults to 'PENDING_VERIFICATION' in DB, but we set explicit here for clarity
         const { data: match, error: matchError } = await supabase
             .from('matches')
             .insert([{
-                season_id: 1, // Default Season (Hardcoded for MVP)
+                season_id: 1, // Default Season (MVP Hardcoded)
                 team_a_id: payload.myTeamId,
                 team_b_id: payload.oppTeamId,
                 venue_id: payload.venueId,
                 score_a: payload.myScore,
                 score_b: payload.oppScore,
                 creator_id: payload.creatorId,
-                status: 'PENDING_VERIFICATION', // Waits for opponent confirmation
-                match_data: {}, // Can store extra meta-data here
+                status: 'PENDING_VERIFICATION',
+                match_data: {}, // Future extensibility
                 played_at: new Date().toISOString()
             }])
             .select()
@@ -153,13 +146,13 @@ export class MatchService {
         const matchId = match.id;
 
         // 2. Insert Lineups (Who actually played?)
-        // Crucial for Defenders/GKs to get clean sheet/participation XP
+        // Critical for "Silent Player" problem: Defenders get credit for participation/clean sheets here.
         if (payload.lineup && payload.lineup.length > 0) {
             const lineupRows = payload.lineup.map(userId => ({
                 match_id: matchId,
                 team_id: payload.myTeamId,
                 player_id: userId,
-                is_starter: true, // MVP Assumption: All selected are starters
+                is_starter: true, // Assuming all checked players started (MVP)
                 xp_earned: 0 // Will be calculated by DB Triggers upon confirmation
             }));
             
@@ -169,37 +162,29 @@ export class MatchService {
                 
             if (lineupError) {
                 console.error("Lineup Insert Error:", lineupError);
-                // We log but continue, as the main match is created
+                // We log but do not throw, to avoid breaking the main match record creation
             }
         }
 
-        // 3. Insert Events (Scorers, Cards)
-        // If scorers array is provided
+        // 3. Insert Events (Goals) if scorers provided
+        // (Reserved for Phase 2 implementation of detailed scorer selection)
         if (payload.scorers && payload.scorers.length > 0) {
             const eventRows = payload.scorers.map(userId => ({
                 match_id: matchId,
                 player_id: userId,
-                event_type: 'GOAL' // Currently supports Goals only
+                event_type: 'GOAL'
             }));
-            
-            const { error: eventError } = await supabase
-                .from('match_events')
-                .insert(eventRows);
-
-            if (eventError) console.error("Event Insert Error:", eventError);
+            await supabase.from('match_events').insert(eventRows);
         }
 
         return true;
     }
 
-    // ============================================================
-    // SECTION 4: CONSENSUS & VERIFICATION (المصافحة)
-    // ============================================================
-
     /**
-     * Verifies (Confirms) a match result.
-     * Called by the Opponent Captain.
-     * @param {string} matchId - The match to confirm.
+     * CONSENSUS: Verify (Confirm) a match result.
+     * Called by the Opponent Captain via Notification.
+     * 
+     * @param {string} matchId - The match UUID.
      * @param {string} verifierId - The captain clicking confirm.
      */
     async confirmMatch(matchId, verifierId) {
@@ -212,7 +197,8 @@ export class MatchService {
             action: 'CONFIRM'
         }]);
 
-        // 2. Update Match Status -> This triggers the Stats Update (DB Trigger)
+        // 2. Update Match Status
+        // This triggers the DB function 'process_match_results' to distribute points
         const { error } = await supabase
             .from('matches')
             .update({ status: 'CONFIRMED' })
@@ -223,18 +209,21 @@ export class MatchService {
     }
 
     /**
-     * Rejects a match result (Dispute).
-     * @param {string} matchId - The match to reject.
+     * CONSENSUS: Reject a match result (Dispute).
+     * @param {string} matchId - The match UUID.
+     * @param {string} verifierId - The captain clicking reject.
      */
     async rejectMatch(matchId, verifierId) {
         console.log(`🚩 Consensus: Match ${matchId} Rejected`);
 
+        // 1. Log Rejection
         await supabase.from('match_verifications').insert([{
             match_id: matchId,
             verifier_id: verifierId,
             action: 'REJECT'
         }]);
 
+        // 2. Update Status to REJECTED (No points awarded)
         const { error } = await supabase
             .from('matches')
             .update({ status: 'REJECTED' })
@@ -244,14 +233,12 @@ export class MatchService {
         return true;
     }
 
-    // ============================================================
-    // SECTION 5: FEED & DISPLAY (العرض)
-    // ============================================================
-
     /**
-     * Gets the Live Match Feed for the Zone.
-     * Used in Arena View.
+     * DISPLAY: Gets the Live Match Feed for the Zone.
+     * Returns matches ordered by date (newest first).
+     * 
      * @param {number} zoneId - The zone to filter by.
+     * @returns {Promise<Array>} List of match objects with joined Team/Venue data.
      */
     async getLiveFeed(zoneId) {
         // Deep Select: Match -> Teams (A/B) -> Venues
@@ -263,14 +250,14 @@ export class MatchService {
                 team_b:teams!team_b_id (name, logo_dna),
                 venue:venues (name)
             `)
-            // Logic: Filter matches where Team A (Home) belongs to this Zone
+            // Logic: Filter matches where Team A (Home Team) belongs to this Zone
             .eq('team_a.zone_id', zoneId) 
             .order('played_at', { ascending: false })
             .limit(20);
 
         if (error) {
             console.error("Feed Error:", error);
-            // Graceful degradation: return empty array
+            // Graceful degradation: return empty array instead of crashing UI
             return [];
         }
         return data;
