@@ -1,20 +1,23 @@
 /*
  * Filename: css/views/team.css
- * Version: 3.0.0
- * Description: Styles for Team Management View.
- * Covers: Create Team Form, Dashboard Header, Stats, and Action Buttons.
+ * Version: 5.5.0 (MASTER FULL)
+ * Description: Styles for Team Management Module.
+ * Covers: Creation Form, Dashboard Header, Stats, Actions, and Roster.
  */
 
-/* 1. View Container Adjustment */
+/* 1. View Container Layout */
 #view-team {
     padding: 20px;
-    padding-bottom: 110px; /* Extra space for Navbar */
+    padding-bottom: 120px; /* Space for Navbar */
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-height: 100%;
 }
 
-/* 2. Creation Form (Empty State) */
+/* =========================================
+   2. Creation View (Free Agent)
+   ========================================= */
 .team-creation-box {
     background-color: var(--bg-surface);
     border: 1px solid rgba(212, 175, 55, 0.1);
@@ -47,7 +50,7 @@
     margin-bottom: 25px;
 }
 
-/* 3. Logo Color Picker */
+/* Color Picker Row */
 .color-picker-row {
     display: flex;
     justify-content: center;
@@ -74,16 +77,9 @@ input[type="color"]:hover {
     transform: scale(1.1);
 }
 
-.hint-text {
-    display: block;
-    text-align: right;
-    font-size: 0.75rem;
-    color: var(--gold-dim);
-    margin-top: 6px;
-    margin-right: 5px;
-}
-
-/* 4. Team Dashboard Header */
+/* =========================================
+   3. Team Dashboard (Members View)
+   ========================================= */
 .team-dashboard {
     display: flex;
     flex-direction: column;
@@ -91,6 +87,7 @@ input[type="color"]:hover {
     animation: slideUp 0.4s ease-out;
 }
 
+/* Header Card */
 .team-header-card {
     position: relative;
     border-radius: 24px;
@@ -102,7 +99,14 @@ input[type="color"]:hover {
     overflow: hidden;
 }
 
-/* Logo Circle inside Header */
+.team-header-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
 .team-logo-circle {
     width: 90px; height: 90px;
     background: rgba(0,0,0,0.3);
@@ -136,7 +140,7 @@ input[type="color"]:hover {
 .status-badge.warning { color: #fbbf24; border-color: #fbbf24; }
 .status-badge.success { color: #34d399; border-color: #34d399; }
 
-/* 5. Stats Row */
+/* Stats Row */
 .team-stats-row {
     display: flex;
     background: var(--bg-surface);
@@ -165,7 +169,7 @@ input[type="color"]:hover {
     color: var(--text-muted);
 }
 
-/* 6. Action Grid */
+/* Actions Grid */
 .team-actions-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -194,10 +198,13 @@ input[type="color"]:hover {
 }
 
 .action-card.danger i { color: var(--danger); }
-.action-card.danger:hover { border-color: var(--danger); }
+.action-card.danger:hover { border-color: var(--danger); background: rgba(239, 68, 68, 0.1); }
 
-/* 7. Roster Section */
+/* =========================================
+   4. Roster List (Member Cards)
+   ========================================= */
 .roster-section { margin-top: 15px; }
+
 .roster-section h4 {
     color: var(--gold-main);
     margin-bottom: 15px;
@@ -205,7 +212,7 @@ input[type="color"]:hover {
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding-bottom: 8px;
 }
-/* 8. Roster Member Card (New) */
+
 .member-card {
     display: flex;
     align-items: center;
@@ -223,18 +230,19 @@ input[type="color"]:hover {
 }
 
 .member-avatar {
-    width: 40px; height: 40px;
+    width: 45px; height: 45px;
     background: #333;
     border-radius: 50%;
     display: flex; justify-content: center; align-items: center;
     margin-left: 12px;
     border: 2px solid rgba(255,255,255,0.1);
+    font-size: 1.2rem;
 }
 
 .member-info { flex: 1; }
 
 .member-name {
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: bold;
     color: var(--text-main);
     display: flex; align-items: center; gap: 5px;
@@ -244,6 +252,7 @@ input[type="color"]:hover {
     font-size: 0.75rem;
     color: var(--text-muted);
     font-family: var(--font-orbitron);
+    margin-top: 2px;
 }
 
 .member-rep {
@@ -251,11 +260,11 @@ input[type="color"]:hover {
     font-size: 0.85rem;
     color: var(--gold-main);
     background: rgba(212,175,55,0.1);
-    padding: 2px 8px;
+    padding: 4px 10px;
     border-radius: 10px;
+    font-weight: bold;
 }
 
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
