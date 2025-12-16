@@ -1,14 +1,11 @@
 /*
- * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/onboardingCtrl.js
- * Version: Noub Sports_beta 0.0.1 (MASTER AUTH)
- * Status: Production Ready
+ * Version: 5.3.0 (HTML MATCHED)
+ * Description: Controller wired specifically for the HTML you provided.
  * 
- * RESPONSIBILITIES:
- * 1. Auth Flow Orchestration: Manages Telegram Minting vs Email Login/Signup.
- * 2. Visual Studio: Handles live updates for Avatar (Skin, Kit, Name on Shirt).
- * 3. Dynamic Forms: Adjusts UI based on user role (Player vs Fan).
- * 4. Interaction: Binds UI events to AuthService transactions.
+ * BINDINGS:
+ * - Tabs: 'tab-tg', 'tab-email' -> Toggle 'panel-tg', 'panel-email'.
+ * - Auth: 'btn-login', 'btn-signup' -> Call AuthService.
  */
 
 import { AvatarEngine } from '../utils/avatarEngine.js';
@@ -18,258 +15,200 @@ import { SoundManager } from '../utils/soundManager.js';
 export class OnboardingController {
     
     constructor() {
-        // Initialize Services
         this.avatarEngine = new AvatarEngine();
         this.authService = new AuthService();
         
-        // Internal State
-        this.authMode = 'LOGIN'; // Default Email Mode ('LOGIN' or 'SIGNUP')
-        
-        // DOM References for Live Preview
-        this.previewContainer = document.getElementById('auth-avatar-display');
-        this.nameInput = document.getElementById('inp-name');
+        // References from your HTML
+        this.dom = {
+            tabTg: document.getElementById('tab-tg'),
+            tabEmail: document.getElementById('tab-email'),
+            panelTg: document.getElementById('panel-tg'),
+            panelEmail: document.getElementById('panel-email'),
+            btnLogin: document.getElementById('btn-login'),
+            btnSignup: document.getElementById('btn-signup'),
+            formEmail: document.getElementById('form-email-auth')
+        };
 
-        // Auto-Start
         this.init();
     }
 
-    /**
-     * Initialize Controller & Bind Events
-     */
     init() {
-        console.log("🎮 Onboarding Controller: Ready.");
+        console.log("🎮 Onboarding: Connecting to HTML...");
         this.bindEvents();
-        this.updateLivePreview(); // Initial render
-        this.updateAuthModeUI();  // Set initial email UI state
+        // Force update visual preview on load
+        this.updatePreview();
     }
 
-    /**
-     * Bind all DOM Event Listeners
-     */
     bindEvents() {
-        // --- 1. Avatar Controls (Visual DNA) ---
-        const bindControl = (id, type, dir) => {
-            document.getElementById(id)?.addEventListener('click', (e) => {
-                e.preventDefault();
-                SoundManager.play('click');
-                this.avatarEngine.change(type, dir);
-                this.updateLivePreview(); // Refresh visual immediately
-            });
-        };
-
-        bindControl('btn-skin-next', 'skin', 1);
-        bindControl('btn-skin-prev', 'skin', -1);
-        bindControl('btn-kit-next', 'kit', 1);
-        bindControl('btn-kit-prev', 'kit', -1);
-
-        // --- 2. Live Name Typing on Shirt ---
-        if (this.nameInput) {
-            this.nameInput.addEventListener('input', () => {
-                this.updateLivePreview();
-            });
+        // 1. Tab Switching (The Logic you are missing)
+        if (this.dom.tabTg && this.dom.tabEmail) {
+            this.dom.tabTg.addEventListener('click', (e) => this.switchTab(e, 'panel-tg'));
+            this.dom.tabEmail.addEventListener('click', (e) => this.switchTab(e, 'panel-email'));
         }
 
-        // --- 3. Activity Type Logic (Hide/Show Position) ---
-        const activitySelect = document.getElementById('inp-activity');
-        const posGroup = document.getElementById('group-position');
-        
-        if (activitySelect) {
-            activitySelect.addEventListener('change', (e) => {
-                const val = e.target.value;
-                const hiddenRoles = ['FAN', 'INACTIVE'];
-                
-                if (hiddenRoles.includes(val) || val === '') {
-                    posGroup.classList.add('hidden');
-                } else {
-                    posGroup.classList.remove('hidden');
-                }
-            });
+        // 2. Email Auth Actions
+        if (this.dom.btnLogin) {
+            this.dom.btnLogin.addEventListener('click', (e) => this.handleEmailAuth(e, 'LOGIN'));
+        }
+        if (this.dom.btnSignup) {
+            this.dom.btnSignup.addEventListener('click', (e) => this.handleEmailAuth(e, 'SIGNUP'));
         }
 
-        // --- 4. Tab Switching (Telegram vs Email) ---
-        const tabTg = document.getElementById('tab-tg');
-        const tabEmail = document.getElementById('tab-email');
-
-        if (tabTg && tabEmail) {
-            tabTg.addEventListener('click', (e) => this.switchTab(e, 'panel-tg'));
-            tabEmail.addEventListener('click', (e) => this.switchTab(e, 'panel-email'));
+        // 3. Telegram Mint Action
+        const mintBtn = document.getElementById('btn-mint');
+        if (mintBtn) {
+            mintBtn.addEventListener('click', (e) => this.handleTelegramMint(e));
         }
 
-        // --- 5. Email Auth Toggles (Login <-> Signup) ---
-        document.getElementById('link-to-signup')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.authMode = 'SIGNUP';
-            this.updateAuthModeUI();
-        });
-        
-        document.getElementById('link-to-login')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.authMode = 'LOGIN';
-            this.updateAuthModeUI();
-        });
-
-        // --- 6. Form Submissions ---
-        // A. Telegram Mint
-        document.getElementById('form-register')?.addEventListener('submit', (e) => this.handleTelegramMint(e));
-        
-        // B. Email Submit (Handles both Login & Signup)
-        document.getElementById('form-email-auth')?.addEventListener('submit', (e) => this.handleEmailSubmit(e));
+        // 4. Avatar Controls
+        this.bindAvatarControls();
     }
 
     /**
-     * Helper: Updates the avatar preview using the Engine.
+     * Logic to Switch Tabs (Fixes "Buttons not responding")
      */
-    updateLivePreview() {
-        if (!this.previewContainer) return;
-        
-        const currentConfig = JSON.parse(this.avatarEngine.getConfig());
-        const name = this.nameInput?.value || 'NOUB';
-        
-        // Generate Layered HTML
-        const html = AvatarEngine.generateAvatarHTML(currentConfig, name);
-        
-        // Inject
-        this.previewContainer.parentElement.innerHTML = html;
-        this.previewContainer = document.querySelector('.avatar-comp'); // Re-bind reference
-    }
-
-    /**
-     * UX: Switch between Main Tabs
-     */
-    switchTab(e, targetPanelId) {
+    switchTab(e, activePanelId) {
         e.preventDefault();
         SoundManager.play('click');
-        
+
+        // Update Buttons Visual
         document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
 
-        document.getElementById('panel-tg').classList.add('hidden');
-        document.getElementById('panel-email').classList.add('hidden');
-        document.getElementById(targetPanelId).classList.remove('hidden');
+        // Toggle Panels
+        // Ensure we remove 'hidden' from target and add to others
+        if (this.dom.panelTg) this.dom.panelTg.classList.add('hidden');
+        if (this.dom.panelEmail) this.dom.panelEmail.classList.add('hidden');
+        
+        document.getElementById(activePanelId)?.classList.remove('hidden');
     }
 
     /**
-     * UX: Toggle Email Form Mode
+     * Logic: Email Login/Signup
      */
-    updateAuthModeUI() {
-        const title = document.getElementById('email-auth-title');
-        const nameGroup = document.getElementById('group-email-name');
-        const btn = document.getElementById('btn-email-action');
-        const footerLogin = document.getElementById('footer-login');
-        const footerSignup = document.getElementById('footer-signup');
+    async handleEmailAuth(e, mode) {
+        e.preventDefault();
+        const email = document.getElementById('inp-email')?.value;
+        const pass = document.getElementById('inp-pass')?.value;
+        const name = document.getElementById('inp-email-name')?.value; // Only for signup
 
-        if (!title) return; // Guard clause
+        if (!email || !pass) {
+            alert("يرجى إدخال البريد الإلكتروني وكلمة المرور.");
+            return;
+        }
 
-        if (this.authMode === 'LOGIN') {
-            title.textContent = "تسجيل الدخول";
-            nameGroup.classList.add('hidden');
-            btn.textContent = "دخول";
-            footerLogin.classList.add('hidden');
-            footerSignup.classList.remove('hidden');
-            // Remove 'required' from name input to allow submission
-            document.getElementById('inp-email-name').removeAttribute('required');
-        } else {
-            title.textContent = "إنشاء حساب جديد";
-            nameGroup.classList.remove('hidden');
-            btn.textContent = "تسجيل";
-            footerLogin.classList.remove('hidden');
-            footerSignup.classList.add('hidden');
-            // Add 'required' to name input
-            document.getElementById('inp-email-name').setAttribute('required', 'true');
+        // Show Loading
+        const btn = mode === 'LOGIN' ? this.dom.btnLogin : this.dom.btnSignup;
+        const originalText = btn.textContent;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            if (mode === 'LOGIN') {
+                await this.authService.loginEmail(email, pass);
+            } else {
+                if (!name) throw new Error("يرجى كتابة الاسم.");
+                await this.authService.registerUserEmail(email, pass, {
+                    username: name,
+                    zoneId: 1, // Default Zone
+                    activityType: 'PLAYER_FREE',
+                    position: 'FWD',
+                    visualDna: { skin: 1, kit: 1 }
+                });
+                alert("تم التسجيل بنجاح!");
+            }
+            
+            // Reload to Enter App
+            window.location.reload();
+
+        } catch (err) {
+            alert("خطأ: " + err.message);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     }
 
     /**
-     * LOGIC: Handle Telegram Minting
+     * Logic: Telegram Mint
      */
     async handleTelegramMint(e) {
         e.preventDefault();
         const btn = document.getElementById('btn-mint');
-        this.setLoadingState(btn, true);
+        btn.innerHTML = '...';
+        btn.disabled = true;
 
-        // Collect Data
         const name = document.getElementById('inp-name').value;
         const zone = document.getElementById('inp-zone').value;
         const activity = document.getElementById('inp-activity').value;
-        
+
+        // Position Logic
         let pos = 'FAN';
-        if (!document.getElementById('group-position').classList.contains('hidden')) {
-            const posEl = document.querySelector('input[name="pos"]:checked');
-            pos = posEl ? posEl.value : 'FWD';
+        if (activity !== 'FAN' && activity !== 'INACTIVE') {
+             const posEl = document.querySelector('input[name="pos"]:checked');
+             pos = posEl ? posEl.value : 'FWD';
         }
 
         try {
             await this.authService.registerUserTelegram({
-                telegramId: null, // Service will generate mock ID if needed
+                telegramId: null,
                 username: name,
                 zoneId: parseInt(zone),
                 activityType: activity,
                 position: pos,
                 visualDna: this.avatarEngine.getConfig()
             });
-
-            SoundManager.play('success');
-            alert("تم صك الهوية بنجاح! جاري الدخول للملعب...");
             window.location.reload();
-
-        } catch (err) {
-            console.error("Mint Error:", err);
-            alert("خطأ: " + err.message);
-            this.setLoadingState(btn, false, "صك الهوية");
-        }
-    }
-
-    /**
-     * LOGIC: Handle Email Submit (Login OR Signup)
-     */
-    async handleEmailSubmit(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btn-email-action');
-        const email = document.getElementById('inp-email').value;
-        const pass = document.getElementById('inp-pass').value;
-
-        if (!email || !pass) return alert("أدخل البيانات");
-        
-        this.setLoadingState(btn, true);
-
-        try {
-            if (this.authMode === 'LOGIN') {
-                // --- Login Flow ---
-                await this.authService.loginEmail(email, pass);
-            } else {
-                // --- Signup Flow ---
-                const name = document.getElementById('inp-email-name').value;
-                
-                await this.authService.registerUserEmail(email, pass, {
-                    username: name,
-                    zoneId: 1, // Default Zone for Email Signup (User can change later)
-                    activityType: 'PLAYER_FREE', // Default
-                    position: 'FWD',
-                    visualDna: { skin: 1, kit: 1 } // Default Visual
-                });
-                alert("تم إنشاء الحساب بنجاح!");
-            }
-            
-            // Success -> Enter App
-            window.location.reload();
-
         } catch (err) {
             alert(err.message);
-            this.setLoadingState(btn, false, this.authMode === 'LOGIN' ? "دخول" : "تسجيل");
+            btn.innerHTML = 'صك الهوية';
+            btn.disabled = false;
         }
     }
 
-    /**
-     * Helper: Loading Spinner
-     */
-    setLoadingState(btn, isLoading, originalText = "") {
-        if (isLoading) {
-            btn.disabled = true;
-            if(!originalText) originalText = btn.textContent;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-        } else {
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
+    // --- Helpers ---
+    bindAvatarControls() {
+        const bind = (id, type, dir) => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.avatarEngine.change(type, dir);
+                this.updatePreview();
+            });
+        };
+        bind('btn-skin-next', 'skin', 1); bind('btn-skin-prev', 'skin', -1);
+        bind('btn-kit-next', 'kit', 1); bind('btn-kit-prev', 'kit', -1);
+        
+        // Live Name
+        const nameInput = document.getElementById('inp-name');
+        if (nameInput) nameInput.addEventListener('input', () => this.updatePreview());
+    }
+
+    updatePreview() {
+        const container = document.getElementById('auth-avatar-display');
+        const nameInput = document.getElementById('inp-name');
+        if (!container) return;
+
+        const config = JSON.parse(this.avatarEngine.getConfig());
+        const name = nameInput ? nameInput.value : 'NOUB';
+        
+        // Use AvatarEngine static method (Ensure AvatarEngine is updated too!)
+        // If AvatarEngine static method is missing in your version, this handles it:
+        const skinColors = ['#F5C6A5', '#C68642', '#8D5524'];
+        const kitColors = ['#EF4444', '#10B981', '#3B82F6'];
+        
+        const skin = skinColors[config.skin - 1] || skinColors[0];
+        const kit = kitColors[config.kit - 1] || kitColors[0];
+
+        container.parentElement.innerHTML = `
+            <div class="avatar-comp" style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                <i class="fa-solid fa-user" style="font-size: 90px; color: ${skin}; position: absolute; bottom: 40px; z-index: 1;"></i>
+                <i class="fa-solid fa-shirt" style="font-size: 110px; color: ${kit}; position: absolute; bottom: -10px; z-index: 2;"></i>
+                <div style="position: absolute; bottom: 35px; z-index: 3; color: rgba(255,255,255,0.8); font-size: 10px; font-weight: bold; text-transform: uppercase;">
+                    ${name}
+                </div>
+            </div>
+        `;
+        // Re-bind container after overwrite
+        this.previewContainer = document.querySelector('.avatar-comp');
     }
 }
