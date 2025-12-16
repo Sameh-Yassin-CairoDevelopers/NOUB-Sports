@@ -1,17 +1,14 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/arenaCtrl.js
- * Version: 5.5.0 (MASTER CONTROLLER)
- * Description: Controller for the Arena/Matchmaking Module.
+ * Version: Noub Sports_beta 0.0.1 (MASTER ARENA)
+ * Status: Production Ready
  * 
- * RESPONSIBILITIES:
- * 1. Role Logic: Determines if the user is a Captain to unlock 'Create Match' tab.
- * 2. Feed Rendering: Displays live/recent matches with real-time status.
- * 3. Match Logging Form: A complex form that aggregates:
- *    - Opponent Selection (Filtered by Zone).
- *    - Venue Selection (GPS verified locations).
- *    - Score Input.
- *    - Lineup Selection (Who played?).
- * 4. Submission Logic: Validates and sends payload to MatchService.
+ * ARCHITECTURAL RESPONSIBILITIES:
+ * 1. Role Verification: Interacts with TeamService to verify 'CAPTAIN' status explicitly.
+ * 2. View Management: Toggles between Live Feed and Match Registration Form.
+ * 3. Data Aggregation: Fetches Opponents and Venues dynamically for the form.
+ * 4. Submission Logic: Validates lineup (5 players) and sends payload to MatchService.
  */
 
 import { MatchService } from '../services/matchService.js';
@@ -29,17 +26,17 @@ export class ArenaController {
         this.teamService = new TeamService();
         this.viewContainer = document.getElementById('view-arena');
         
-        // Internal Cache for Captain Data
+        // Internal Cache
         this.myTeamData = null;
         this.roster = [];
     }
 
     /**
-     * Main Initialization Logic.
-     * Called when 'Arena' tab is clicked.
+     * Main Initialization.
+     * Called by AppClass when 'Arena' tab is clicked.
      */
     async init() {
-        console.log("🏟️ ArenaController: Initializing...");
+        console.log("🏟️ ArenaController: Initializing & Checking Role...");
         
         const currentUser = state.getUser();
         if (!currentUser) {
@@ -47,25 +44,28 @@ export class ArenaController {
             return;
         }
 
-        // 1. Show Loading
+        // 1. Show Loader
         this.viewContainer.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
 
         try {
-            // 2. Fetch User's Team Role
+            // 2. Fetch User's Team Role (CRITICAL STEP)
             const myTeam = await this.teamService.getMyTeam(currentUser.id);
-            const isCaptain = myTeam?.my_role === 'CAPTAIN';
+            
+            // 3. Determine Eligibility
+            // Check if user has a team AND is the CAPTAIN
+            const isCaptain = myTeam && myTeam.my_role === 'CAPTAIN';
 
-            // 3. Pre-load Captain Data (if applicable)
+            // 4. Cache Data for Form Use
             if (isCaptain) {
+                console.log("✅ User is Captain. Enabling Registration.");
                 this.myTeamData = myTeam;
-                // Fetch roster to populate the Lineup Selector later
                 this.roster = await this.teamService.getTeamRoster(myTeam.id);
             }
 
-            // 4. Render Layout (Tabs)
+            // 5. Render Layout (Pass captain status to show/hide button)
             this.renderLayout(isCaptain);
             
-            // 5. Load Default Feed
+            // 6. Load Default Feed
             await this.loadLiveFeed(currentUser.zoneId);
 
         } catch (err) {
@@ -76,23 +76,26 @@ export class ArenaController {
 
     /**
      * Renders the Tab Navigation.
+     * @param {boolean} isCaptain - Logic to show/hide 'Register' tab.
      */
     renderLayout(isCaptain) {
         this.viewContainer.innerHTML = `
             <div class="arena-container fade-in">
-                <!-- Navigation Tabs -->
+                <!-- Tabs -->
                 <div class="arena-tabs">
                     <button class="tab-btn active" data-tab="feed">
                         <i class="fa-solid fa-tower-broadcast"></i> مباشر
                     </button>
+                    
+                    <!-- Only show if Captain -->
                     ${isCaptain ? `
                         <button class="tab-btn" data-tab="create">
-                            <i class="fa-solid fa-plus-circle"></i> تسجيل
+                            <i class="fa-solid fa-plus-circle"></i> تسجيل مباراة
                         </button>
                     ` : ''}
                 </div>
 
-                <!-- Dynamic Content Area -->
+                <!-- Dynamic Content -->
                 <div id="arena-content"></div>
             </div>
         `;
@@ -106,16 +109,14 @@ export class ArenaController {
 
                 // Logic Switch
                 const tab = e.target.dataset.tab;
-                const user = state.getUser();
-                
-                if (tab === 'feed') this.loadLiveFeed(user.zoneId);
+                if (tab === 'feed') this.loadLiveFeed(state.getUser().zoneId);
                 if (tab === 'create') this.renderCreateForm();
             });
         });
     }
 
     /**
-     * TAB 1: Loads the Match Feed.
+     * TAB 1: Live Matches Feed
      */
     async loadLiveFeed(zoneId) {
         const container = document.getElementById('arena-content');
@@ -124,7 +125,7 @@ export class ArenaController {
         try {
             const matches = await this.matchService.getLiveFeed(zoneId);
             
-            if (!matches.length) { 
+            if (!matches || matches.length === 0) { 
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fa-solid fa-wind" style="font-size:3rem; margin-bottom:10px; color:#555;"></i>
@@ -134,36 +135,25 @@ export class ArenaController {
                 return; 
             }
 
-            // Render Match Cards
             container.innerHTML = matches.map(m => `
                 <div class="match-card">
-                    <!-- Header -->
                     <div class="match-meta">
                         <span>${Helpers.formatDate(new Date(m.played_at))}</span>
                         <span><i class="fa-solid fa-location-dot"></i> ${m.venue?.name || 'ملعب'}</span>
                     </div>
-                    
-                    <!-- Scoreboard -->
                     <div class="scoreboard">
-                        <!-- Team A -->
                         <div class="sb-team">
                             <div class="sb-logo" style="background:${m.team_a?.logo_dna?.primary || '#333'}"></div>
                             <span>${m.team_a?.name}</span>
                         </div>
-                        
-                        <!-- Score -->
                         <div class="sb-score">
                             ${m.score_a} - ${m.score_b}
                         </div>
-                        
-                        <!-- Team B -->
                         <div class="sb-team">
                             <div class="sb-logo" style="background:${m.team_b?.logo_dna?.primary || '#333'}"></div>
                             <span>${m.team_b?.name}</span>
                         </div>
                     </div>
-                    
-                    <!-- Status -->
                     <div class="match-status status-${m.status.toLowerCase()}">
                         ${m.status === 'CONFIRMED' ? 'نتيجة معتمدة' : 'في انتظار التوثيق'}
                     </div>
@@ -177,8 +167,7 @@ export class ArenaController {
     }
 
     /**
-     * TAB 2: Renders the Create Match Form.
-     * Fetches Opponents and Venues on load.
+     * TAB 2: Create Match Form (Captains Only)
      */
     async renderCreateForm() {
         const container = document.getElementById('arena-content');
@@ -187,7 +176,7 @@ export class ArenaController {
         try {
             const user = state.getUser();
             
-            // Parallel Fetch: Opponents & Venues
+            // Parallel Fetch: Get Valid Opponents & Venues
             const [opponents, venues] = await Promise.all([
                 this.matchService.getOpponents(user.zoneId, this.myTeamData.id),
                 this.matchService.getVenues(user.zoneId)
@@ -195,21 +184,21 @@ export class ArenaController {
 
             container.innerHTML = `
                 <div class="match-form-box fade-in">
-                    <h3>تسجيل مباراة جديدة</h3>
+                    <h3 style="color:var(--gold-main); text-align:center; margin-bottom:20px;">تسجيل مباراة جديدة</h3>
                     
                     <form id="form-match">
-                        <!-- 1. Opponent -->
+                        <!-- 1. Select Opponent -->
                         <div class="form-group">
                             <label>الفريق الخصم</label>
                             <select id="inp-opp" required>
                                 <option value="" disabled selected>اختر الفريق...</option>
                                 ${opponents.length 
                                     ? opponents.map(o => `<option value="${o.id}">${o.name}</option>`).join('') 
-                                    : `<option disabled>لا يوجد خصوم نشطين</option>`}
+                                    : `<option disabled>لا يوجد خصوم نشطين (5 لاعبين+) في منطقتك</option>`}
                             </select>
                         </div>
 
-                        <!-- 2. Venue -->
+                        <!-- 2. Select Venue -->
                         <div class="form-group">
                             <label>الملعب</label>
                             <select id="inp-venue" required>
@@ -232,8 +221,8 @@ export class ArenaController {
 
                         <!-- 4. Lineup Selector -->
                         <div class="form-group">
-                            <label>التشكيلة (اختر من نزل الملعب)</label>
-                            <p class="text-muted text-small">حدد اللاعبين لتسجيل نقاط المشاركة</p>
+                            <label>التشكيلة (من شارك في المباراة؟)</label>
+                            <p class="text-muted" style="font-size:0.8rem; margin-bottom:5px;">حدد اللاعبين ليحصلوا على نقاط الخبرة</p>
                             <div class="roster-grid">
                                 ${this.roster.map(p => `
                                     <label class="player-chk">
@@ -250,7 +239,6 @@ export class ArenaController {
                     </form>
                 </div>`;
             
-            // Bind Submit
             document.getElementById('form-match').addEventListener('submit', (e) => this.handleSubmit(e));
 
         } catch (e) {
@@ -259,7 +247,7 @@ export class ArenaController {
     }
 
     /**
-     * LOGIC: Submit the Match
+     * LOGIC: Submit the Match Payload
      */
     async handleSubmit(e) {
         e.preventDefault();
@@ -268,7 +256,7 @@ export class ArenaController {
         btn.disabled = true; 
         btn.textContent = "جاري الإرسال...";
         
-        // 1. Collect Payload
+        // Construct Payload
         const payload = {
             creatorId: state.getUser().id,
             myTeamId: this.myTeamData.id,
@@ -276,14 +264,13 @@ export class ArenaController {
             venueId: parseInt(document.getElementById('inp-venue').value),
             myScore: parseInt(document.getElementById('inp-score-my').value),
             oppScore: parseInt(document.getElementById('inp-score-opp').value),
-            // Map selected checkboxes to array
             lineup: Array.from(document.querySelectorAll('input[name="lineup"]:checked')).map(cb => cb.value),
-            scorers: [] // Reserved for future
+            scorers: [] 
         };
 
-        // 2. Validate Lineup
+        // Validation
         if (payload.lineup.length < 5) {
-            if(!confirm("عدد اللاعبين المختارين أقل من 5. هل أنت متأكد؟")) {
+            if(!confirm("عدد اللاعبين المختارين أقل من 5. هل أنت متأكد من المتابعة؟")) {
                 btn.disabled = false;
                 btn.textContent = "إرسال للتوثيق";
                 return;
@@ -291,18 +278,16 @@ export class ArenaController {
         }
 
         try {
-            // 3. Check Constraints
+            // Call Service
             await this.matchService.validateMatchConstraints(payload.myTeamId);
-            
-            // 4. Execute Transaction
             await this.matchService.submitMatch(payload);
             
             alert("تم تسجيل المباراة بنجاح! بانتظار موافقة الكابتن الخصم.");
             
-            // 5. Reload Feed
+            // Return to Feed
             this.loadLiveFeed(state.getUser().zoneId);
             
-            // Reset Tabs UI
+            // Update Tab UI
             this.viewContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             this.viewContainer.querySelector('[data-tab="feed"]').classList.add('active');
 
