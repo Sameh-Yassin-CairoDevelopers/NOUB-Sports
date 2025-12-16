@@ -1,23 +1,35 @@
 /*
  * Filename: js/controllers/teamCtrl.js
- * Version: 5.4.1 (FIX: Duplicate Declaration Removed)
+ * Version: 5.5.0 (MASTER FULL)
  * Description: Controller for the Team Management Module.
+ * 
+ * RESPONSIBILITIES:
+ * 1. State Resolution: Determines if user is Captain, Member, or Free Agent.
+ * 2. View Rendering: Renders Dashboard (for members) or Creation Form (for free agents).
+ * 3. Roster Management: Fetches and displays the team list with roles.
+ * 4. Deep Linking: Handles 'Join via Link' logic on initialization.
  */
 
 import { TeamService } from '../services/teamService.js';
-import { state } from '../core/state.js'; // Singleton Import
-import { AvatarEngine } from '../utils/avatarEngine.js';
+import { state } from '../core/state.js'; // Singleton State
+import { AvatarEngine } from '../utils/avatarEngine.js'; // For rendering member visuals
 
 export class TeamController {
     
+    /**
+     * Constructor: Initializes dependencies and binds the view container.
+     */
     constructor() {
         this.teamService = new TeamService();
         this.viewContainer = document.getElementById('view-team');
+        
+        // Check for invite links immediately upon load
         this.checkInviteParam();
     }
 
     /**
-     * Main Init Logic
+     * Main Init Logic: Called when tab is clicked.
+     * Determines which view to show based on user's team status.
      */
     async init() {
         console.log("🛡️ TeamController: Refreshing View...");
@@ -31,16 +43,17 @@ export class TeamController {
         this.setLoading(true);
 
         try {
-            // Fetch Team Data
+            // 1. Fetch Team Data from Service
             const myTeam = await this.teamService.getMyTeam(currentUser.id);
 
             if (myTeam) {
-                // Scenario A: User HAS a team
+                // Scenario A: User HAS a team -> Render Dashboard
                 console.log(`✅ Member of Team: ${myTeam.name}`);
                 this.renderTeamDashboard(myTeam);
+                // Load roster asynchronously
                 this.loadRoster(myTeam.id);
             } else {
-                // Scenario B: User is FREE
+                // Scenario B: User is FREE -> Render Create/Join View
                 console.log("ℹ️ User is Free Agent -> Show Create Form");
                 this.renderFreeAgentView();
             }
@@ -53,6 +66,7 @@ export class TeamController {
 
     /**
      * VIEW 1: Free Agent View (Create New Team)
+     * Displays form to create a team AND button to go to Scout.
      */
     renderFreeAgentView() {
         this.viewContainer.innerHTML = `
@@ -97,6 +111,7 @@ export class TeamController {
 
     /**
      * VIEW 2: Team Dashboard (For Members/Captains)
+     * Shows Team Header, Stats, Actions, and Roster Placeholder.
      */
     renderTeamDashboard(team) {
         const isDraft = team.status === 'DRAFT';
@@ -170,7 +185,7 @@ export class TeamController {
     }
 
     /**
-     * LOGIC: Handle Team Creation
+     * LOGIC: Handle Team Creation Form Submission
      */
     async handleCreate(e) {
         e.preventDefault();
@@ -195,7 +210,9 @@ export class TeamController {
             await this.teamService.createTeam(user.id, name, user.zoneId, logoDna);
 
             alert("تم تأسيس الفريق بنجاح!");
-            this.init(); // Refresh
+            
+            // 3. Refresh View
+            this.init(); 
 
         } catch (err) {
             alert("خطأ: " + err.message);
@@ -205,7 +222,7 @@ export class TeamController {
     }
 
     /**
-     * LOGIC: Fetch & Render Roster
+     * LOGIC: Fetch & Render Roster List
      */
     async loadRoster(teamId) {
         const container = document.getElementById('roster-list-container');
@@ -260,7 +277,7 @@ export class TeamController {
     }
 
     /**
-     * LOGIC: Deep Link Handler
+     * LOGIC: Deep Link Handler (Join via URL)
      */
     async checkInviteParam() {
         const tgParams = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -269,21 +286,27 @@ export class TeamController {
             const teamId = tgParams.split('_')[1];
             const currentUser = state.getUser();
             
-            if (currentUser && confirm("لقد تمت دعوتك للانضمام لهذا الفريق. هل تقبل؟")) {
-                try {
-                    await this.teamService.joinTeam(currentUser.id, teamId);
-                    alert("تم الانضمام بنجاح!");
-                    window.location.reload();
-                } catch (e) {
-                    alert("فشل الانضمام: " + e.message);
+            if (currentUser) {
+                if (confirm("لقد تمت دعوتك للانضمام لهذا الفريق. هل تقبل؟")) {
+                    try {
+                        await this.teamService.joinTeam(currentUser.id, teamId);
+                        alert("تم الانضمام بنجاح!");
+                        window.location.reload();
+                    } catch (e) {
+                        alert("فشل الانضمام: " + e.message);
+                    }
                 }
             }
         }
     }
 
+    /**
+     * Helper: Copy Invite Link to Clipboard
+     */
     copyInviteLink(teamId) {
-        const botName = 'NoubSportsBot';
+        const botName = 'NoubSportsBot'; // Replace with your Bot Username
         const link = `https://t.me/${botName}?start=join_${teamId}`;
+        
         navigator.clipboard.writeText(link).then(() => {
             alert("تم نسخ رابط الدعوة! أرسله لأصدقائك.");
         }).catch(() => {
@@ -291,12 +314,18 @@ export class TeamController {
         });
     }
 
+    /**
+     * Helper: Toggle Loading Spinner
+     */
     setLoading(isLoading) {
         if (isLoading) {
             this.viewContainer.innerHTML = '<div style="text-align:center; padding:50px;"><div class="loader-bar"></div></div>';
         }
     }
 
+    /**
+     * Helper: Skin Color Mapper
+     */
     getSkinColor(id) {
         const colors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
         return colors[id] || '#ccc';
