@@ -1,54 +1,24 @@
 /*
  * Filename: js/controllers/teamCtrl.js
- * Version: 5.4.0 (MASTER FULL)
+ * Version: 5.4.1 (FIX: Duplicate Declaration Removed)
  * Description: Controller for the Team Management Module.
- * 
- * RESPONSIBILITIES:
- * 1. State Resolution: Determines if user is Captain, Member, or Free Agent.
- * 2. View Rendering: Renders Dashboard (for members) or Creation Form (for free agents).
- * 3. Roster Management: Fetches and displays the team list with roles.
- * 4. Deep Linking: Handles 'Join via Link' logic on initialization.
  */
 
 import { TeamService } from '../services/teamService.js';
-import { State } from '../core/state.js'; // Singleton
-import { AvatarEngine } from '../utils/avatarEngine.js'; // For rendering avatars
+import { state } from '../core/state.js'; // Singleton Import
+import { AvatarEngine } from '../utils/avatarEngine.js';
 
 export class TeamController {
     
-    /**
-     * Constructor: Initializes dependencies and binds the view container.
-     */
-    constructor() {
-        this.teamService = new TeamService();
-        this.viewContainer = document.getElementById('view-team');
-        
-        // Check for invite links immediately upon load
-        this.checkInviteParam();
-    }
-
-    /**
-     * Main Init Logic: Called when tab is clicked.
-     * Determines which view to show based on user's team status.
-     */
-    async init() {
-        console.log("🛡️ TeamController: Refreshing View...");
-        
-        // 1. Validate User Session
-        const currentUser = State.getUser(); // Access singleton directly if exported as class, or use imported instance
-        // Note: Based on previous files, we import 'state' (lowercase). Fixing import below.
-    }
-}
-// FIX IMPORT: Re-writing the class with correct import from previous context
-import { state } from '../core/state.js';
-
-export class TeamController {
     constructor() {
         this.teamService = new TeamService();
         this.viewContainer = document.getElementById('view-team');
         this.checkInviteParam();
     }
 
+    /**
+     * Main Init Logic
+     */
     async init() {
         console.log("🛡️ TeamController: Refreshing View...");
         
@@ -61,16 +31,16 @@ export class TeamController {
         this.setLoading(true);
 
         try {
-            // 2. Fetch Team Data
+            // Fetch Team Data
             const myTeam = await this.teamService.getMyTeam(currentUser.id);
 
             if (myTeam) {
-                // Scenario A: User HAS a team -> Render Dashboard
+                // Scenario A: User HAS a team
                 console.log(`✅ Member of Team: ${myTeam.name}`);
                 this.renderTeamDashboard(myTeam);
                 this.loadRoster(myTeam.id);
             } else {
-                // Scenario B: User is FREE -> Render Create/Join View
+                // Scenario B: User is FREE
                 console.log("ℹ️ User is Free Agent -> Show Create Form");
                 this.renderFreeAgentView();
             }
@@ -216,21 +186,21 @@ export class TeamController {
         try {
             const user = state.getUser();
             
-            // Check Availability
+            // 1. Validate Name
             const exists = await this.teamService.checkNameAvailability(name, user.zoneId);
             if (exists) throw new Error("عذراً، هذا الاسم مستخدم بالفعل.");
 
-            // Create
+            // 2. Create
             const logoDna = { primary: c1, secondary: c2 };
             await this.teamService.createTeam(user.id, name, user.zoneId, logoDna);
 
             alert("تم تأسيس الفريق بنجاح!");
-            this.init(); // Reload View
+            this.init(); // Refresh
 
         } catch (err) {
             alert("خطأ: " + err.message);
             btn.disabled = false;
-            btn.textContent = "تأسيس فريق";
+            btn.textContent = "إنشاء الكيان";
         }
     }
 
@@ -290,7 +260,7 @@ export class TeamController {
     }
 
     /**
-     * LOGIC: Deep Link Handler (Join via URL)
+     * LOGIC: Deep Link Handler
      */
     async checkInviteParam() {
         const tgParams = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -299,28 +269,21 @@ export class TeamController {
             const teamId = tgParams.split('_')[1];
             const currentUser = state.getUser();
             
-            if (currentUser) {
-                // Confirm dialog is handled by browser, but we can do custom UI later
-                if (confirm("لقد تمت دعوتك للانضمام لهذا الفريق. هل تقبل؟")) {
-                    try {
-                        await this.teamService.joinTeam(currentUser.id, teamId);
-                        alert("تم الانضمام بنجاح!");
-                        window.location.reload();
-                    } catch (e) {
-                        alert("فشل الانضمام: " + e.message);
-                    }
+            if (currentUser && confirm("لقد تمت دعوتك للانضمام لهذا الفريق. هل تقبل؟")) {
+                try {
+                    await this.teamService.joinTeam(currentUser.id, teamId);
+                    alert("تم الانضمام بنجاح!");
+                    window.location.reload();
+                } catch (e) {
+                    alert("فشل الانضمام: " + e.message);
                 }
             }
         }
     }
 
-    /**
-     * Helper: Copy Invite Link
-     */
     copyInviteLink(teamId) {
-        const botName = 'NoubSportsBot'; // Replace with real bot
+        const botName = 'NoubSportsBot';
         const link = `https://t.me/${botName}?start=join_${teamId}`;
-        
         navigator.clipboard.writeText(link).then(() => {
             alert("تم نسخ رابط الدعوة! أرسله لأصدقائك.");
         }).catch(() => {
@@ -328,18 +291,12 @@ export class TeamController {
         });
     }
 
-    /**
-     * Helper: Loading Spinner
-     */
     setLoading(isLoading) {
         if (isLoading) {
-            this.viewContainer.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:300px;"><div class="loader-bar"></div></div>';
+            this.viewContainer.innerHTML = '<div style="text-align:center; padding:50px;"><div class="loader-bar"></div></div>';
         }
     }
 
-    /**
-     * Helper: Skin Color Mapper
-     */
     getSkinColor(id) {
         const colors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
         return colors[id] || '#ccc';
