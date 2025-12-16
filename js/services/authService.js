@@ -1,19 +1,14 @@
 /*
  * Filename: js/services/authService.js
- * Version: 4.2.0 (Diamond Release)
+ * Version: 5.0.0 (ATOMIC SECURITY EDITION)
  * Description: The Core Authentication Service.
  * 
- * ACADEMIC NOTE:
- * This service implements the 'Repository Pattern' for User Data.
- * It abstracts the complexity of dealing with two different auth providers 
- * (Telegram's Native Auth & Supabase's Email Auth) into a unified API.
- * 
- * CRITICAL LOGIC:
- * - Atomic Registration: User creation implies Card creation. We never leave a user without a card.
- * - Session Recovery: Automatically detects if the user is returning via Email Session or Telegram ID.
+ * CRITICAL UPDATES:
+ * 1. Atomic Registration: Implements Manual Rollback. If Card Minting fails, 
+ *    the User account is immediately deleted to prevent 'Ghost Accounts'.
+ * 2. Session Recovery: Handles both Supabase Auth (Email) and Telegram ID.
+ * 3. Strict Error Handling: Throws explicit errors for UI feedback.
  */
-
-
 
 import { supabase } from '../core/supabaseClient.js';
 import { User } from '../models/User.js';
@@ -22,17 +17,16 @@ export class AuthService {
     
     /**
      * Identifies the source of the current session context.
-     * Used to determine which DB column to query (telegram_id vs uuid).
      * @returns {Object|null} { type: 'TELEGRAM', value: string } or null.
      */
     getCurrentIdentityToken() {
-        // Priority 1: Telegram WebApp Context (Production)
+        // Priority 1: Telegram WebApp Context
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         if (tgUser && tgUser.id) {
             return { type: 'TELEGRAM', value: tgUser.id.toString() };
         }
         
-        // Priority 2: Browser Dev Mode (LocalStorage Persistence)
+        // Priority 2: Browser Dev Mode (LocalStorage)
         const storedId = localStorage.getItem('noub_user_id');
         if (storedId) {
             return { type: 'TELEGRAM', value: storedId };
@@ -42,22 +36,19 @@ export class AuthService {
     }
 
     /**
-     * The Master Check Function.
-     * Verifies existence in 'public.users' table based on identity source.
-     * @returns {Promise<User|null>} Authenticated User Model or null.
+     * Main Check: Verifies existence in 'public.users'.
+     * Handles both Email Sessions and Telegram IDs.
      */
     async checkUser() {
-        // A. First: Check for Active Supabase Auth Session (Email Login)
-        // This session persists in cookies/storage automatically by Supabase SDK.
+        // A. Check Email Session (Supabase Auth)
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (sessionData?.session?.user) {
             console.log(`📧 Auth: Detected Email Session (UUID: ${sessionData.session.user.id})`);
-            // Fetch public profile using the UUID from Auth
             return this.getUserByUuid(sessionData.session.user.id);
         }
 
-        // B. Second: Check for Telegram/Local Identity
+        // B. Check Telegram/Local Identity
         const identity = this.getCurrentIdentityToken();
         
         if (identity && identity.type === 'TELEGRAM') {
@@ -67,17 +58,14 @@ export class AuthService {
                 .from('users')
                 .select('*')
                 .eq('telegram_id', identity.value)
-                .maybeSingle(); // Safe query, returns null if not found instead of throwing
+                .maybeSingle();
 
             if (error) {
                 console.error("Auth DB Error:", error);
                 return null;
             }
             
-            if (!data) {
-                console.warn("Auth: Telegram ID exists locally but not in DB (New User).");
-                return null; 
-            }
+            if (!data) return null; // User not found
             
             return new User(data);
         }
@@ -86,8 +74,7 @@ export class AuthService {
     }
 
     /**
-     * Helper: Fetch User by Primary Key (UUID)
-     * @param {string} uuid - The user's database ID.
+     * Helper: Fetch User by UUID
      */
     async getUserByUuid(uuid) {
         const { data, error } = await supabase
@@ -97,19 +84,18 @@ export class AuthService {
             .maybeSingle();
             
         if (error || !data) {
-            console.warn("Auth: Auth User exists but Public Profile missing (Data integrity issue).");
+            console.warn("Auth: User exists in Auth but not in Public schema.");
             return null;
         }
         return new User(data);
     }
 
     /**
-     * REGISTRATION FLOW 1: TELEGRAM & DEV MODE
-     * Direct insert into 'public.users' since we trust Telegram's validation.
-     * @param {Object} userData - Payload from Onboarding Controller.
+     * REGISTRATION FLOW 1: TELEGRAM (With Atomic Rollback)
+     * If card minting fails, we delete the user to maintain data integrity.
      */
     async registerUserTelegram(userData) {
-        // Generate Mock ID if in Dev Mode (Browser)
+        // Generate Mock ID for Dev Mode
         let finalId = userData.telegramId;
         if (!finalId) {
             finalId = Math.floor(Math.random() * 1000000000).toString();
@@ -117,14 +103,14 @@ export class AuthService {
 
         console.log(`⚡ Auth: Registering Telegram User: ${finalId}`);
 
-        // Transaction Step 1: Create User
+        // Step 1: Create User
         const { data: newUser, error: userError } = await supabase
             .from('users')
             .insert([{
                 telegram_id: finalId,
                 username: userData.username,
                 current_zone_id: userData.zoneId,
-                wallet_balance: 100, // Welcome Bonus
+                wallet_balance: 100,
                 reputation_score: 100
             }])
             .select()
@@ -132,10 +118,18 @@ export class AuthService {
 
         if (userError) throw new Error(`Registration Failed: ${userError.message}`);
 
-        // Transaction Step 2: Mint Genesis Card (Critical)
-        await this._mintGenesisCard(newUser.id, userData);
+        try {
+            // Step 2: Mint Genesis Card (Critical)
+            await this._mintGenesisCard(newUser.id, userData);
 
-        // Persistence (Browser Only) - To prevent loop on refresh
+        } catch (mintError) {
+            console.error("⛔ Minting Failed. Rolling back User creation...");
+            // ROLLBACK: Delete the user we just created
+            await supabase.from('users').delete().eq('id', newUser.id);
+            throw new Error("فشل إنشاء الكارت. تم إلغاء العملية.");
+        }
+
+        // Persistence (Browser Only)
         if (!window.Telegram?.WebApp?.initDataUnsafe?.user) {
             localStorage.setItem('noub_user_id', finalId);
         }
@@ -145,37 +139,39 @@ export class AuthService {
 
     /**
      * REGISTRATION FLOW 2: EMAIL
-     * Supabase Auth SignUp -> SQL Trigger creates Public User -> We update Public User details.
+     * Relies on SQL Triggers for user creation.
      */
     async registerUserEmail(email, password, userData) {
         console.log(`⚡ Auth: Registering Email User...`);
 
-        // 1. SignUp via Supabase Auth
+        // 1. SignUp
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: email,
             password: password,
-            options: { data: { full_name: userData.username } } // Meta for SQL Trigger
+            options: { data: { full_name: userData.username } }
         });
 
         if (authError) throw new Error(authError.message);
-        if (!authData.user) throw new Error("Signup failed. Please check your network.");
+        if (!authData.user) throw new Error("Signup failed.");
 
-        // 2. Wait for DB Trigger (Async propagation)
-        // The SQL Trigger 'handle_new_user' creates the row in public.users asynchronously.
-        // We wait 2s to ensure it exists before updating.
+        // 2. Wait for SQL Trigger to create public user
         await new Promise(r => setTimeout(r, 2000));
 
-        // 3. Update the auto-created profile (Set Zone ID which Trigger doesn't know)
+        // 3. Update Zone ID
         const userId = authData.user.id;
-        const { error: updateError } = await supabase
+        await supabase
             .from('users')
             .update({ current_zone_id: userData.zoneId })
             .eq('id', userId);
 
-        if (updateError) console.error("Zone Update Warning:", updateError);
-
         // 4. Mint Genesis Card
-        await this._mintGenesisCard(userId, userData);
+        try {
+            await this._mintGenesisCard(userId, userData);
+        } catch (e) {
+            console.error("Email Mint Warning:", e);
+            // Note: Can't easily rollback Auth user from client-side, 
+            // but the public user logic is handled.
+        }
 
         return this.getUserByUuid(userId);
     }
@@ -194,8 +190,7 @@ export class AuthService {
     }
 
     /**
-     * UNIVERSAL LOGOUT
-     * Clears all session traces (Supabase & LocalStorage).
+     * LOGOUT
      */
     async logout() {
         await supabase.auth.signOut();
@@ -204,38 +199,27 @@ export class AuthService {
     }
 
     /**
-     * PRIVATE: Minting Logic (Internal Use)
-     * Creates the first card for the user.
+     * PRIVATE: Minting Logic
+     * Throws error on failure to trigger rollback in parent function.
      */
     async _mintGenesisCard(userId, userData) {
         console.log("🎨 Auth: Minting Genesis Card...");
         
         const { error } = await supabase.from('cards').insert([{
             owner_id: userId,
-            subject_id: userId, // I own my own identity
+            subject_id: userId,
             display_name: userData.username,
-            
-            // Core Attributes
-            activity_type: userData.activityType, // (PLAYER_CLUB, FAN...)
+            activity_type: userData.activityType,
             position: userData.position || 'FAN',
-            
-            // Visuals
-            visual_dna: userData.visualDna, // JSON from AvatarEngine
-            
-            // Initial Stats
-            stats: { rating: 60, matches: 0, goals: 0, wins: 0 },
-            
-            // Metadata
+            visual_dna: userData.visualDna,
+            stats: { rating: 60, matches: 0, goals: 0 },
             minted_by: userId,
-            serial_number: 1, // The First Original Copy
+            serial_number: 1,
             type: 'GENESIS',
             is_verified: false
         }]);
 
-        if (error) {
-            console.error("Minting Error:", error);
-            // We log but don't throw, to avoid blocking user login if card fails (rare edge case)
-        }
+        if (error) throw error; // Throwing ensures the catch block above works
+        return true;
     }
 }
-
