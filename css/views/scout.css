@@ -1,15 +1,16 @@
 /*
  * Filename: css/views/scout.css
- * Version: 5.0.0 (Filters Styling)
- * Description: Styles for Scout View including Filter Pills.
+ * Version: 5.4.0 (Rich Visuals)
+ * Description: Styles for Scout/Market View.
+ * FIX: Added Background Images to Scout Cards.
  */
 
 #view-scout {
     padding: 20px;
-    padding-bottom: 110px;
+    padding-bottom: 120px;
 }
 
-/* 1. Header Area */
+/* 1. Header & Filters */
 .scout-header {
     display: flex;
     flex-direction: column;
@@ -17,7 +18,6 @@
     margin-bottom: 25px;
 }
 
-/* Search Bar */
 .search-bar-wrapper {
     background: var(--bg-input);
     border: 1px solid #333;
@@ -33,7 +33,7 @@
     background: transparent; border: none; padding: 0; width: 100%; font-size: 1rem; color: #fff;
 }
 
-/* 2. Filter Pills */
+/* Filter Pills */
 .filter-pills {
     display: flex;
     gap: 10px;
@@ -51,18 +51,19 @@
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
     font-family: var(--font-primary);
+    transition: all 0.2s;
 }
 
 .pill.active {
     background: var(--gold-main);
     color: #000;
     border-color: var(--gold-main);
-    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }
 
-/* 3. Trending Section */
+/* 2. Trending Section */
 .trending-section { margin-bottom: 30px; }
 .trending-section h4 { 
     color: var(--gold-main); margin-bottom: 15px; font-size: 0.95rem; 
@@ -89,7 +90,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
 }
 
-/* 4. Main Grid */
+/* 3. Grid Layout */
 .market-grid-section h4 { color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem; }
 
 .market-grid {
@@ -98,53 +99,77 @@
     gap: 15px;
 }
 
-/* 5. Scout Card */
+/* 4. Scout Card (VISUALLY UPGRADED) */
 .scout-card {
-    background: var(--bg-surface);
-    border: 1px solid rgba(255,255,255,0.05);
+    position: relative;
+    height: 220px;
     border-radius: 16px;
-    padding: 15px;
-    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    
+    /* FIX: Added Background Image Support */
+    background: 
+        linear-gradient(to top, #000 10%, rgba(0,0,0,0.5) 100%),
+        url('../../assets/images/backgrounds/futsal-night.webp'); 
+    background-size: cover;
+    background-position: center;
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     transition: transform 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    overflow: hidden;
 }
 
 .scout-card:hover {
-    border-color: var(--gold-dim);
-    transform: translateY(-3px);
+    transform: translateY(-5px);
+    border-color: var(--gold-main);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }
 
 .scout-card-top {
-    display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: bold; color: var(--text-muted);
+    position: absolute; top: 10px; left: 10px; right: 10px;
+    display: flex; justify-content: space-between; z-index: 2;
 }
-.scout-rating { font-family: var(--font-orbitron); font-size: 0.9rem; }
+
+.scout-pos {
+    background: rgba(0,0,0,0.7);
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 0.7rem; font-weight: bold; color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.scout-rating {
+    font-family: var(--font-orbitron);
+    font-size: 1rem; color: var(--gold-main);
+    text-shadow: 0 2px 2px #000;
+}
 
 .scout-avatar {
-    margin: 15px auto;
-    width: 60px; height: 60px;
-    background: #1a1a1a; border-radius: 50%;
-    display: flex; justify-content: center; align-items: center;
-    font-size: 1.8rem;
-    border: 2px solid rgba(255,255,255,0.1);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+    font-size: 4rem; z-index: 1;
+    filter: drop-shadow(0 5px 5px rgba(0,0,0,0.8));
 }
 
-.scout-info h5 { margin: 5px 0; font-size: 0.95rem; color: #fff; }
+.scout-info {
+    position: relative; z-index: 2; text-align: center;
+}
+
+.scout-info h5 {
+    margin: 5px 0; font-size: 0.95rem; color: #fff;
+    text-shadow: 0 2px 5px #000; font-family: var(--font-sport);
+}
+
 .scout-tags span {
-    font-size: 0.65rem; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; color: var(--text-grey);
+    font-size: 0.65rem; background: rgba(0,0,0,0.6); padding: 3px 8px;
+    border-radius: 6px; color: #ddd;
 }
 
 .btn-social-mint {
     width: 100%;
-    background: transparent;
-    color: var(--gold-main);
-    border: 1px solid var(--gold-dim);
-    border-radius: 10px;
-    padding: 8px;
-    margin-top: 12px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s;
+    background: rgba(212, 175, 55, 0.9);
+    color: #000; border: none; border-radius: 8px; padding: 6px;
+    margin-top: 8px; font-size: 0.75rem; cursor: pointer; font-weight: bold;
 }
-.btn-social-mint:hover { background: var(--gold-main); color: #000; }
+.btn-social-mint:hover { background: #fff; }
