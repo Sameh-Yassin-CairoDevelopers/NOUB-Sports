@@ -134,53 +134,54 @@ export class TeamService {
         };
     }
 
-/**
-     * [4] GET TEAM ROSTER (FIXED QUERY)
-     * التعديل: نقلنا طلب (cards) ليصبح داخل قوس (users).
-     * المسار أصبح: Team Members -> Users -> Cards
+    /**
+     * [4] GET TEAM ROSTER (CRITICAL FIX)
+     * Solves PGRST201 by fetching Members and Cards separately and merging them.
      */
     async getTeamRoster(teamId) {
-        const { data, error } = await supabase
+        // Step A: Fetch Members & User Profiles
+        const { data: members, error: mError } = await supabase
             .from('team_members')
             .select(`
                 user_id,
                 role,
                 jersey_number,
                 joined_at,
-                users (
-                    username,
-                    reputation_score,
-                    cards (
-                        display_name,
-                        position,
-                        visual_dna,
-                        stats
-                    )
-                )
+                users ( username, reputation_score )
             `)
             .eq('team_id', teamId)
             .order('joined_at', { ascending: true });
         
-        if (error) {
-            console.error("Roster Fetch Error:", error);
-            throw new Error("فشل تحميل قائمة اللاعبين.");
+        if (mError) {
+            console.error("Roster Member Error:", mError);
+            throw new Error("فشل تحميل الأعضاء.");
         }
+
+        if (!members || members.length === 0) return [];
+
+        // Step B: Fetch Cards for these Users (GENESIS Only)
+        // We act as the "Joiner" here to avoid DB confusion
+        const userIds = members.map(m => m.user_id);
         
-        // تعديل الـ Mapping ليتناسب مع الشكل الجديد للبيانات
-        return data.map(member => {
-            // الكروت تأتي الآن كمصفوفة داخل users
-            // نأخذ الكارت الأول (عادة هو الكارت الأصلي)
-            const userCard = (member.users?.cards && member.users.cards.length > 0) 
-                             ? member.users.cards[0] 
-                             : null;
+        const { data: cards, error: cError } = await supabase
+            .from('cards')
+            .select('*')
+            .in('owner_id', userIds)
+            .eq('type', 'GENESIS');
+
+        if (cError) console.warn("Card Fetch Warning:", cError);
+
+        // Step C: Merge Data
+        return members.map(member => {
+            const card = cards?.find(c => c.owner_id === member.user_id);
 
             return {
                 userId: member.user_id,
-                name: userCard?.display_name || member.users?.username || 'غير معروف',
+                name: card?.display_name || member.users?.username || 'غير معروف',
                 role: member.role,
-                position: userCard?.position || 'N/A',
-                rating: userCard?.stats?.rating || 60,
-                visual: userCard?.visual_dna || { skin: 1, kit: 1 },
+                position: card?.position || 'N/A',
+                rating: card?.stats?.rating || 60,
+                visual: card?.visual_dna || { skin: 1, kit: 1 },
                 joinedAt: member.joined_at,
                 reputation: member.users?.reputation_score
             };
