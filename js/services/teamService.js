@@ -1,16 +1,19 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/services/teamService.js
- * Version: 6.0.0 (FINAL PRODUCTION)
- * Description: Service layer for Team Management.
+ * Version: Noub Sports_beta 0.0.1
+ * Status: Production Ready
  * 
- * RESPONSIBILITIES:
- * 1. Team Creation: Transactional insert of Team + Captain Member.
- * 2. Roster Management: Fetching members with nested User/Card data.
- * 3. Membership Logic: Joining via Invite, Leaving, and Kicking.
- * 4. Role Management: Promoting members to Vice Captain.
- * 
- * DEPENDENCIES:
- * - Supabase Client (Singleton)
+ * -----------------------------------------------------------------------------
+ * ARCHITECTURAL RESPONSIBILITIES (مسؤوليات الخدمة):
+ * -----------------------------------------------------------------------------
+ * 1. Team Creation: Transactional insert (Team + Captain Member).
+ * 2. Integrity Checks: Name uniqueness, Member limits (Max 16).
+ * 3. Roster Management: Complex joins to fetch Members + User Info + Player Card.
+ *    * FIX APPLIED: Resolved ambiguous relationship using '!owner_id' hint.
+ * 4. Membership Logic: Join via invite (Auto-Active Logic), Leave team.
+ * 5. Administrative Actions: Kick member, Promote to Vice Captain.
+ * -----------------------------------------------------------------------------
  */
 
 import { supabase } from '../core/supabaseClient.js';
@@ -18,12 +21,13 @@ import { supabase } from '../core/supabaseClient.js';
 export class TeamService {
 
     /**
+     * [1] CHECK NAME AVAILABILITY
      * Checks if a team name is available in a specific zone.
      * Constraint: Team names must be unique within the same zone.
      * 
      * @param {string} name - Desired team name.
-     * @param {number} zoneId - The zone ID.
-     * @returns {Promise<boolean>} True if name exists (taken).
+     * @param {number} zoneId - The zone ID to check within.
+     * @returns {Promise<boolean>} True if name exists (taken), False if available.
      */
     async checkNameAvailability(name, zoneId) {
         try {
@@ -35,6 +39,8 @@ export class TeamService {
                 .maybeSingle();
 
             if (error) throw error;
+            
+            // If data exists, name is taken
             return !!data; 
 
         } catch (error) {
@@ -44,17 +50,19 @@ export class TeamService {
     }
 
     /**
+     * [2] CREATE TEAM
      * Creates a new Team and assigns the creator as Captain.
      * 
      * @param {string} captainId - User UUID.
-     * @param {string} teamName - Team Name.
-     * @param {number} zoneId - Zone ID.
-     * @param {Object} logoDna - JSON for logo colors.
+     * @param {string} teamName - Validated name of the team.
+     * @param {number} zoneId - Geographic zone ID.
+     * @param {Object} logoDna - JSON object describing the logo colors.
+     * @returns {Promise<Object>} - The newly created team object.
      */
     async createTeam(captainId, teamName, zoneId, logoDna) {
         console.log(`🛡️ TeamService: Creating Team '${teamName}'...`);
 
-        // 1. Insert Team
+        // A. Insert the Team Record
         const { data: teamData, error: teamError } = await supabase
             .from('teams')
             .insert([{
@@ -63,7 +71,7 @@ export class TeamService {
                 zone_id: zoneId,
                 logo_dna: logoDna,
                 total_matches: 0,
-                status: 'DRAFT'
+                status: 'DRAFT' // Default state until 5 members join
             }])
             .select()
             .single();
@@ -73,35 +81,42 @@ export class TeamService {
             throw new Error(`فشل إنشاء سجل الفريق: ${teamError.message}`);
         }
 
-        // 2. Insert Captain as Member
+        const newTeamId = teamData.id;
+
+        // B. Insert the Captain into Team Members
         const { error: memberError } = await supabase
             .from('team_members')
             .insert([{
-                team_id: teamData.id,
+                team_id: newTeamId,
                 user_id: captainId,
                 role: 'CAPTAIN',
-                jersey_number: 10,
+                jersey_number: 10, // Default jersey for Captain
                 joined_at: new Date().toISOString()
             }]);
 
         if (memberError) {
             console.error("Member Insert Error:", memberError);
-            // Cleanup: Try to delete the orphaned team (Best effort)
-            await supabase.from('teams').delete().eq('id', teamData.id);
-            throw new Error("فشل تعيين الكابتن. حاول مرة أخرى.");
+            // Cleanup: Try to delete the orphaned team
+            await supabase.from('teams').delete().eq('id', newTeamId);
+            throw new Error("تم إنشاء الفريق ولكن فشل تعيين الكابتن. حاول مرة أخرى.");
         }
 
         return teamData;
     }
 
     /**
-     * Retrieves the current user's team membership.
-     * @param {string} userId - User UUID.
+     * [3] GET MY TEAM
+     * Retrieves the team associated with a specific user.
+     * Used to determine UI state (Dashboard vs Create Form).
+     * 
+     * @param {string} userId - UUID of the user.
+     * @returns {Promise<Object|null>} - Returns Team object with 'my_role' injected, or null.
      */
     async getMyTeam(userId) {
+        // Query 'team_members' to find the link
         const { data: memberData, error } = await supabase
             .from('team_members')
-            .select('team_id, role, teams (*)')
+            .select('team_id, role, teams (*)') // Inner Join with teams table
             .eq('user_id', userId)
             .maybeSingle();
 
@@ -110,9 +125,9 @@ export class TeamService {
             return null;
         }
 
-        if (!memberData) return null;
+        if (!memberData) return null; // User has no team
 
-        // Flatten response
+        // Flatten the response
         return {
             ...memberData.teams,
             my_role: memberData.role
@@ -120,13 +135,14 @@ export class TeamService {
     }
 
     /**
-     * Fetches the full Team Roster with Player Details.
-     * Uses explicit Foreign Key hints to avoid Ambiguous Relationship errors.
+     * [4] GET TEAM ROSTER (CRITICAL FIX)
+     * Fetches the full list of players in a team.
+     * FIX: Uses explicit Foreign Key hints (cards!owner_id) to resolve ambiguous joins.
      * 
-     * @param {string} teamId - Team UUID.
+     * @param {string} teamId - UUID of the team.
+     * @returns {Promise<Array>} - List of mapped member objects.
      */
     async getTeamRoster(teamId) {
-        // Query: Select members, join users, join cards (via owner_id)
         const { data, error } = await supabase
             .from('team_members')
             .select(`
@@ -153,15 +169,11 @@ export class TeamService {
             throw new Error("فشل تحميل قائمة اللاعبين.");
         }
         
-        // Map to UI Structure
+        // Map DB structure to cleaner UI structure
         return data.map(member => {
-            // Cards relation returns an array (usually 1 item)
-            // We find the GENESIS card or take the first one
+            // Select the first card found (handling array response from relation)
             let cardInfo = null;
-            if (member.users?.cards && Array.isArray(member.users.cards)) {
-                cardInfo = member.users.cards[0]; 
-            } else if (member.cards) {
-                // If Supabase flattened it differently based on version
+            if (member.cards) {
                  cardInfo = Array.isArray(member.cards) ? member.cards[0] : member.cards;
             }
 
@@ -171,7 +183,7 @@ export class TeamService {
                 role: member.role,
                 position: cardInfo?.position || 'N/A',
                 rating: cardInfo?.stats?.rating || 60,
-                visual: cardInfo?.visual_dna || {},
+                visual: cardInfo?.visual_dna || { skin: 1, kit: 1 },
                 joinedAt: member.joined_at,
                 reputation: member.users?.reputation_score
             };
@@ -179,22 +191,28 @@ export class TeamService {
     }
 
     /**
-     * Join Team via Invite.
-     * Validates capacity (Max 16).
+     * [5] JOIN TEAM
+     * Join an existing team via Invite.
+     * Enforces Capacity Constraint (Max 16).
+     * Updates Team Status to ACTIVE if threshold reached (5 members).
+     * 
+     * @param {string} userId - User UUID.
+     * @param {string} teamId - Team UUID.
      */
     async joinTeam(userId, teamId) {
-        // 1. Validation
+        // 1. Validation: Already in team?
         const currentTeam = await this.getMyTeam(userId);
-        if (currentTeam) throw new Error("أنت بالفعل عضو في فريق.");
+        if (currentTeam) throw new Error("لا يمكنك الانضمام. أنت بالفعل عضو في فريق.");
 
+        // 2. Validation: Capacity Check
         const { count } = await supabase
             .from('team_members')
             .select('*', { count: 'exact', head: true })
             .eq('team_id', teamId);
         
-        if (count >= 16) throw new Error("الفريق مكتمل العدد.");
+        if (count >= 16) throw new Error("عذراً، هذا الفريق مكتمل العدد (16 لاعباً).");
 
-        // 2. Insert
+        // 3. Execute Join
         const { error } = await supabase
             .from('team_members')
             .insert([{
@@ -204,37 +222,54 @@ export class TeamService {
                 joined_at: new Date().toISOString()
             }]);
 
-        if (error) throw new Error("فشل الانضمام.");
+        if (error) throw new Error("فشل الانضمام للفريق.");
         
-        // 3. Auto-Activate Logic
+        // 4. Auto-Activate Team (If 5 members reached)
         if (count + 1 >= 5) {
-            await supabase.from('teams').update({ status: 'ACTIVE' }).eq('id', teamId).eq('status', 'DRAFT');
+            await supabase
+                .from('teams')
+                .update({ status: 'ACTIVE' })
+                .eq('id', teamId)
+                .eq('status', 'DRAFT');
         }
 
         return true;
     }
 
     /**
-     * Leave Team.
+     * [6] LEAVE TEAM
+     * Leave Team Logic. Enforces Captain Constraint.
+     * 
+     * @param {string} userId - User UUID.
+     * @param {string} teamId - Team UUID.
      */
     async leaveTeam(userId, teamId) {
+        // 1. Check Role
         const myTeam = await this.getMyTeam(userId);
+        
         if (myTeam.my_role === 'CAPTAIN') {
-            throw new Error("الكابتن لا يمكنه المغادرة. عين بديلاً أولاً.");
+            throw new Error("الكابتن لا يمكنه المغادرة. يجب تعيين بديل أولاً أو حل الفريق.");
         }
 
+        // 2. Execute Leave
         const { error } = await supabase
             .from('team_members')
             .delete()
             .eq('team_id', teamId)
             .eq('user_id', userId);
 
-        if (error) throw new Error("فشل الخروج.");
+        if (error) throw new Error("فشل الخروج من الفريق.");
+        
         return true;
     }
 
     /**
-     * Kick Member (Captain Only).
+     * [7] KICK MEMBER (Admin)
+     * Allows Captain to remove a member.
+     * 
+     * @param {string} captainId - Current Captain ID (Security check).
+     * @param {string} teamId - Team UUID.
+     * @param {string} memberId - Member UUID to kick.
      */
     async kickMember(captainId, teamId, memberId) {
         // Double check captaincy server-side for security
@@ -252,12 +287,19 @@ export class TeamService {
     }
 
     /**
-     * Promote Member (Captain Only).
+     * [8] PROMOTE MEMBER (Admin)
+     * Allows Captain to promote a member to Vice Captain.
+     * 
+     * @param {string} captainId - Current Captain ID.
+     * @param {string} teamId - Team UUID.
+     * @param {string} memberId - Member UUID to promote.
      */
     async promoteMember(captainId, teamId, memberId) {
+        // 1. Verify Captaincy
         const myTeam = await this.getMyTeam(captainId);
         if (myTeam.my_role !== 'CAPTAIN') throw new Error("صلاحيات غير كافية.");
 
+        // 2. Update DB
         const { error } = await supabase
             .from('team_members')
             .update({ role: 'VICE' })
