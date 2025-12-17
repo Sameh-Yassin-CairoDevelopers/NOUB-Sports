@@ -134,13 +134,10 @@ export class TeamService {
         };
     }
 
-    /**
-     * [4] GET TEAM ROSTER (CRITICAL FIX)
-     * Fetches the full list of players in a team.
-     * FIX: Uses explicit Foreign Key hints (cards!owner_id) to resolve ambiguous joins.
-     * 
-     * @param {string} teamId - UUID of the team.
-     * @returns {Promise<Array>} - List of mapped member objects.
+/**
+     * [4] GET TEAM ROSTER (FIXED QUERY)
+     * التعديل: نقلنا طلب (cards) ليصبح داخل قوس (users).
+     * المسار أصبح: Team Members -> Users -> Cards
      */
     async getTeamRoster(teamId) {
         const { data, error } = await supabase
@@ -152,13 +149,13 @@ export class TeamService {
                 joined_at,
                 users (
                     username,
-                    reputation_score
-                ),
-                cards!owner_id (
-                    display_name,
-                    position,
-                    visual_dna,
-                    stats
+                    reputation_score,
+                    cards (
+                        display_name,
+                        position,
+                        visual_dna,
+                        stats
+                    )
                 )
             `)
             .eq('team_id', teamId)
@@ -169,27 +166,26 @@ export class TeamService {
             throw new Error("فشل تحميل قائمة اللاعبين.");
         }
         
-        // Map DB structure to cleaner UI structure
+        // تعديل الـ Mapping ليتناسب مع الشكل الجديد للبيانات
         return data.map(member => {
-            // Select the first card found (handling array response from relation)
-            let cardInfo = null;
-            if (member.cards) {
-                 cardInfo = Array.isArray(member.cards) ? member.cards[0] : member.cards;
-            }
+            // الكروت تأتي الآن كمصفوفة داخل users
+            // نأخذ الكارت الأول (عادة هو الكارت الأصلي)
+            const userCard = (member.users?.cards && member.users.cards.length > 0) 
+                             ? member.users.cards[0] 
+                             : null;
 
             return {
                 userId: member.user_id,
-                name: cardInfo?.display_name || member.users?.username || 'غير معروف',
+                name: userCard?.display_name || member.users?.username || 'غير معروف',
                 role: member.role,
-                position: cardInfo?.position || 'N/A',
-                rating: cardInfo?.stats?.rating || 60,
-                visual: cardInfo?.visual_dna || { skin: 1, kit: 1 },
+                position: userCard?.position || 'N/A',
+                rating: userCard?.stats?.rating || 60,
+                visual: userCard?.visual_dna || { skin: 1, kit: 1 },
                 joinedAt: member.joined_at,
                 reputation: member.users?.reputation_score
             };
         });
     }
-
     /**
      * [5] JOIN TEAM
      * Join an existing team via Invite.
