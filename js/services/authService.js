@@ -1,11 +1,12 @@
 /*
  * Filename: js/services/authService.js
- * Version: 6.0.0 (EXPLICIT ENGINEERING)
- * Description: Auth Service with Client-Side Orchestration.
+ * Version: 6.1.0 (SELF-HEALING MASTER)
+ * Description: Auth Service that fixes "Ghost Users" automatically.
  * 
- * CHANGE: Removed reliance on SQL Triggers. 
- * The client explicitly creates the Public User and Genesis Card 
- * immediately after Auth Signup ensures atomic-like behavior via code.
+ * LOGIC UPDATE:
+ * 1. checkUser() now detects if Auth exists but Public Profile is missing.
+ * 2. If missing, it triggers '_restoreMissingProfile' immediately.
+ * 3. This guarantees the user is never stuck in a Login Loop.
  */
 
 import { supabase } from '../core/supabaseClient.js';
@@ -13,106 +14,151 @@ import { User } from '../models/User.js';
 
 export class AuthService {
     
-    // --- Helpers ---
-    getCurrentId() {
+    /**
+     * Get Identity Source (Telegram or LocalStorage)
+     */
+    getCurrentIdentityToken() {
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-        if (tgUser?.id) return tgUser.id.toString();
-        return localStorage.getItem('noub_user_id'); 
-    }
-
-    async getUserByUuid(uuid) {
-        const { data } = await supabase.from('users').select('*').eq('id', uuid).single();
-        return data ? new User(data) : null;
-    }
-
-    // --- Main Check ---
-    async checkUser() {
-        // 1. Check Email Session
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData?.session?.user) {
-            return this.getUserByUuid(sessionData.session.user.id);
-        }
+        if (tgUser && tgUser.id) return { type: 'TELEGRAM', value: tgUser.id.toString() };
         
-        // 2. Check Telegram ID
-        const id = this.getCurrentId();
-        if (id) {
-            const { data } = await supabase.from('users').select('*').eq('telegram_id', id).maybeSingle();
-            return data ? new User(data) : null;
-        }
+        const storedId = localStorage.getItem('noub_user_id');
+        if (storedId) return { type: 'TELEGRAM', value: storedId };
+
         return null;
     }
 
-    // --- EMAIL REGISTRATION (The Fixed Logic) ---
-    async registerUserEmail(email, password, userData) {
-        console.log("🔐 Auth: Starting Explicit Registration Flow...");
+    /**
+     * MAIN CHECK: The Guard
+     * Checks Session -> Validates Public Profile -> Heals if broken -> Returns User.
+     */
+    async checkUser() {
+        // A. Check Email Session (Supabase Auth)
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData?.session?.user) {
+            console.log(`📧 Auth: Valid Session (${sessionData.session.user.email})`);
+            
+            // Try fetch public profile
+            let user = await this.getUserByUuid(sessionData.session.user.id);
+            
+            // CRITICAL FIX: If Auth exists but Public Profile is missing -> HEAL IT
+            if (!user) {
+                console.warn("⚠️ Auth: Profile missing. Attempting Self-Healing...");
+                user = await this._restoreMissingProfile(sessionData.session.user);
+            }
+            
+            return user;
+        }
 
-        // 1. Create Auth Account (Supabase Identity)
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: email,
-            password: password
-        });
+        // B. Check Telegram/Local ID
+        const identity = this.getCurrentIdentityToken();
+        if (identity && identity.type === 'TELEGRAM') {
+            console.log(`📱 Auth: Telegram ID ${identity.value}`);
+            const { data } = await supabase.from('users').select('*').eq('telegram_id', identity.value).maybeSingle();
+            return data ? new User(data) : null;
+        }
 
-        if (authError) throw new Error(authError.message);
-        if (!authData.user) throw new Error("فشل إنشاء الحساب.");
+        return null; // Guest
+    }
 
-        const userId = authData.user.id;
+    /**
+     * Helper: Fetch User by UUID
+     */
+    async getUserByUuid(uuid) {
+        const { data, error } = await supabase.from('users').select('*').eq('id', uuid).maybeSingle();
+        if (error) console.error("Fetch Error:", error);
+        return data ? new User(data) : null;
+    }
 
-        // 2. Create Public Profile (Explicit Insert)
-        // This will succeed because of the RLS Policy "Insert Own Profile"
-        const { error: profileError } = await supabase
-            .from('users')
-            .insert([{
-                id: userId, // Link to Auth ID
-                email: email,
-                username: userData.username,
-                current_zone_id: userData.zoneId,
+    /**
+     * INTERNAL FIXER: Creates Public Profile for existing Auth User
+     */
+    async _restoreMissingProfile(authUser) {
+        try {
+            // 1. Re-create User Record
+            const { error: userError } = await supabase.from('users').insert([{
+                id: authUser.id,
+                email: authUser.email,
+                username: authUser.user_metadata?.full_name || 'Captain',
+                current_zone_id: 1, // Default to Fustat
                 wallet_balance: 100,
                 reputation_score: 100
             }]);
 
-        if (profileError) {
-            // Rollback: If profile fails, shouldn't keep the auth account
-            console.error("Profile creation failed:", profileError);
-            throw new Error("فشل إنشاء ملف المستخدم.");
+            if (userError) throw userError;
+
+            // 2. Re-mint Genesis Card
+            await this._mintGenesisCard(authUser.id, {
+                username: authUser.user_metadata?.full_name || 'Captain',
+                activityType: 'PLAYER_FREE',
+                visualDna: { skin: 1, kit: 1 }
+            });
+
+            console.log("✅ Self-Healing Complete.");
+            return this.getUserByUuid(authUser.id);
+
+        } catch (e) {
+            console.error("❌ Healing Failed:", e);
+            return null; // If healing fails, then force logout
+        }
+    }
+
+    /**
+     * MANUAL REGISTRATION (Email)
+     */
+    async registerUserEmail(email, password, userData) {
+        // 1. Sign Up
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email, password, options: { data: { full_name: userData.username } }
+        });
+
+        if (authError) throw new Error(authError.message);
+        if (!authData.user) throw new Error("فشل التسجيل.");
+
+        // 2. Explicit Insert (No Triggers)
+        const userId = authData.user.id;
+        
+        const { error: insertError } = await supabase.from('users').insert([{
+            id: userId,
+            email: email,
+            username: userData.username,
+            current_zone_id: userData.zoneId,
+            wallet_balance: 100
+        }]);
+
+        if (insertError) {
+            // If already exists (duplicate), ignore. Else throw.
+            if (insertError.code !== '23505') throw insertError;
         }
 
-        // 3. Mint Genesis Card (Explicit Insert)
+        // 3. Mint Card
         await this._mintGenesisCard(userId, userData);
 
         return this.getUserByUuid(userId);
     }
 
-    // --- LOGIN ---
+    /**
+     * MANUAL LOGIN (Email)
+     */
     async loginEmail(email, password) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw new Error("بيانات الدخول غير صحيحة");
+        if (error) throw new Error("بيانات خطأ.");
         
-        // Check if Public Profile exists (integrity check)
-        const user = await this.getUserByUuid(data.user.id);
-        if (!user) throw new Error("حسابك موجود لكن ملفك الشخصي مفقود (بيانات تالفة).");
-        
-        return user;
+        // CheckUser logic above will handle the profile fetching/healing
+        return this.checkUser();
     }
 
-    async logout() {
-        await supabase.auth.signOut();
-        localStorage.removeItem('noub_user_id');
-        window.location.reload();
-    }
-
-    // --- TELEGRAM REGISTRATION ---
+    /**
+     * TELEGRAM REGISTRATION
+     */
     async registerUserTelegram(userData) {
         let finalId = userData.telegramId || Math.floor(Math.random() * 1000000000).toString();
         
         const { data, error } = await supabase.from('users').insert([{
-            telegram_id: finalId,
-            username: userData.username,
-            current_zone_id: userData.zoneId,
-            wallet_balance: 100
+            telegram_id: finalId, username: userData.username, current_zone_id: userData.zoneId, wallet_balance: 100
         }]).select().single();
 
         if (error) throw error;
-        
         await this._mintGenesisCard(data.id, userData);
         
         if (!window.Telegram?.WebApp?.initDataUnsafe?.user) {
@@ -121,22 +167,30 @@ export class AuthService {
         return new User(data);
     }
 
-    // --- INTERNAL: Minting ---
+    async logout() {
+        await supabase.auth.signOut();
+        localStorage.removeItem('noub_user_id');
+        window.location.reload();
+    }
+
     async _mintGenesisCard(userId, userData) {
+        // Check if card exists first
+        const { data } = await supabase.from('cards').select('id').eq('owner_id', userId).eq('type', 'GENESIS').maybeSingle();
+        if (data) return; // Already has card
+
         const { error } = await supabase.from('cards').insert([{
             owner_id: userId,
             subject_id: userId,
             display_name: userData.username,
-            activity_type: userData.activityType,
+            activity_type: userData.activityType || 'PLAYER',
             position: userData.position || 'FAN',
-            visual_dna: userData.visualDna,
+            visual_dna: userData.visualDna || {},
             stats: { rating: 60, matches: 0, goals: 0 },
             minted_by: userId,
             serial_number: 1,
             type: 'GENESIS',
             is_verified: false
         }]);
-
-        if (error) console.error("Genesis Mint Error:", error);
+        if (error) console.error("Mint Error:", error);
     }
 }
