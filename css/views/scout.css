@@ -1,16 +1,25 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/views/scout.css
- * Version: 5.4.0 (Rich Visuals)
- * Description: Styles for Scout/Market View.
- * FIX: Added Background Images to Scout Cards.
+ * Version: Noub Sports_beta 0.0.1 (VISUAL RICHNESS)
+ * Description: Styling for the Scout/Market Module.
+ * 
+ * SECTIONS:
+ * 1. Layout & Header (Search, Scopes).
+ * 2. Filter Pills (The Toggles).
+ * 3. Trending Rail (Horizontal Scroll).
+ * 4. Grid System (The Marketplace).
+ * 5. Card Components (Polymorphic: Player vs Team styling).
  */
 
+/* 1. View Layout */
 #view-scout {
     padding: 20px;
-    padding-bottom: 120px;
+    padding-bottom: 120px; /* Extra space for Bottom Navbar */
+    min-height: 100vh;
 }
 
-/* 1. Header & Filters */
+/* 2. Header Section */
 .scout-header {
     display: flex;
     flex-direction: column;
@@ -18,19 +27,72 @@
     margin-bottom: 25px;
 }
 
+/* Scope Buttons (Local vs Global) */
+.scope-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.scope-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid #333;
+    color: var(--text-muted);
+    padding: 10px;
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.scope-btn:first-child {
+    border-radius: 0 12px 12px 0; /* RTL rounded right */
+    border-left: none;
+}
+
+.scope-btn:last-child {
+    border-radius: 12px 0 0 12px; /* RTL rounded left */
+}
+
+.scope-btn.active {
+    background: var(--gold-main);
+    color: #000;
+    border-color: var(--gold-main);
+    font-weight: bold;
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+/* Search Bar */
 .search-bar-wrapper {
     background: var(--bg-input);
-    border: 1px solid #333;
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 30px;
     padding: 12px 20px;
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: border-color 0.3s;
 }
-.search-bar-wrapper i { color: var(--gold-main); }
+
+.search-bar-wrapper:focus-within {
+    border-color: var(--gold-main);
+}
+
+.search-bar-wrapper i {
+    color: var(--gold-main);
+    font-size: 1.1rem;
+}
+
 .search-bar-wrapper input {
-    background: transparent; border: none; padding: 0; width: 100%; font-size: 1rem; color: #fff;
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: 100%;
+    font-size: 1rem;
+    color: #fff;
+    font-family: var(--font-primary);
 }
 
 /* Filter Pills */
@@ -39,21 +101,29 @@
     gap: 10px;
     overflow-x: auto;
     padding-bottom: 5px;
+    scrollbar-width: none; /* Hide scrollbar Firefox */
 }
+.filter-pills::-webkit-scrollbar { display: none; } /* Hide Chrome */
 
 .pill {
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
     color: var(--text-muted);
-    padding: 8px 16px;
+    padding: 8px 18px;
     border-radius: 20px;
     font-size: 0.85rem;
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
-    display: flex; align-items: center; gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-family: var(--font-primary);
     transition: all 0.2s;
+}
+
+.pill:hover {
+    background: rgba(255,255,255,0.1);
 }
 
 .pill.active {
@@ -63,18 +133,28 @@
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }
 
-/* 2. Trending Section */
-.trending-section { margin-bottom: 30px; }
+/* 3. Trending Section (Rail) */
+.trending-section {
+    margin-bottom: 30px;
+    animation: fadeIn 0.5s ease-out;
+}
+
 .trending-section h4 { 
-    color: var(--gold-main); margin-bottom: 15px; font-size: 0.95rem; 
-    border-right: 3px solid var(--gold-main); padding-right: 10px;
+    color: var(--gold-main); 
+    margin-bottom: 15px; 
+    font-size: 0.95rem; 
+    border-right: 3px solid var(--gold-main); 
+    padding-right: 10px;
+    font-family: var(--font-sport);
 }
 
 .trending-scroll {
-    display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 10px;
     scrollbar-width: none;
 }
-.trending-scroll::-webkit-scrollbar { display: none; }
 
 .mini-trend-card {
     background: linear-gradient(145deg, #252525, #111);
@@ -84,32 +164,53 @@
     min-width: 90px;
     text-align: center;
     flex-shrink: 0;
-}
-.mini-trend-card span { 
-    display: block; font-size: 0.75rem; margin-top: 8px; color: #fff; 
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
 
-/* 3. Grid Layout */
-.market-grid-section h4 { color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem; }
+.mini-avatar {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.mini-trend-card span { 
+    display: block; 
+    font-size: 0.75rem; 
+    margin-top: 5px; 
+    color: #fff; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    max-width: 80px;
+}
+
+/* 4. Main Grid Section */
+.market-grid-section h4 { 
+    color: var(--text-muted); 
+    margin-bottom: 15px; 
+    font-size: 0.9rem; 
+}
 
 .market-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* 2 Columns Layout */
     gap: 15px;
+    padding-bottom: 20px;
 }
 
-/* 4. Scout Card (VISUALLY UPGRADED) */
+/* =========================================
+   5. CARD COMPONENTS (Player & Team)
+   ========================================= */
+
 .scout-card {
     position: relative;
-    height: 220px;
+    height: 230px; /* Taller for rich background */
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.1);
     
-    /* FIX: Added Background Image Support */
+    /* Default Background (Stadium Night) */
     background: 
-        linear-gradient(to top, #000 10%, rgba(0,0,0,0.5) 100%),
-        url('../../assets/images/backgrounds/futsal-night.webp'); 
+        linear-gradient(to top, #000 10%, rgba(0,0,0,0.3) 100%),
+        url('../../assets/images/backgrounds/futsal-night.webp');
     background-size: cover;
     background-position: center;
     
@@ -118,58 +219,105 @@
     justify-content: flex-end;
     padding: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    transition: transform 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .scout-card:hover {
     transform: translateY(-5px);
     border-color: var(--gold-main);
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
 }
 
+/* Top Badge Area */
 .scout-card-top {
-    position: absolute; top: 10px; left: 10px; right: 10px;
-    display: flex; justify-content: space-between; z-index: 2;
+    position: absolute;
+    top: 10px; left: 10px; right: 10px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 2;
 }
 
 .scout-pos {
     background: rgba(0,0,0,0.7);
-    padding: 2px 8px; border-radius: 4px;
-    font-size: 0.7rem; font-weight: bold; color: #fff;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #fff;
     border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 
 .scout-rating {
     font-family: var(--font-orbitron);
-    font-size: 1rem; color: var(--gold-main);
-    text-shadow: 0 2px 2px #000;
+    font-size: 1.1rem;
+    color: var(--gold-main);
+    text-shadow: 0 2px 4px #000;
+    font-weight: 900;
 }
 
+/* Avatar Center */
 .scout-avatar {
-    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
-    font-size: 4rem; z-index: 1;
-    filter: drop-shadow(0 5px 5px rgba(0,0,0,0.8));
+    position: absolute;
+    top: 45px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 4.5rem; /* Large icon */
+    z-index: 1;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
+    transition: transform 0.3s;
 }
 
+.scout-card:hover .scout-avatar {
+    transform: translateX(-50%) scale(1.1); /* Zoom effect on hover */
+}
+
+/* Bottom Info */
 .scout-info {
-    position: relative; z-index: 2; text-align: center;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); /* Readability gradient */
+    padding-top: 20px;
+    border-radius: 0 0 16px 16px;
 }
 
 .scout-info h5 {
-    margin: 5px 0; font-size: 0.95rem; color: #fff;
-    text-shadow: 0 2px 5px #000; font-family: var(--font-sport);
+    margin: 5px 0;
+    font-size: 1rem;
+    color: #fff;
+    text-shadow: 0 2px 5px #000;
+    font-family: var(--font-sport);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .scout-tags span {
-    font-size: 0.65rem; background: rgba(0,0,0,0.6); padding: 3px 8px;
-    border-radius: 6px; color: #ddd;
+    font-size: 0.65rem;
+    background: rgba(255,255,255,0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+    color: #ddd;
+    border: 1px solid rgba(255,255,255,0.05);
 }
 
-.btn-social-mint {
-    width: 100%;
-    background: rgba(212, 175, 55, 0.9);
-    color: #000; border: none; border-radius: 8px; padding: 6px;
-    margin-top: 8px; font-size: 0.75rem; cursor: pointer; font-weight: bold;
+/* Specific Style for Team Cards */
+.scout-card.team-mode {
+    /* Different background for teams to distinguish them */
+    background: 
+        linear-gradient(to top, #111 20%, rgba(20,20,30,0.6) 100%),
+        url('../../assets/images/backgrounds/youth-center.webp');
+    background-size: cover;
 }
-.btn-social-mint:hover { background: #fff; }
+
+.scout-avatar.team-logo {
+    font-size: 2rem;
+    width: 70px; height: 70px;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+}
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
