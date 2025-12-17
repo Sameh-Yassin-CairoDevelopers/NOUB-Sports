@@ -1,275 +1,196 @@
 /*
- * Project: NOUB SPORTS ECOSYSTEM
- * Filename: js/controllers/onboardingCtrl.js
- * Version: Noub Sports_beta 0.0.1 (MASTER AUTH)
- * Status: Production Ready
+ * Filename: js/services/authService.js
+ * Version: 6.1.0 (SELF-HEALING MASTER)
+ * Description: Auth Service that fixes "Ghost Users" automatically.
  * 
- * RESPONSIBILITIES:
- * 1. Auth Flow Orchestration: Manages Telegram Minting vs Email Login/Signup.
- * 2. Visual Studio: Handles live updates for Avatar (Skin, Kit, Name on Shirt).
- * 3. Dynamic Forms: Adjusts UI based on user role (Player vs Fan).
- * 4. Interaction: Binds UI events to AuthService transactions.
+ * LOGIC UPDATE:
+ * 1. checkUser() now detects if Auth exists but Public Profile is missing.
+ * 2. If missing, it triggers '_restoreMissingProfile' immediately.
+ * 3. This guarantees the user is never stuck in a Login Loop.
  */
 
-import { AvatarEngine } from '../utils/avatarEngine.js';
-import { AuthService } from '../services/authService.js';
-import { SoundManager } from '../utils/soundManager.js';
+import { supabase } from '../core/supabaseClient.js';
+import { User } from '../models/User.js';
 
-export class OnboardingController {
+export class AuthService {
     
-    constructor() {
-        // Initialize Services
-        this.avatarEngine = new AvatarEngine();
-        this.authService = new AuthService();
+    /**
+     * Get Identity Source (Telegram or LocalStorage)
+     */
+    getCurrentIdentityToken() {
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tgUser && tgUser.id) return { type: 'TELEGRAM', value: tgUser.id.toString() };
         
-        // Internal State
-        this.authMode = 'LOGIN'; // Default Email Mode ('LOGIN' or 'SIGNUP')
-        
-        // DOM References for Live Preview
-        this.previewContainer = document.getElementById('auth-avatar-display');
-        this.nameInput = document.getElementById('inp-name');
+        const storedId = localStorage.getItem('noub_user_id');
+        if (storedId) return { type: 'TELEGRAM', value: storedId };
 
-        // Auto-Start
-        this.init();
+        return null;
     }
 
     /**
-     * Initialize Controller & Bind Events
+     * MAIN CHECK: The Guard
+     * Checks Session -> Validates Public Profile -> Heals if broken -> Returns User.
      */
-    init() {
-        console.log("🎮 Onboarding Controller: Ready.");
-        this.bindEvents();
-        this.updateLivePreview(); // Initial render
-        this.updateAuthModeUI(); // Set initial email UI state
-    }
-
-    /**
-     * Bind all DOM Event Listeners
-     */
-    bindEvents() {
-        // --- 1. Avatar Controls (Visual DNA) ---
-        const bindControl = (id, type, dir) => {
-            document.getElementById(id)?.addEventListener('click', (e) => {
-                e.preventDefault();
-                SoundManager.play('click');
-                this.avatarEngine.change(type, dir);
-                this.updateLivePreview(); // Refresh visual immediately
-            });
-        };
-
-        bindControl('btn-skin-next', 'skin', 1);
-        bindControl('btn-skin-prev', 'skin', -1);
-        bindControl('btn-kit-next', 'kit', 1);
-        bindControl('btn-kit-prev', 'kit', -1);
-
-        // --- 2. Live Name Typing on Shirt ---
-        if (this.nameInput) {
-            this.nameInput.addEventListener('input', () => {
-                this.updateLivePreview();
-            });
-        }
-
-        // --- 3. Activity Type Logic (Hide/Show Position) ---
-        const activitySelect = document.getElementById('inp-activity');
-        const posGroup = document.getElementById('group-position');
+    async checkUser() {
+        // A. Check Email Session (Supabase Auth)
+        const { data: sessionData } = await supabase.auth.getSession();
         
-        if (activitySelect) {
-            activitySelect.addEventListener('change', (e) => {
-                const val = e.target.value;
-                const hiddenRoles = ['FAN', 'INACTIVE'];
-                
-                if (hiddenRoles.includes(val) || val === '') {
-                    posGroup.classList.add('hidden');
-                } else {
-                    posGroup.classList.remove('hidden');
-                }
-            });
-        }
-
-        // --- 4. Tab Switching (Telegram vs Email) ---
-        const tabTg = document.getElementById('tab-tg');
-        const tabEmail = document.getElementById('tab-email');
-
-        if (tabTg && tabEmail) {
-            tabTg.addEventListener('click', (e) => this.switchTab(e, 'panel-tg'));
-            tabEmail.addEventListener('click', (e) => this.switchTab(e, 'panel-email'));
-        }
-
-        // --- 5. Email Auth Toggles (Login <-> Signup) ---
-        document.getElementById('link-to-signup')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.authMode = 'SIGNUP';
-            this.updateAuthModeUI();
-        });
-        
-        document.getElementById('link-to-login')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.authMode = 'LOGIN';
-            this.updateAuthModeUI();
-        });
-
-        // --- 6. Form Submissions ---
-        // A. Telegram Mint
-        document.getElementById('form-register')?.addEventListener('submit', (e) => this.handleTelegramMint(e));
-        
-        // B. Email Submit (Handles both Login & Signup)
-        document.getElementById('form-email-auth')?.addEventListener('submit', (e) => this.handleEmailSubmit(e));
-    }
-
-    /**
-     * Helper: Updates the avatar preview using the Engine.
-     */
-    updateLivePreview() {
-        if (!this.previewContainer) return;
-        
-        const currentConfig = JSON.parse(this.avatarEngine.getConfig());
-        const name = this.nameInput?.value || 'NOUB';
-        
-        // Generate Layered HTML
-        const html = AvatarEngine.generateAvatarHTML(currentConfig, name);
-        
-        // Inject
-        this.previewContainer.parentElement.innerHTML = html;
-        this.previewContainer = document.querySelector('.avatar-comp'); // Re-bind reference
-    }
-
-    /**
-     * UX: Switch between Main Tabs
-     */
-    switchTab(e, targetPanelId) {
-        e.preventDefault();
-        SoundManager.play('click');
-        
-        document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-
-        document.getElementById('panel-tg').classList.add('hidden');
-        document.getElementById('panel-email').classList.add('hidden');
-        document.getElementById(targetPanelId).classList.remove('hidden');
-    }
-
-    /**
-     * UX: Toggle Email Form Mode
-     */
-    updateAuthModeUI() {
-        const title = document.getElementById('email-auth-title');
-        const nameGroup = document.getElementById('group-email-name');
-        const btn = document.getElementById('btn-email-action');
-        const footerLogin = document.getElementById('footer-login');
-        const footerSignup = document.getElementById('footer-signup');
-
-        if (!title) return; // Guard clause
-
-        if (this.authMode === 'LOGIN') {
-            title.textContent = "تسجيل الدخول";
-            nameGroup.classList.add('hidden');
-            btn.textContent = "دخول";
-            footerLogin.classList.add('hidden');
-            footerSignup.classList.remove('hidden');
-            // Remove 'required' from name input to allow submission
-            document.getElementById('inp-email-name').removeAttribute('required');
-        } else {
-            title.textContent = "إنشاء حساب جديد";
-            nameGroup.classList.remove('hidden');
-            btn.textContent = "تسجيل";
-            footerLogin.classList.remove('hidden');
-            footerSignup.classList.add('hidden');
-            // Add 'required' to name input
-            document.getElementById('inp-email-name').setAttribute('required', 'true');
-        }
-    }
-
-    /**
-     * LOGIC: Handle Telegram Minting
-     */
-    async handleTelegramMint(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btn-mint');
-        this.setLoadingState(btn, true);
-
-        // Collect Data
-        const name = document.getElementById('inp-name').value;
-        const zone = document.getElementById('inp-zone').value;
-        const activity = document.getElementById('inp-activity').value;
-        
-        let pos = 'FAN';
-        if (!document.getElementById('group-position').classList.contains('hidden')) {
-            const posEl = document.querySelector('input[name="pos"]:checked');
-            pos = posEl ? posEl.value : 'FWD';
-        }
-
-        try {
-            await this.authService.registerUserTelegram({
-                telegramId: null, // Service will generate mock ID if needed
-                username: name,
-                zoneId: parseInt(zone),
-                activityType: activity,
-                position: pos,
-                visualDna: this.avatarEngine.getConfig()
-            });
-
-            SoundManager.play('success');
-            alert("تم صك الهوية بنجاح! جاري الدخول للملعب...");
-            window.location.reload();
-
-        } catch (err) {
-            console.error("Mint Error:", err);
-            alert("خطأ: " + err.message);
-            this.setLoadingState(btn, false, "صك الهوية");
-        }
-    }
-
-    /**
-     * LOGIC: Handle Email Submit (Login OR Signup)
-     */
-    async handleEmailSubmit(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btn-email-action');
-        const email = document.getElementById('inp-email').value;
-        const pass = document.getElementById('inp-pass').value;
-
-        if (!email || !pass) return alert("أدخل البيانات");
-        
-        this.setLoadingState(btn, true);
-
-        try {
-            if (this.authMode === 'LOGIN') {
-                // --- Login Flow ---
-                await this.authService.loginEmail(email, pass);
-            } else {
-                // --- Signup Flow ---
-                const name = document.getElementById('inp-email-name').value;
-                
-                await this.authService.registerUserEmail(email, pass, {
-                    username: name,
-                    zoneId: 1, // Default Zone for Email Signup (User can change later)
-                    activityType: 'PLAYER_FREE', // Default
-                    position: 'FWD',
-                    visualDna: { skin: 1, kit: 1 } // Default Visual
-                });
-                alert("تم إنشاء الحساب بنجاح!");
+        if (sessionData?.session?.user) {
+            console.log(`📧 Auth: Valid Session (${sessionData.session.user.email})`);
+            
+            // Try fetch public profile
+            let user = await this.getUserByUuid(sessionData.session.user.id);
+            
+            // CRITICAL FIX: If Auth exists but Public Profile is missing -> HEAL IT
+            if (!user) {
+                console.warn("⚠️ Auth: Profile missing. Attempting Self-Healing...");
+                user = await this._restoreMissingProfile(sessionData.session.user);
             }
             
-            // Success -> Enter App
-            window.location.reload();
+            return user;
+        }
 
-        } catch (err) {
-            alert(err.message);
-            this.setLoadingState(btn, false, this.authMode === 'LOGIN' ? "دخول" : "تسجيل");
+        // B. Check Telegram/Local ID
+        const identity = this.getCurrentIdentityToken();
+        if (identity && identity.type === 'TELEGRAM') {
+            console.log(`📱 Auth: Telegram ID ${identity.value}`);
+            const { data } = await supabase.from('users').select('*').eq('telegram_id', identity.value).maybeSingle();
+            return data ? new User(data) : null;
+        }
+
+        return null; // Guest
+    }
+
+    /**
+     * Helper: Fetch User by UUID
+     */
+    async getUserByUuid(uuid) {
+        const { data, error } = await supabase.from('users').select('*').eq('id', uuid).maybeSingle();
+        if (error) console.error("Fetch Error:", error);
+        return data ? new User(data) : null;
+    }
+
+    /**
+     * INTERNAL FIXER: Creates Public Profile for existing Auth User
+     */
+    async _restoreMissingProfile(authUser) {
+        try {
+            // 1. Re-create User Record
+            const { error: userError } = await supabase.from('users').insert([{
+                id: authUser.id,
+                email: authUser.email,
+                username: authUser.user_metadata?.full_name || 'Captain',
+                current_zone_id: 1, // Default to Fustat
+                wallet_balance: 100,
+                reputation_score: 100
+            }]);
+
+            if (userError) throw userError;
+
+            // 2. Re-mint Genesis Card
+            await this._mintGenesisCard(authUser.id, {
+                username: authUser.user_metadata?.full_name || 'Captain',
+                activityType: 'PLAYER_FREE',
+                visualDna: { skin: 1, kit: 1 }
+            });
+
+            console.log("✅ Self-Healing Complete.");
+            return this.getUserByUuid(authUser.id);
+
+        } catch (e) {
+            console.error("❌ Healing Failed:", e);
+            return null; // If healing fails, then force logout
         }
     }
 
     /**
-     * Helper: Loading Spinner
+     * MANUAL REGISTRATION (Email)
      */
-    setLoadingState(btn, isLoading, originalText = "") {
-        if (isLoading) {
-            btn.disabled = true;
-            if(!originalText) originalText = btn.textContent;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-        } else {
-            btn.disabled = false;
-            btn.textContent = originalText;
+    async registerUserEmail(email, password, userData) {
+        // 1. Sign Up
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email, password, options: { data: { full_name: userData.username } }
+        });
+
+        if (authError) throw new Error(authError.message);
+        if (!authData.user) throw new Error("فشل التسجيل.");
+
+        // 2. Explicit Insert (No Triggers)
+        const userId = authData.user.id;
+        
+        const { error: insertError } = await supabase.from('users').insert([{
+            id: userId,
+            email: email,
+            username: userData.username,
+            current_zone_id: userData.zoneId,
+            wallet_balance: 100
+        }]);
+
+        if (insertError) {
+            // If already exists (duplicate), ignore. Else throw.
+            if (insertError.code !== '23505') throw insertError;
         }
+
+        // 3. Mint Card
+        await this._mintGenesisCard(userId, userData);
+
+        return this.getUserByUuid(userId);
+    }
+
+    /**
+     * MANUAL LOGIN (Email)
+     */
+    async loginEmail(email, password) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw new Error("بيانات خطأ.");
+        
+        // CheckUser logic above will handle the profile fetching/healing
+        return this.checkUser();
+    }
+
+    /**
+     * TELEGRAM REGISTRATION
+     */
+    async registerUserTelegram(userData) {
+        let finalId = userData.telegramId || Math.floor(Math.random() * 1000000000).toString();
+        
+        const { data, error } = await supabase.from('users').insert([{
+            telegram_id: finalId, username: userData.username, current_zone_id: userData.zoneId, wallet_balance: 100
+        }]).select().single();
+
+        if (error) throw error;
+        await this._mintGenesisCard(data.id, userData);
+        
+        if (!window.Telegram?.WebApp?.initDataUnsafe?.user) {
+            localStorage.setItem('noub_user_id', finalId);
+        }
+        return new User(data);
+    }
+
+    async logout() {
+        await supabase.auth.signOut();
+        localStorage.removeItem('noub_user_id');
+        window.location.reload();
+    }
+
+    async _mintGenesisCard(userId, userData) {
+        // Check if card exists first
+        const { data } = await supabase.from('cards').select('id').eq('owner_id', userId).eq('type', 'GENESIS').maybeSingle();
+        if (data) return; // Already has card
+
+        const { error } = await supabase.from('cards').insert([{
+            owner_id: userId,
+            subject_id: userId,
+            display_name: userData.username,
+            activity_type: userData.activityType || 'PLAYER',
+            position: userData.position || 'FAN',
+            visual_dna: userData.visualDna || {},
+            stats: { rating: 60, matches: 0, goals: 0 },
+            minted_by: userId,
+            serial_number: 1,
+            type: 'GENESIS',
+            is_verified: false
+        }]);
+        if (error) console.error("Mint Error:", error);
     }
 }
