@@ -76,7 +76,7 @@ export class MarketService {
         let query = supabase
             .from('teams')
             .select('*')
-            .eq('status', 'ACTIVE') // Only fully formed teams
+            .in('status', ['ACTIVE', 'DRAFT'])
             .order('total_matches', { ascending: false });
 
         if (!enableGlobal) {
@@ -142,3 +142,4 @@ export class MarketService {
         );
     }
 }
+
