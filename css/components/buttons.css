@@ -1,17 +1,26 @@
+/*
+ * Filename: css/components/buttons.css
+ * Version: Noub Sports_beta 0.0.1
+ */
 .btn-primary {
-    width: 100%; padding: 12px;
+    width: 100%; padding: 14px;
     background: linear-gradient(135deg, var(--gold-main), var(--gold-dim));
     border: none; border-radius: var(--radius-md);
-    color: #000; font-weight: 800; font-size: 1rem;
+    color: #000; font-weight: 800; font-size: 1.1rem;
     cursor: pointer; margin-top: 15px;
-    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
-    transition: transform 0.1s;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+    transition: transform 0.1s, box-shadow 0.2s;
+    font-family: var(--font-cairo);
 }
-.btn-primary:active { transform: scale(0.98); }
+.btn-primary:active { transform: scale(0.97); box-shadow: none; }
+.btn-primary:disabled { opacity: 0.7; cursor: not-allowed; filter: grayscale(0.5); }
 
 .btn-control {
-    width: 30px; height: 30px;
-    background: var(--gold-main); border: none; border-radius: 6px;
-    color: #000; font-weight: bold; cursor: pointer;
+    width: 32px; height: 32px;
+    background: var(--bg-input); border: 1px solid var(--gold-dim);
+    color: var(--gold-main); border-radius: 8px;
+    font-weight: bold; cursor: pointer;
     display: flex; justify-content: center; align-items: center;
+    transition: 0.2s;
 }
+.btn-control:active { background: var(--gold-main); color: #000; }
