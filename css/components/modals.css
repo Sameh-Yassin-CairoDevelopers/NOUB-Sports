@@ -1,52 +1,50 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/components/modals.css
- * Version: 5.0.0 (Player Profile Added)
- * Description: Styles for Overlay Modals (Notifications & Player Details).
+ * Version: Noub Sports_beta 0.0.1
+ * Description: Styling for Overlay Modals (Bottom Sheets & Popups).
  */
 
-/* 1. Base Overlay */
+/* 1. Backdrop Overlay */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.85); /* Darker for focus */
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.85); /* Deep focus */
+    backdrop-filter: blur(8px);       /* Frost effect */
     z-index: 2000;
-    display: flex; justify-content: center; align-items: flex-end;
-    animation: fadeIn 0.2s ease-out;
+    display: flex; justify-content: center; align-items: flex-end; /* Bottom Sheet */
+    animation: fadeIn 0.3s ease-out;
 }
 
-/* 2. Modal Box (Bottom Sheet) */
+/* 2. Modal Container */
 .modal-box {
     background: var(--bg-surface);
     width: 100%; max-width: 500px;
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
+    border-top-left-radius: 24px; border-top-right-radius: 24px;
     border-top: 1px solid var(--gold-dim);
     padding: 25px;
-    max-height: 85vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
+    max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 -10px 60px rgba(0, 0, 0, 0.9);
+    animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* 3. Header */
 .modal-header {
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 15px;
+    margin-bottom: 20px; padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.modal-header h3 { 
+    color: var(--gold-main); font-family: var(--font-sport); font-size: 1.3rem; 
+}
+.close-btn { 
+    background: none; border: none; color: var(--text-muted); 
+    font-size: 2rem; cursor: pointer; line-height: 1;
 }
 
-.modal-header h3 { color: var(--gold-main); font-size: 1.2rem; font-family: var(--font-sport); }
-.close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.8rem; cursor: pointer; }
-
-/* 3. Player Detail Specifics */
-.player-detail-header {
-    text-align: center;
-    margin-bottom: 25px;
-}
-
-.detail-avatar-large {
-    font-size: 5rem;
-    margin-bottom: 10px;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+/* 4. Player Detail Profile */
+.player-detail-header { text-align: center; margin-bottom: 25px; }
+.detail-avatar-large { 
+    font-size: 5rem; margin-bottom: 10px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.6)); 
 }
 
 .detail-stats-row {
@@ -55,35 +53,22 @@
     border-radius: 16px; margin-bottom: 20px;
     border: 1px solid rgba(255,255,255,0.05);
 }
-
 .ds-item { text-align: center; }
 .ds-val { display: block; font-family: var(--font-orbitron); font-size: 1.4rem; color: #fff; font-weight: bold; }
 .ds-lbl { font-size: 0.8rem; color: var(--text-muted); }
 
-/* History Timeline */
-.history-section h4 { color: var(--text-main); margin-bottom: 10px; font-size: 1rem; }
-.history-list { display: flex; flex-direction: column; gap: 8px; }
-
-.history-card {
-    display: flex; justify-content: space-between; align-items: center;
-    background: rgba(255,255,255,0.03); padding: 12px;
-    border-radius: 10px; font-size: 0.9rem;
-}
-.result-badge {
-    padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem;
-}
-.res-win { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-.res-loss { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-.res-draw { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
-
-/* Notifications (Previous Code Preserved) */
+/* 5. Notifications List */
 .notif-list { display: flex; flex-direction: column; gap: 10px; }
 .notif-card { background: var(--bg-input); border: 1px solid #333; padding: 15px; border-radius: 12px; }
 .notif-info { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.notif-icon { 
+    width: 40px; height: 40px; background: rgba(212,175,55,0.1); border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; color: var(--gold-main); 
+}
 .notif-actions { display: flex; gap: 10px; }
 .btn-accept { flex: 1; padding: 10px; background: var(--success); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 .btn-reject { flex: 1; padding: 10px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
-.empty-notif { text-align: center; padding: 30px; color: var(--text-muted); }
 
-/* Animation */
+/* Animation Keyframes */
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
