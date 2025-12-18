@@ -1,125 +1,46 @@
 /*
  * Filename: css/components/cards.css
- * Version: 5.2.0 (Clean Fix)
- * Description: Player Card Styling & Actions Cleanup.
+ * Version: Noub Sports_beta 0.0.1 (RECTANGLE FIX)
  */
-
-/* 1. Container */
 .card-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding-top: 20px;
-    perspective: 1000px;
-    gap: 25px; /* مسافة نظيفة بين الكارت والأزرار */
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding-top: 20px; perspective: 1000px; gap: 20px;
 }
 
-/* 2. The Card Body */
 .player-card {
-    width: 300px;
-    height: 480px;
-    position: relative;
-    color: #fff;
-    border-radius: 24px;
-    border: 2px solid var(--gold-dim);
-    
-    /* الخلفية الافتراضية (تدرج لوني فخم في حال غياب الصورة) */
+    width: 300px; height: 480px; position: relative; color: #fff;
+    border-radius: 24px; border: 2px solid var(--gold-dim);
     background: radial-gradient(circle at 50% 30%, #2a2a2e 0%, #000 80%);
-    background-size: cover;
-    background-position: center;
-    
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8); /* ظل قوي للعمق */
-    overflow: hidden;
-    transition: transform 0.3s ease;
+    background-size: cover; background-position: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    overflow: hidden; transition: transform 0.3s ease;
 }
-
-/* Rarity Borders */
 .player-card.rarity-common { border-color: #a0a0a0; }
 .player-card.rarity-gold { border-color: #D4AF37; box-shadow: 0 0 25px rgba(212, 175, 55, 0.25); }
 
-/* Sheen Effect */
 .player-card::after {
-    content: "";
-    position: absolute;
-    top: 0; left: -100%;
-    width: 50%; height: 100%;
+    content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
     background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
-    transform: skewX(-25deg);
-    animation: sheen 6s infinite;
-    pointer-events: none;
-    z-index: 20;
+    transform: skewX(-25deg); animation: sheen 6s infinite; pointer-events: none; z-index: 20;
 }
+@keyframes sheen { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
 
-@keyframes sheen {
-    0% { left: -100%; }
-    20% { left: 200%; }
-    100% { left: 200%; }
-}
+.card-top { position: absolute; top: 25px; left: 25px; display: flex; flex-direction: column; align-items: center; z-index: 15; }
+.card-rating { font-family: var(--font-orbitron); font-size: 2.8rem; font-weight: 900; line-height: 1; color: var(--text-white); text-shadow: 2px 2px 4px #000; }
+.card-pos { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: var(--gold-main); text-shadow: 1px 1px 2px #000; }
 
-/* 3. Top Info */
-.card-top {
-    position: absolute; top: 25px; left: 25px;
-    display: flex; flex-direction: column; align-items: center;
-    z-index: 15;
-}
-.card-rating {
-    font-family: var(--font-orbitron); font-size: 2.8rem; font-weight: 900;
-    line-height: 1; color: var(--text-white); text-shadow: 2px 2px 4px #000;
-}
-.card-pos {
-    font-size: 1.2rem; font-weight: bold; text-transform: uppercase;
-    margin-top: 2px; color: var(--gold-main); text-shadow: 1px 1px 2px #000;
-}
-.card-flag { margin-top: 5px; filter: drop-shadow(0 2px 2px black); }
+.card-image-area { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 220px; height: 220px; z-index: 5; }
 
-/* 4. Avatar Area */
-.card-image-area {
-    position: absolute; top: 60px; left: 50%;
-    transform: translateX(-50%);
-    width: 220px; height: 220px;
-    z-index: 5;
-}
-
-/* 5. Bottom Info */
 .card-info {
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    height: 160px;
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 160px;
     background: linear-gradient(to top, #000 20%, rgba(0,0,0,0.8) 70%, transparent 100%);
-    display: flex; flex-direction: column; justify-content: flex-end;
-    padding-bottom: 25px;
-    z-index: 10;
+    display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 25px; z-index: 10;
 }
-.player-name {
-    text-align: center; font-family: var(--font-sport); font-size: 1.8rem;
-    color: var(--gold-main); text-transform: uppercase;
-    text-shadow: 0 2px 10px #000; margin-bottom: 10px; letter-spacing: 1px;
-}
-.separator-line {
-    width: 80%; height: 1px; background: rgba(255,255,255,0.2);
-    margin: 0 auto 10px auto;
-}
+.player-name { text-align: center; font-family: var(--font-sport); font-size: 1.8rem; color: var(--gold-main); text-transform: uppercase; text-shadow: 0 2px 10px #000; margin-bottom: 10px; letter-spacing: 1px; }
+.separator-line { width: 80%; height: 1px; background: rgba(255,255,255,0.2); margin: 0 auto 10px auto; }
 
-/* Stats */
-.card-stats-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    width: 80%; margin: 0 auto;
-    font-family: var(--font-orbitron); font-size: 0.95rem;
-    row-gap: 4px; column-gap: 20px;
-}
+.card-stats-grid { display: grid; grid-template-columns: 1fr 1fr; width: 80%; margin: 0 auto; font-family: var(--font-orbitron); font-size: 0.95rem; row-gap: 4px; column-gap: 20px; }
 .stat-box { display: flex; justify-content: space-between; color: #fff; text-shadow: 1px 1px 2px #000; }
 .stat-box span { font-weight: bold; color: var(--gold-light); }
 
-/* 6. Action Buttons (Clean Fix) */
-/* إزالة أي خلفية أو حدود من الحاوية لتعود الأزرار عائمة */
-.home-actions {
-    display: flex;
-    gap: 15px;
-    width: 100%;
-    justify-content: center;
-    background: none !important; /* إجبار الشفافية */
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0;
-    margin-top: 0;
-}
+.home-actions { display: flex; gap: 15px; width: 100%; justify-content: center; background: none !important; border: none !important; box-shadow: none !important; padding: 0; margin-top: 0; }
