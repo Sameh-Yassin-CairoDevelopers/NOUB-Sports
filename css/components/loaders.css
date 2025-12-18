@@ -1,6 +1,12 @@
+/*
+ * Filename: css/components/loaders.css
+ * Version: Noub Sports_beta 0.0.1
+ */
 .loader-bar {
-    width: 120px; height: 3px; background: rgba(255,255,255,0.1);
-    margin-top: 20px; border-radius: 2px; overflow: hidden; position: relative;
+    width: 140px; height: 4px; 
+    background: rgba(255,255,255,0.1);
+    margin: 20px auto; border-radius: 2px; 
+    overflow: hidden; position: relative;
 }
 .loader-bar::after {
     content: ''; display: block; width: 40%; height: 100%;
@@ -8,3 +14,8 @@
     animation: loadAnim 1s infinite ease-in-out;
 }
 @keyframes loadAnim { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+
+.loader-center {
+    display: flex; justify-content: center; align-items: center;
+    height: 200px; width: 100%;
+}
