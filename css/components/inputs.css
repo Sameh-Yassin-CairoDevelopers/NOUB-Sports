@@ -1,26 +1,29 @@
+/*
+ * Filename: css/components/inputs.css
+ * Version: Noub Sports_beta 0.0.1
+ */
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 0.85rem; }
 
-input[type="text"], select {
+input[type="text"], input[type="email"], input[type="password"], select {
     width: 100%; padding: 12px;
     background: var(--bg-input); border: 1px solid #333;
     border-radius: var(--radius-md);
     color: white; font-family: var(--font-primary); font-size: 1rem;
-    appearance: none;
+    appearance: none; transition: border-color 0.3s;
 }
-input:focus, select:focus { border-color: var(--gold-main); }
+input:focus, select:focus { border-color: var(--gold-main); outline: none; }
 
-/* Radio Grid for Position */
-.radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.radio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .radio-card { position: relative; cursor: pointer; }
 .radio-card input { position: absolute; opacity: 0; }
 .radio-card span {
-    display: block; padding: 10px;
-    background: var(--bg-input); border: 1px solid #333;
-    border-radius: var(--radius-md); text-align: center;
-    color: var(--text-muted); transition: 0.2s; font-size: 0.9rem;
+    display: flex; justify-content: center; align-items: center;
+    height: 40px; background: var(--bg-input);
+    border: 1px solid #333; border-radius: 8px;
+    font-size: 0.75rem; color: var(--text-grey); transition: all 0.2s;
 }
 .radio-card input:checked + span {
-    background: rgba(212,175,55,0.15); border-color: var(--gold-main);
-    color: var(--gold-main); font-weight: bold;
+    background: var(--gold-main); color: #000; border-color: var(--gold-main); font-weight: bold;
+    box-shadow: 0 4px 10px rgba(212,175,55,0.3);
 }
