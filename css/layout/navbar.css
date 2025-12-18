@@ -1,157 +1,247 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/layout/navbar.css
- * Version: 2.2.0 (3D & Responsive Fix)
- * Description: Styles for the bottom navigation bar with 3D depth and floating action button.
+ * Version: Noub Sports_beta 0.0.3 (MASTER 3D & RESPONSIVE)
+ * Status: Production Ready
+ * 
+ * -----------------------------------------------------------------------------
+ * ARCHITECTURAL OVERVIEW (نظرة معمارية):
+ * -----------------------------------------------------------------------------
+ * This stylesheet manages the Global Bottom Navigation Bar.
+ * It uses a specific combination of Flexbox, Absolute Positioning, and CSS Gradients
+ * to achieve a "Floating Glass" effect with a "Levitating Action Orb".
+ * 
+ * CORE FEATURES:
+ * 1. Responsive Grid: Uses 'flex: 1' to mathematically distribute 5 buttons evenly.
+ * 2. Glassmorphism: Backdrop-filter and semi-transparent backgrounds.
+ * 3. 3D Depth: Multi-layered shadows and border-lighting (Bevels).
+ * 4. Desktop Constraints: Centralizes the bar on large screens to match mobile view.
+ * -----------------------------------------------------------------------------
  */
 
+/* =========================================
+   1. THE CONTAINER (الشريط الحاوي)
+   ========================================= */
 #global-navbar {
-    /* 1. التثبيت والأبعاد */
+    /* Positioning & Layout */
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
     height: var(--nav-height);
-    z-index: 1000;
+    z-index: 1000; /* Ensures it floats above all views */
 
-    /* 2. نظام التوزيع المرن (Flexbox) */
+    /* Flexbox Architecture for 5 items */
     display: flex;
-    justify-content: space-between; /* توزيع المسافات بالتساوي */
-    align-items: flex-end; /* محاذاة العناصر للأسفل */
-    padding-bottom: 12px; /* مسافة من الأسفل للأيقونات */
+    justify-content: space-between;
+    align-items: flex-end; /* Align icons to bottom for the arc effect */
+    padding-bottom: 12px;
     padding-left: 10px;
     padding-right: 10px;
 
-    /* 3. تأثير الـ 3D والزجاج (The 3D Glass Look) */
-    background: linear-gradient(to top, #15171e 0%, rgba(26, 28, 35, 0.95) 100%);
-    backdrop-filter: blur(12px); /* تغبيش الخلفية */
-    -webkit-backdrop-filter: blur(12px);
+    /* 3D Glass Effect (Background) */
+    background: linear-gradient(
+        to top, 
+        rgba(15, 16, 20, 1) 0%,       /* Deep Black at bottom */
+        rgba(26, 28, 35, 0.9) 100%    /* Dark Grey at top */
+    );
     
-    /* الحافة العلوية المضيئة (Bevel Effect) */
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    /* Frost Effect (Blur behind the bar) */
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     
-    /* الظل العميق للرفع عن الصفحة */
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+    /* Lighting: Top Border Bevel (Simulates light source from top) */
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    
+    /* Depth: Deep Shadow to lift it from the page */
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+    
+    /* Smooth transition for visibility toggle */
+    transition: transform 0.3s ease-in-out;
 }
 
-/* -------------------------------------------
-   Standard Navigation Buttons (4 Buttons)
-------------------------------------------- */
+/* =========================================
+   2. STANDARD NAVIGATION BUTTONS (الأزرار الجانبية)
+   ========================================= */
 .nav-btn {
-    /* المرونة: يأخذ مساحة متساوية */
+    /* Fluid Width: Each button takes equal space */
     flex: 1; 
-    min-width: 0; /* يمنع الزر من تجاوز مساحته المحددة */
+    min-width: 0; /* Prevents text overflow breaking layout */
     
-    /* المظهر */
+    /* Styling Reset */
     background: none;
     border: none;
-    color: var(--text-muted);
     cursor: pointer;
     
-    /* الترتيب الداخلي */
+    /* Content Layout */
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
     
-    /* النصوص */
+    /* Typography */
+    color: var(--text-muted);
     font-family: var(--font-primary);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     
-    /* تأثيرات الانتقال */
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Interaction Physics */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
 }
 
-/* أيقونات الأزرار العادية */
+/* Icon Styling */
 .nav-btn i {
     font-size: 1.4rem;
-    transition: transform 0.3s, text-shadow 0.3s;
-    /* ظل خفيف للأيقونة لتعزيز الـ 3D */
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy effect */
+    /* Subtle text shadow for depth */
     filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
 }
 
-/* الحالة النشطة (Active State) */
+/* -------------------------------------------
+   STATE: Active / Selected
+   ------------------------------------------- */
 .nav-btn.active {
     color: var(--gold-main);
 }
 
 .nav-btn.active i {
-    transform: translateY(-5px); /* يرتفع للأعلى قليلاً */
-    text-shadow: 0 0 15px rgba(212, 175, 55, 0.6); /* وهج ذهبي */
+    /* Lift the icon up */
+    transform: translateY(-6px) scale(1.1);
+    
+    /* Neon Glow */
+    text-shadow: 
+        0 0 15px rgba(212, 175, 55, 0.5),
+        0 0 5px rgba(212, 175, 55, 0.8);
 }
 
-/* نقطة مضيئة تحت الزر النشط */
+/* The Glowing Dot Indicator */
 .nav-btn.active::after {
     content: '';
     position: absolute;
-    bottom: -12px;
-    width: 6px;
-    height: 6px;
-    background-color: var(--gold-main);
-    border-radius: 50%;
-    box-shadow: 0 0 10px var(--gold-main);
+    bottom: -12px; /* Hidden below padding */
+    width: 20px;
+    height: 4px;
+    background: var(--gold-main);
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 -2px 10px var(--gold-main);
+    opacity: 1;
+    animation: glowUp 0.3s ease-out;
+}
+
+@keyframes glowUp {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* -------------------------------------------
-   The Floating Action Button (The Center Orb)
-------------------------------------------- */
+   STATE: Touch Feedback (Click)
+   ------------------------------------------- */
+.nav-btn:active i {
+    transform: scale(0.9);
+    filter: brightness(0.8);
+}
+
+/* =========================================
+   3. THE FLOATING ORB (زر الإجراء العائم)
+   ========================================= */
+/* This button breaks the flow and floats above */
 .nav-btn.action-center {
-    /* أبعاد ثابتة للزر الدائري */
+    /* Fixed Dimensions to maintain perfect circle */
     flex: 0 0 65px; 
     height: 65px;
     
-    /* الشكل */
+    /* Shape */
     border-radius: 50%;
     
-    /* الرفع للأعلى (ليخرج من الشريط) */
+    /* Positioning: Levitation */
     transform: translateY(-35px);
     
-    /* الخلفية: تدرج لوني يعطي شكل الكرة الذهبية */
-    background: radial-gradient(circle at 30% 30%, var(--gold-light), var(--gold-main));
+    /* Material: Gold Sphere Gradient */
+    background: radial-gradient(
+        circle at 35% 35%, 
+        var(--gold-light) 0%, 
+        var(--gold-main) 60%,
+        var(--gold-dim) 100%
+    );
     
-    /* الحدود: حافة سميكة بلون الخلفية لعمل "قطع" وهمي في الشريط */
+    /* The Cutout Effect: Thick border matching body bg */
     border: 6px solid var(--bg-primary); 
     
-    /* التوسيط */
+    /* Layout */
     display: flex;
     justify-content: center;
     align-items: center;
     
-    /* الظلال الـ 3D القوية */
+    /* 3D Shadows (Complex Layering) */
     box-shadow: 
-        0 10px 25px rgba(212, 175, 55, 0.3), /* ظل خارجي ملون */
-        inset 0 2px 5px rgba(255, 255, 255, 0.4), /* لمعة علوية */
-        inset 0 -5px 10px rgba(0, 0, 0, 0.2); /* ظل سفلي داخلي */
+        /* 1. Drop Shadow */
+        0 12px 25px rgba(0, 0, 0, 0.6),
+        /* 2. Glow Shadow */
+        0 0 20px rgba(212, 175, 55, 0.2),
+        /* 3. Inner Highlight (Top) */
+        inset 0 3px 5px rgba(255, 255, 255, 0.4),
+        /* 4. Inner Shadow (Bottom) */
+        inset 0 -5px 12px rgba(0, 0, 0, 0.3);
     
     z-index: 1100;
-    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: visible; /* Allow glow to spill out */
 }
 
-/* أيقونة الزر العائم */
+/* The Icon inside the Orb */
 .nav-btn.action-center i {
     font-size: 1.8rem;
-    color: #1a1a1a; /* لون داكن للتباين مع الذهبي */
-    filter: drop-shadow(0 1px 1px rgba(255,255,255,0.3));
+    color: #1a1a1a; /* Dark Contrast against Gold */
+    filter: drop-shadow(0 1px 1px rgba(255,255,255,0.3)); /* Etched effect */
 }
 
-/* تأثير الضغط (Click Effect) */
+/* Interaction: Pressing the Orb */
 .nav-btn.action-center:active {
-    transform: translateY(-30px) scale(0.95); /* ينضغط للأسفل */
-    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
+    transform: translateY(-30px) scale(0.95); /* Sink down slightly */
+    box-shadow: 
+        0 5px 15px rgba(0,0,0,0.8),
+        inset 0 0 20px rgba(0,0,0,0.5); /* Darken inside */
 }
 
-/* -------------------------------------------
-   Responsive Adjustments (تحسينات الشاشات الكبيرة)
-------------------------------------------- */
+/* Ripple Effect for the Orb */
+.nav-btn.action-center::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.5);
+    opacity: 0;
+    transform: scale(1);
+    pointer-events: none;
+}
+
+.nav-btn.action-center:active::before {
+    animation: ripple 0.4s linear;
+}
+
+@keyframes ripple {
+    0% { transform: scale(1); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* =========================================
+   4. DESKTOP ADAPTATION (التجاوب مع الشاشات الكبيرة)
+   ========================================= */
 @media (min-width: 600px) {
     #global-navbar {
-        /* في الشاشات العريضة، نحدد العرض الأقصى ونوسط الشريط */
+        /* Centralize the bar to mimic mobile app feel */
         max-width: 600px;
         left: 50%;
         transform: translateX(-50%);
-        border-radius: 20px 20px 0 0; /* تدوير الحواف العلوية */
-        border-left: 1px solid rgba(255,255,255,0.05);
-        border-right: 1px solid rgba(255,255,255,0.05);
+        
+        /* Rounded styling for standalone bar */
+        border-radius: 24px 24px 0 0;
+        
+        /* Side Borders */
+        border-left: 1px solid rgba(255,255,255,0.08);
+        border-right: 1px solid rgba(255,255,255,0.08);
+        
+        /* Clearer separation from desktop background */
+        box-shadow: 0 -5px 50px rgba(0, 0, 0, 0.8);
     }
 }
