@@ -1,29 +1,85 @@
 /*
  * Filename: css/components/inputs.css
- * Version: Noub Sports_beta 0.0.1
+ * Version: 6.0.0 (Compact Size 10%)
+ * Description: Input fields styling.
+ * UPDATE: Reduced height and padding for sleeker look.
  */
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: 0.85rem; }
 
-input[type="text"], input[type="email"], input[type="password"], select {
-    width: 100%; padding: 12px;
-    background: var(--bg-input); border: 1px solid #333;
-    border-radius: var(--radius-md);
-    color: white; font-family: var(--font-primary); font-size: 1rem;
-    appearance: none; transition: border-color 0.3s;
+.form-group {
+    margin-bottom: 12px; /* Reduced space */
 }
-input:focus, select:focus { border-color: var(--gold-main); outline: none; }
 
-.radio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.radio-card { position: relative; cursor: pointer; }
-.radio-card input { position: absolute; opacity: 0; }
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+    font-size: 0.8rem; /* Smaller label */
+    font-weight: bold;
+}
+
+/* Compact Inputs */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+input[type="number"], 
+select {
+    width: 100%;
+    height: 42px; /* Enforce shorter height (Standard was ~50px) */
+    padding: 0 12px; /* Horizontal padding only */
+    
+    background: var(--bg-input);
+    border: 1px solid #333;
+    border-radius: 10px; /* Tighter radius */
+    
+    color: white;
+    font-family: var(--font-primary);
+    font-size: 0.9rem; /* Compact font */
+    
+    appearance: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus {
+    border-color: var(--gold-main);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
+}
+
+/* Radio Grid (Compact) */
+.radio-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px; /* Tighter gap */
+}
+
+.radio-card {
+    position: relative;
+    cursor: pointer;
+}
+
+.radio-card input {
+    position: absolute;
+    opacity: 0;
+}
+
 .radio-card span {
-    display: flex; justify-content: center; align-items: center;
-    height: 40px; background: var(--bg-input);
-    border: 1px solid #333; border-radius: 8px;
-    font-size: 0.75rem; color: var(--text-grey); transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px; /* Reduced from 45px */
+    
+    background: var(--bg-input);
+    border: 1px solid #333;
+    border-radius: 8px;
+    
+    font-size: 0.7rem; /* Smaller text */
+    color: var(--text-grey);
+    font-weight: bold;
+    transition: all 0.2s;
 }
+
 .radio-card input:checked + span {
-    background: var(--gold-main); color: #000; border-color: var(--gold-main); font-weight: bold;
-    box-shadow: 0 4px 10px rgba(212,175,55,0.3);
+    background: var(--gold-main);
+    color: #000;
+    border-color: var(--gold-main);
+    box-shadow: 0 2px 8px rgba(212,175,55,0.25);
 }
