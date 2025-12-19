@@ -1,250 +1,215 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/components/cards.css
- * Version: Noub Sports_beta 0.0.2 (ULTRA 3D)
+ * Version: 6.5.0 (MASTER INTERACTIVE)
  * Description: High-Fidelity Player Card Styling.
- * Features: 
- * - Multi-layer 3D Borders (Gold Rim).
- * - Embossed/Debossed Text Effects.
- * - Dynamic Holographic Sheen.
- * - Deep Shadows & Ambient Occlusion.
+ * 
+ * DESIGN SPECS:
+ * 1. Shape: Rounded Rectangle (Artifact Style).
+ * 2. Interaction: Click-to-reveal Overlay Menu.
+ * 3. Lighting: Dynamic Sheen & Gold Glow.
+ * 4. Z-Index Management: Ensures Overlay sits above Avatar/Stats.
  */
 
-/* 1. Container: Sets the 3D Stage */
+/* 1. The Stage (Container) */
 .card-container {
+    perspective: 1200px; /* Deep 3D Space */
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-top: 20px;
-    perspective: 1200px; /* Deeper perspective */
-    gap: 25px;
-    /* Floating Animation for the whole container */
-    animation: floatCard 6s ease-in-out infinite;
+    /* No padding needed as Home View centers it */
 }
 
-@keyframes floatCard {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-}
-
-/* 2. The Card Body (The Artifact) */
+/* 2. The Artifact (Card Body) */
 .player-card {
-    width: 240px;
-    height: 400px;
+    width: 290px;  /* Optimal width for mobile */
+    height: 460px; /* Tall enough for Avatar + Stats */
     position: relative;
     color: #fff;
-    border-radius: 22px;
     
-    /* COMPLEX 3D BORDER SYSTEM */
-    /* 1. Thin inner light (Edge highlight) */
-    border: 1px solid rgba(255, 255, 255, 0.2); 
+    /* Shape */
+    border-radius: 24px;
     
-    /* 2. Multiple Shadows for Bezel Effect */
+    /* 3D Bezel (The Gold Rim) */
+    border: 3px solid #D4AF37; 
     box-shadow: 
-        /* Inner Shadow (Depth) */
-        inset 0 0 20px rgba(0,0,0,0.9),
-        /* Outer Dark Rim */
-        0 0 0 2px #0f0f0f,
-        /* Gold Bezel (The Frame) */
-        0 0 0 4px #B8860B,
-        /* Outer Glow */
-        0 0 30px rgba(212, 175, 55, 0.15),
-        /* Deep Drop Shadow */
-        0 30px 60px rgba(0,0,0,0.6);
+        0 0 0 1px #000, /* Inner separation */
+        0 0 25px rgba(212, 175, 55, 0.15), /* Gold Aura */
+        0 30px 60px rgba(0, 0, 0, 0.8); /* Deep Ground Shadow */
 
-    /* Background Setup */
-    background-color: #1a1a1a;
+    /* Default Background (Fallback) */
+    background-color: #111;
     background-size: cover;
     background-position: center;
-    background-blend-mode: overlay;
     
-    overflow: hidden;
-    transform-style: preserve-3d; /* Important for 3D children */
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden; /* Contains the Sheen */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    transform-style: preserve-3d;
 }
 
-/* Interactive Hover Effect */
-.player-card:active {
-    transform: scale(0.98) rotateX(2deg);
+/* Hover State (Desktop) */
+.player-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 35px rgba(212, 175, 55, 0.25), 0 40px 70px rgba(0,0,0,0.9);
 }
 
-/* 3. The Holographic Sheen (The Polish) */
+/* Active Mode (When clicked to show menu) */
+.player-card.active-mode {
+    transform: scale(1.02); /* Slight Zoom */
+    border-color: #fff; /* Highlight Border */
+}
+
+/* 3. Holographic Sheen Animation */
 .player-card::after {
     content: "";
     position: absolute;
-    top: 0; left: -150%;
-    width: 100%; height: 100%;
-    
-    /* Diagonal Glass Reflection */
-    background: linear-gradient(
-        115deg, 
-        transparent 30%, 
-        rgba(255, 255, 255, 0.05) 40%, 
-        rgba(255, 255, 255, 0.3) 50%, 
-        rgba(255, 255, 255, 0.05) 60%, 
-        transparent 70%
-    );
-    
-    transform: skewX(-20deg);
-    animation: holoWipe 5s infinite linear;
+    top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+    transform: skewX(-25deg);
+    animation: sheen 6s infinite;
     pointer-events: none;
-    z-index: 50;
-    mix-blend-mode: overlay;
+    z-index: 20;
 }
 
-@keyframes holoWipe {
-    0% { left: -150%; }
-    40% { left: 200%; } /* Fast sweep */
-    100% { left: 200%; } /* Pause */
+@keyframes sheen {
+    0% { left: -100%; }
+    20% { left: 200%; }
+    100% { left: 200%; }
 }
 
-/* 4. Top Info - Embossed Gold */
+/* 4. The Interaction Overlay (Hidden Menu) */
+/* This layer covers the card when clicked */
+.card-actions-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 16, 20, 0.9); /* Deep Dark Glass */
+    backdrop-filter: blur(8px);
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    
+    opacity: 0;
+    pointer-events: none; /* Allows clicking through when hidden */
+    transition: opacity 0.3s ease;
+    z-index: 100; /* Topmost layer */
+}
+
+/* Reveal Logic */
+.player-card.active-mode .card-actions-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Menu Buttons */
+.action-btn-large {
+    width: 80%;
+    padding: 15px;
+    background: transparent;
+    border: 1px solid var(--gold-main);
+    color: var(--gold-main);
+    font-family: var(--font-primary);
+    font-weight: bold;
+    font-size: 1rem;
+    border-radius: 30px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: all 0.2s;
+}
+
+.action-btn-large:hover {
+    background: var(--gold-main);
+    color: #000;
+    box-shadow: 0 0 20px rgba(212,175,55,0.4);
+}
+
+.action-btn-large i { font-size: 1.2rem; }
+
+.close-hint {
+    position: absolute; bottom: 20px;
+    color: var(--text-muted); font-size: 0.8rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+
+/* 5. Card Content Layers */
+
+/* Top Info */
 .card-top {
     position: absolute; top: 20px; left: 20px;
     display: flex; flex-direction: column; align-items: center;
     z-index: 15;
 }
-
 .card-rating {
     font-family: var(--font-orbitron);
-    font-size: 2.6rem;
-    font-weight: 900;
-    line-height: 0.9;
-    color: #fff;
-    
-    /* Debossed Effect (Carved In) */
-    text-shadow: 
-        1px 1px 0px #aaa, /* Light edge */
-        2px 2px 4px rgba(0,0,0,0.8); /* Shadow inside */
-    
-    /* Gold Gradient Text */
-    background: linear-gradient(to bottom, #fff 20%, #D4AF37 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: 2.8rem; font-weight: 900; line-height: 0.9;
+    color: var(--text-white); text-shadow: 2px 2px 4px #000;
 }
-
 .card-pos {
-    font-size: 1rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    margin-top: 4px;
-    color: var(--gold-main);
-    letter-spacing: 1px;
-    text-shadow: 0 2px 4px #000;
-    
-    /* Bottom border separator */
-    border-bottom: 2px solid rgba(212, 175, 55, 0.5);
-    padding-bottom: 2px;
+    font-size: 1rem; font-weight: 800; text-transform: uppercase;
+    margin-top: 4px; color: var(--gold-main); text-shadow: 1px 1px 2px #000;
 }
-
 .card-flag { 
-    margin-top: 6px; 
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8)); 
-    font-size: 1.2rem;
-    color: #fff;
-    opacity: 0.9;
+    margin-top: 5px; filter: drop-shadow(0 2px 2px #000); font-size: 1.2rem;
 }
 
-/* 5. Avatar Area - Pop Out Effect */
+/* Avatar Position */
 .card-image-area {
     position: absolute;
-    top: 55px; 
-    left: 50%;
-    transform: translateX(-50%) translateZ(20px); /* 3D Push */
-    width: 210px; height: 210px;
+    top: 60px; left: 50%;
+    transform: translateX(-50%);
+    width: 220px; height: 220px;
     z-index: 5;
-    
-    /* Subtle Glow behind head */
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.5));
 }
 
-/* 6. Bottom Info - Glass Panel */
+/* Bottom Info Panel */
 .card-info {
     position: absolute; bottom: 0; left: 0; width: 100%;
     height: 155px;
-    
-    /* Glass Morphism Background */
-    background: linear-gradient(
-        to top, 
-        rgba(0,0,0,0.95) 10%, 
-        rgba(15, 12, 5, 0.8) 60%, 
-        transparent 100%
-    );
-    
+    /* Gradient to make text readable over any image */
+    background: linear-gradient(to top, #000 20%, rgba(0,0,0,0.8) 70%, transparent 100%);
     display: flex; flex-direction: column; justify-content: flex-end;
-    padding-bottom: 20px;
+    padding-bottom: 25px;
     z-index: 10;
-    
-    /* Top border shine */
-    border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .player-name {
     text-align: center;
     font-family: var(--font-sport);
     font-size: 1.8rem;
-    color: #fff; /* White base */
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    letter-spacing: 1px;
-    
-    /* 3D Text Shadow */
-    text-shadow: 
-        0 1px 0 #ccc,
-        0 2px 0 #c9c9c9,
-        0 3px 5px rgba(0,0,0,0.4),
-        0 5px 10px rgba(0,0,0,0.5);
-}
-
-/* Gold Name Variant for Captains/Rares (Optional Logic) */
-.player-card.rarity-gold .player-name {
     color: var(--gold-main);
-    text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    text-transform: uppercase;
+    text-shadow: 0 2px 10px #000;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
 }
 
 .separator-line {
-    width: 60%; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    width: 70%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
     margin: 0 auto 10px auto;
-    opacity: 0.7;
 }
 
-/* Stats Grid - Clean & Crisp */
+/* Stats Grid */
 .card-stats-grid {
     display: grid; 
     grid-template-columns: 1fr 1fr;
     width: 80%; margin: 0 auto;
     font-family: var(--font-orbitron);
-    font-size: 0.85rem;
-    row-gap: 5px; column-gap: 25px;
+    font-size: 0.9rem;
+    row-gap: 4px; column-gap: 20px;
 }
 
 .stat-box {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex; justify-content: space-between; align-items: center;
+    color: #fff; text-shadow: 1px 1px 2px #000;
 }
-
-.stat-box span {
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 0 1px 2px #000;
-}
-
-.stat-box:last-child { color: var(--text-muted); } /* Label color */
-.stat-box { color: #ddd; font-size: 0.75rem; font-weight: bold; } /* Label */
-
-/* 7. Action Buttons (Clean & Separated) */
-.home-actions {
-    display: flex; gap: 15px; width: 100%; justify-content: center;
-    background: none !important; border: none !important; box-shadow: none !important;
-    padding: 0; margin-top: 5px;
-    
-    /* Animation entry */
-    opacity: 0;
-    animation: fadeIn 1s ease-out 0.5s forwards;
-}
-
-@keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
-
-
+.stat-box span { font-weight: bold; color: var(--gold-light); }
