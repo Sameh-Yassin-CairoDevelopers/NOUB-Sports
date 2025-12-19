@@ -1,22 +1,22 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/utils/avatarEngine.js
- * Version: 6.0.0 (MASTER ENGINE)
- * Description: The Core Visual Generation Engine.
+ * Version: Noub Sports_beta 0.0.5 (ROYAL UPDATE)
+ * Status: Production Ready
+ * 
+ * DESCRIPTION:
+ * The Core Visual Generation Engine.
+ * Responsible for composing the SVG-based Avatar layers based on DNA.
  * 
  * ARCHITECTURE (System of Layers):
- * The engine composes the avatar by stacking Z-Indexed layers:
- * [Layer 1]: Body/Skin (Base)
- * [Layer 2]: Kit/Shirt (Torso)
- * [Layer 3]: Accessories/Hair (Headgear) - NEW!
- * [Layer 4]: Branding (Name on Shirt)
- * 
- * SCALABILITY:
- * Designed to easily accept SVG paths in the future instead of FontAwesome icons.
+ * [Layer 1]: Body/Skin (Base) - Z-Index 1
+ * [Layer 2]: Kit/Shirt (Torso) - Z-Index 2 (Sits ON TOP of body)
+ * [Layer 3]: Accessories (Headgear) - Z-Index 4 (Sits ON TOP of head)
+ * [Layer 4]: Branding (Name on Shirt) - Z-Index 5
  */
 
 // ==========================================
-// 1. CONFIGURATION CONSTANTS (سهولة التعديل)
+// 1. CONFIGURATION CONSTANTS
 // ==========================================
 
 const AVATAR_CONFIG = {
@@ -38,11 +38,11 @@ const AVATAR_CONFIG = {
         '#111111'  // 5. Black
     ],
 
-    // Accessories (Headgear/Hair) - Future Extensibility
-    // Currently mapping FontAwesome Classes. In future, map to SVG URLs.
+    // Accessories (Headgear/Hair)
+    // Mapping FontAwesome Classes.
     ACCESSORIES: [
         null,                  // 1. Bald/None
-        'fa-hat-cowboy',       // 2. Cap (Mockup)
+        'fa-hat-cowboy',       // 2. Cap
         'fa-crown',            // 3. King
         'fa-helmet-safety',    // 4. Defender
         'fa-graduation-cap'    // 5. Academy
@@ -53,14 +53,14 @@ export class AvatarEngine {
 
     /**
      * Constructor: Initializes state.
-     * Looks for a default display element if available.
+     * Looks for a default display element if available (for Onboarding).
      */
     constructor() {
         // Default State
         this.state = { 
             skin: 1, 
             kit: 1, 
-            hair: 1 // 1 = None
+            hair: 1 
         };
 
         // Cache DOM if running in Onboarding
@@ -94,7 +94,6 @@ export class AvatarEngine {
         if(lbl) lbl.textContent = val;
 
         // Trigger Render (Only for Onboarding Preview)
-        // For static generation, the caller uses generateAvatarHTML
         this.renderPreview(); 
     }
 
@@ -106,8 +105,7 @@ export class AvatarEngine {
     }
 
     /**
-     * Internal Preview Render (Simple CSS manipulation for Onboarding).
-     * Note: This is a lightweight preview. The full card uses generateAvatarHTML.
+     * Internal Preview Render (Simple injection for Onboarding).
      */
     renderPreview() {
         if (!this.displayElement) {
@@ -116,10 +114,9 @@ export class AvatarEngine {
         if (!this.displayElement) return;
 
         // Use the Static Generator to inject the full HTML into the preview box
-        // This ensures what they see in onboarding is EXACTLY what they get on the card
         const html = AvatarEngine.generateAvatarHTML(this.state, 'PREVIEW');
         
-        // We find the parent of the icon and replace content
+        // Replace content
         if(this.displayElement.parentElement) {
             this.displayElement.parentElement.innerHTML = html;
             // Re-bind to the new element created
@@ -131,6 +128,8 @@ export class AvatarEngine {
      * STATIC GENERATOR: The Core Renderer.
      * Creates the complex HTML string for the avatar.
      * 
+     * FIX APPLIED: Adjusted 'bottom' pixels to fix proportions.
+     * 
      * @param {Object} visualDna - { skin: int, kit: int, hair: int }
      * @param {string} shirtName - Text to print on shirt.
      * @returns {string} HTML String.
@@ -140,8 +139,8 @@ export class AvatarEngine {
         const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {skin:1, kit:1, hair:1});
         
         // 2. Resolve Attributes
-        const skinColor = AVATAR_CONFIG.SKINS[(dna.skin || 1) - 1];
-        const kitColor  = AVATAR_CONFIG.KITS[(dna.kit || 1) - 1];
+        const skinColor = AVATAR_CONFIG.SKINS[(dna.skin || 1) - 1] || AVATAR_CONFIG.SKINS[0];
+        const kitColor  = AVATAR_CONFIG.KITS[(dna.kit || 1) - 1] || AVATAR_CONFIG.KITS[0];
         const accessoryIcon = AVATAR_CONFIG.ACCESSORIES[(dna.hair || 1) - 1];
 
         // 3. Construct HTML Layer by Layer
@@ -149,48 +148,46 @@ export class AvatarEngine {
             <div class="avatar-comp" style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
                 
                 <!-- LAYER 1: The Body (Skin) -->
-                <!-- Z-Index: 1 (Lowest) -->
+                <!-- Raised to 75px to show neck above shirt line -->
                 <i class="fa-solid fa-user" style="
                     font-size: 110px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 45px; /* Lifted to hide armpits */
+                    bottom: 75px; 
                     z-index: 1;
                     filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
                 "></i>
 
                 <!-- LAYER 2: The Shirt (Kit) -->
-                <!-- Z-Index: 2 (Middle) -->
-                <!-- Size increased to 160px to cover shoulders fully -->
+                <!-- Increased size to 160px to cover shoulders -->
                 <i class="fa-solid fa-shirt" style="
                     font-size: 160px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -25px;
+                    bottom: -20px;
                     z-index: 2;
-                    filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));
+                    filter: drop-shadow(0 0 10px rgba(0,0,0,0.8));
                 "></i>
 
-                <!-- LAYER 3: The Accessory (Hair/Cap) - NEW! -->
-                <!-- Z-Index: 3 (Top) -->
+                <!-- LAYER 3: The Accessory (Hair/Cap) -->
+                <!-- Raised to 155px to sit on top of the raised head -->
                 ${accessoryIcon ? `
                 <i class="fa-solid ${accessoryIcon}" style="
                     font-size: 60px;
-                    color: ${kitColor}; /* Match kit or make custom */
+                    color: ${kitColor}; /* Matches Kit Color */
                     position: absolute;
-                    bottom: 125px; /* On Top of Head */
+                    bottom: 155px; 
                     z-index: 4;
-                    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.8));
+                    filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
                 "></i>
                 ` : ''}
 
                 <!-- LAYER 4: Name on Shirt (Branding) -->
-                <!-- Z-Index: 5 (Overlay) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 45px; /* Centered on chest */
+                    bottom: 50px; 
                     z-index: 5;
-                    color: rgba(255,255,255,0.85); 
+                    color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron'; 
                     font-size: 13px; 
                     font-weight: 900;
