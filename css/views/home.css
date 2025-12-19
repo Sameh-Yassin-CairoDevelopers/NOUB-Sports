@@ -1,38 +1,84 @@
 /*
  * Filename: css/views/home.css
- * Description: Specific styles for the Home/Locker Room View.
+ * Version: 5.4.0 (No Scroll Fix)
+ * Description: Styles for the Home/Locker Room View.
  */
 
 #view-home {
-    /* Ensure content is centered and scrollable */
-    width: 100%;
-    min-height: 100%;
+    /* تحديد الارتفاع بدقة ليملأ المساحة المتاحة فقط */
+    height: calc(100vh - var(--header-height) - var(--nav-height));
+    margin-top: var(--header-height); /* إبعاد عن الهيدر */
+    
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-bottom: 100px; /* Space for navbar */
+    justify-content: center; /* توسيط الكارت رأسياً */
+    
+    overflow-y: auto; /* سكرول فقط عند الضرورة القصوى */
+    overflow-x: hidden;
+    padding: 10px 0; /* تقليل الحواف */
 }
 
-/* Action Buttons below the card */
+.home-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* تنسيق التبويبات (ألبومي / بطاقتي) */
+.home-tabs { 
+    display: flex; 
+    gap: 30px; 
+    margin-bottom: 15px; /* تقليل المسافة */
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+    padding-bottom: 5px; 
+    width: 80%; 
+    justify-content: center;
+}
+
+.htab { 
+    background: none; border: none; color: #888; 
+    font-family: 'Cairo'; font-weight: bold; cursor: pointer; 
+    font-size: 1rem; position: relative; padding-bottom: 5px;
+    transition: color 0.3s;
+}
+
+.htab.active { color: #D4AF37; }
+
+.htab.active::after {
+    content: ''; position: absolute; bottom: -6px; left: 0; 
+    width: 100%; height: 2px; background: #D4AF37;
+}
+
+#home-dynamic-content { 
+    width: 100%; 
+    display: flex; 
+    justify-content: center; 
+}
+
+/* Action Buttons (Below Card) */
 .home-actions {
     display: flex;
     gap: 15px;
-    margin-top: 10px;
+    width: 100%;
+    justify-content: center;
+    margin-top: 15px; /* مسافة بسيطة تحت الكارت */
+    /* إجبار عدم وجود خلفيات */
+    background: none !important; border: none !important; box-shadow: none !important;
 }
 
 .btn-action-secondary {
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
     color: var(--text-muted);
-    padding: 10px 20px;
+    padding: 8px 16px; /* تصغير الأزرار قليلاً */
     border-radius: 20px;
     font-family: var(--font-cairo);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
 }
 
 .btn-action-secondary:hover {
@@ -41,6 +87,8 @@
     border-color: var(--gold-main);
 }
 
-.btn-action-secondary i {
-    color: var(--gold-main);
-}
+.btn-action-secondary i { color: var(--gold-main); }
+
+/* Animation */
+.fade-in { animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
