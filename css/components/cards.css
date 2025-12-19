@@ -29,8 +29,8 @@
 
 /* 2. The Card Body (The Artifact) */
 .player-card {
-    width: 210px;
-    height: 340px;
+    width: 240px;
+    height: 400px;
     position: relative;
     color: #fff;
     border-radius: 22px;
@@ -246,4 +246,5 @@
 }
 
 @keyframes fadeIn { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+
 
