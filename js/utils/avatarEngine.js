@@ -54,9 +54,9 @@ export class AvatarEngine {
         this.displayElement.style.filter = `drop-shadow(0 0 10px ${kitColor})`;
     }
 
-    /**
+/**
      * Static Helper: Generates the HTML string for a full card avatar.
-     * FIX: Z-Index and Order swapped.
+     * UPDATE: Increased Shirt Size (10%) to fix proportions.
      */
     static generateAvatarHTML(visualDna, shirtName) {
         const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {skin:1, kit:1});
@@ -67,31 +67,25 @@ export class AvatarEngine {
         const skin = skinColors[(dna.skin || 1) - 1];
         const kit = kitColors[(dna.kit || 1) - 1];
 
-        // Layering Logic:
-        // 1. Head/Body (Bottom Layer) - z-index: 1
-        // 2. Shirt (Top Layer) - z-index: 2
-        // 3. Text (Overlay) - z-index: 3
-        
         return `
             <div class="avatar-comp" style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
                 
-                <!-- LAYER 1: The Body (Skin) -->
+                <!-- LAYER 1: Body (Skin) -->
                 <i class="fa-solid fa-user" style="
                     font-size: 110px; 
                     color: ${skin}; 
                     position: absolute; 
-                    bottom: 40px; /* Adjusted to fit under shirt */
+                    bottom: 48px; /* رفعنا الرأس قليلاً ليتناسب مع التيشيرت الأكبر */
                     z-index: 1;
                     filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
                 "></i>
 
-                <!-- LAYER 2: The Shirt (Kit) -->
-                <!-- Using fa-shirt which is usually broader -->
+                <!-- LAYER 2: Shirt (Kit) - BIGGER NOW -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 130px; 
+                    font-size: 155px; /* كبرنا الحجم من 130 إلى 155 لتغطية الأكتاف */
                     color: ${kit}; 
                     position: absolute; 
-                    bottom: -20px;
+                    bottom: -25px; /* نزلنا قليلاً لاستيعاب الحجم الجديد */
                     z-index: 2;
                     filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));
                 "></i>
@@ -99,18 +93,18 @@ export class AvatarEngine {
                 <!-- LAYER 3: Name on Shirt -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 40px; 
+                    bottom: 42px; /* تعديل المكان ليبقى على الصدر */
                     z-index: 3;
-                    color: rgba(255,255,255,0.8); 
+                    color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron'; 
                     font-size: 14px; 
                     font-weight: bold;
                     text-transform: uppercase;
                     text-shadow: 0 1px 2px #000;
+                    letter-spacing: 1px;
                 ">
                     ${shirtName || 'NOUB'}
                 </div>
             </div>
         `;
     }
-}
