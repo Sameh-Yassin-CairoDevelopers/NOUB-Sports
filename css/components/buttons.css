@@ -1,26 +1,62 @@
 /*
  * Filename: css/components/buttons.css
- * Version: Noub Sports_beta 0.0.1
+ * Version: 6.0.0 (Compact 3D Buttons)
+ * Description: Button Styles.
+ * UPDATE: Reduced padding, added 3D press effect.
  */
-.btn-primary {
-    width: 100%; padding: 14px;
-    background: linear-gradient(135deg, var(--gold-main), var(--gold-dim));
-    border: none; border-radius: var(--radius-md);
-    color: #000; font-weight: 800; font-size: 1.1rem;
-    cursor: pointer; margin-top: 15px;
-    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
-    transition: transform 0.1s, box-shadow 0.2s;
-    font-family: var(--font-cairo);
-}
-.btn-primary:active { transform: scale(0.97); box-shadow: none; }
-.btn-primary:disabled { opacity: 0.7; cursor: not-allowed; filter: grayscale(0.5); }
 
+.btn-primary {
+    width: 100%;
+    padding: 10px 0; /* Reduced from 16px */
+    height: 44px;    /* Fixed height for consistency */
+    
+    /* Gradient with Depth */
+    background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-main) 100%);
+    
+    border: none;
+    border-radius: 10px;
+    border-bottom: 3px solid #9e822b; /* 3D Bezel Effect */
+    
+    color: #000;
+    font-weight: 800;
+    font-size: 1rem;
+    font-family: var(--font-cairo);
+    
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    
+    transition: all 0.1s;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+}
+
+/* Press Effect */
+.btn-primary:active {
+    transform: translateY(2px);
+    border-bottom: 0px solid transparent; /* Collapse bezel */
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    filter: grayscale(0.8);
+    cursor: not-allowed;
+}
+
+/* Small Control Buttons (Arrows) */
 .btn-control {
-    width: 32px; height: 32px;
-    background: var(--bg-input); border: 1px solid var(--gold-dim);
-    color: var(--gold-main); border-radius: 8px;
-    font-weight: bold; cursor: pointer;
+    width: 32px; height: 32px; /* Compact square */
+    background: var(--bg-input);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold-main);
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
     display: flex; justify-content: center; align-items: center;
     transition: 0.2s;
 }
-.btn-control:active { background: var(--gold-main); color: #000; }
+
+.btn-control:active {
+    background: var(--gold-main);
+    color: #000;
+}
