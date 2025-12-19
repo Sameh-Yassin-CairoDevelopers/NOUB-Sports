@@ -1,20 +1,11 @@
 <!--
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: index.html
- * Version: Noub Sports_beta 0.0.1 (EMAIL ONLY EDITION)
+ * Version: NOUB SPORTS_beta 0.0.4 (AVATAR STUDIO UPGRADE)
  * Status: Production Ready
  * 
- * ARCHITECTURE OVERVIEW:
- * The Single Page Application (SPA) Root.
- * Refactored to support Email-Only Authentication.
- * 
- * SECTIONS:
- * 1. HEAD: Dependencies (Supabase, Telegram SDK kept for environment detection only).
- * 2. SPLASH: Initial Loading State.
- * 3. GLOBAL HEADER: User Stats & Navigation Triggers.
- * 4. ONBOARDING: Unified Email Auth + Avatar Studio.
- * 5. MODULES: Home, Arena, Scout, Team Containers.
- * 6. NAVBAR: Persistent Bottom Navigation.
+ * CHANGE LOG:
+ * - Added 'Headgear/Hair' control row to the Avatar Studio section.
 -->
 
 <!DOCTYPE html>
@@ -24,21 +15,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NOUB Sports | نوب سبورتس</title>
 
-    <!-- =========================================
-         1. CORE DEPENDENCIES
-    ========================================== -->
+    <!-- 1. CORE DEPENDENCIES -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- =========================================
-         2. ASSETS & TYPOGRAPHY
-    ========================================== -->
+    <!-- 2. ASSETS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Changa:wght@500;700&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Main Stylesheet -->
+    <!-- 3. STYLES -->
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -57,7 +44,6 @@
 
         <!-- B. GLOBAL HEADER -->
         <header id="global-header" class="app-header hidden">
-            <!-- User Profile (Injected via JS) -->
             <div class="profile-summary">
                 <div class="avatar-circle" id="header-avatar">
                     <i class="fa-solid fa-user"></i>
@@ -67,8 +53,6 @@
                     <span id="header-zone" class="text-muted">...</span>
                 </div>
             </div>
-            
-            <!-- Wallet -->
             <div class="currency-badge">
                 <span id="header-balance" class="font-num">0</span> 
                 <i class="fa-solid fa-coins text-gold"></i>
@@ -78,21 +62,21 @@
         <!-- C. MAIN CONTENT -->
         <main id="main-content">
             
-            <!-- VIEW 1: AUTHENTICATION (UNIFIED EMAIL FLOW) -->
+            <!-- VIEW 1: AUTHENTICATION -->
             <section id="view-onboarding" class="view-section hidden">
                 <div class="auth-box">
                     <h2 class="section-title text-gold" id="auth-title">تسجيل الدخول</h2>
                     <p class="section-desc">بوابتك لمجتمع الرياضة المحلي</p>
 
-                    <!-- AVATAR STUDIO (Always Visible for Visual Appeal) -->
-                    <!-- Used for configuring look during Sign Up -->
+                    <!-- AVATAR STUDIO (UPDATED) -->
                     <div class="avatar-studio" id="studio-container">
                         <div class="avatar-preview">
                             <div id="auth-avatar-display" class="avatar-placeholder">
-                                <i class="fa-solid fa-shirt"></i>
+                                <!-- Will be replaced by AvatarEngine -->
                             </div>
                         </div>
                         <div class="avatar-controls">
+                            <!-- 1. Skin -->
                             <div class="control-row">
                                 <label>لون البشرة</label>
                                 <div class="selector">
@@ -101,6 +85,7 @@
                                     <button class="btn-control" id="btn-skin-next">❯</button>
                                 </div>
                             </div>
+                            <!-- 2. Kit -->
                             <div class="control-row">
                                 <label>طقم الفريق</label>
                                 <div class="selector">
@@ -109,28 +94,34 @@
                                     <button class="btn-control" id="btn-kit-next">❯</button>
                                 </div>
                             </div>
+                            <!-- 3. Headgear (NEW) -->
+                            <div class="control-row">
+                                <label>الرأس / الشعر</label>
+                                <div class="selector">
+                                    <button class="btn-control" id="btn-hair-prev">❮</button>
+                                    <span id="lbl-hair" class="font-num">1</span>
+                                    <button class="btn-control" id="btn-hair-next">❯</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- UNIFIED EMAIL FORM -->
+                    <!-- EMAIL FORM -->
                     <form id="form-email-auth">
-                        
-                        <!-- Login Fields -->
                         <div class="form-group">
                             <label>البريد الإلكتروني</label>
                             <input type="email" id="inp-email" placeholder="name@example.com" required>
                         </div>
-                        
                         <div class="form-group">
                             <label>كلمة المرور</label>
                             <input type="password" id="inp-pass" placeholder="******" required>
                         </div>
 
-                        <!-- Signup Extra Fields (Hidden by default) -->
+                        <!-- Signup Extras -->
                         <div id="signup-extras" class="hidden">
                             <div class="form-group">
-                                <label>اسم الشهرة (الكارت)</label>
-                                <input type="text" id="inp-name" placeholder="الاسم في الملعب" maxlength="15">
+                                <label>اسم الشهرة (على التيشيرت)</label>
+                                <input type="text" id="inp-name" placeholder="الاسم في الملعب" maxlength="12">
                             </div>
 
                             <div class="form-group">
@@ -144,7 +135,6 @@
                                 </select>
                             </div>
 
-                            <!-- Position (Dynamic) -->
                             <div class="form-group hidden" id="group-position">
                                 <label>المركز</label>
                                 <div class="radio-grid">
@@ -165,11 +155,9 @@
                             </div>
                         </div>
 
-                        <!-- Action Button -->
                         <button type="submit" id="btn-auth-action" class="btn-primary">دخول</button>
                     </form>
 
-                    <!-- Toggle Mode Footer -->
                     <div class="auth-footer" style="text-align:center; margin-top:20px;">
                         <p id="txt-footer">
                             ليس لديك حساب؟ <a href="#" id="link-toggle-mode" class="text-gold" style="font-weight:bold;">إنشاء حساب جديد</a>
@@ -178,27 +166,21 @@
                 </div>
             </section>
 
-            <!-- VIEW 2: HOME -->
+            <!-- OTHER VIEWS (Standard) -->
             <section id="view-home" class="view-section hidden"></section>
-
-            <!-- VIEW 3: ARENA -->
             <section id="view-arena" class="view-section hidden">
                 <div class="empty-state"><h3>الساحة</h3></div>
             </section>
-
-            <!-- VIEW 4: SCOUT -->
             <section id="view-scout" class="view-section hidden">
                 <div class="empty-state"><h3>الكشاف</h3></div>
             </section>
-
-            <!-- VIEW 5: TEAM -->
             <section id="view-team" class="view-section hidden">
                 <div class="empty-state"><h3>الفريق</h3></div>
             </section>
 
         </main>
 
-        <!-- D. GLOBAL NAVBAR -->
+        <!-- D. NAVBAR -->
         <nav id="global-navbar" class="hidden">
             <button class="nav-btn active" id="nav-home" onclick="window.router('view-home')">
                 <i class="fa-solid fa-id-card"></i><span>هويتي</span>
@@ -219,7 +201,6 @@
 
     </div>
 
-    <!-- JS Entry Point -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
