@@ -1,15 +1,90 @@
 /*
  * Filename: css/layout/header.css
- * Version: Noub Sports_beta 0.0.1
+ * Version: 6.0.0 (3D Glass Upgrade)
+ * Description: Top Navigation Bar styling.
+ * UPDATE: Added Depth, Glassmorphism, and Gold Bezel.
  */
+
 .app-header {
-    position: fixed; top: 0; left: 0; width: 100%; height: var(--header-height);
-    background: var(--bg-surface); border-bottom: 1px solid rgba(255,255,255,0.05);
-    display: flex; justify-content: space-between; align-items: center; padding: 0 15px; z-index: 100;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.5); /* 3D Shadow */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: var(--header-height);
+    z-index: 100;
+    
+    /* 1. Glass Background */
+    background: linear-gradient(
+        to bottom, 
+        rgba(20, 22, 28, 1) 0%, 
+        rgba(30, 32, 40, 0.9) 100%
+    );
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    /* 2. 3D Bezel (Bottom Edge) */
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2); /* Gold hint */
+    
+    /* 3. Shadow for Depth */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+
+    /* Layout */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    transition: all 0.3s ease;
 }
-.profile-summary { display: flex; align-items: center; gap: 10px; }
-.avatar-circle { width: 40px; height: 40px; border-radius: 50%; background: #333; border: 2px solid var(--gold-main); display: flex; justify-content: center; align-items: center; overflow: hidden; }
-.user-texts h3 { font-size: 0.9rem; line-height: 1.2; }
-.user-texts span { font-size: 0.7rem; }
-.currency-badge { background: rgba(212,175,55,0.1); padding: 5px 12px; border-radius: 20px; color: var(--gold-main); font-weight: bold; border: 1px solid rgba(212,175,55,0.2); }
+
+/* Profile Section */
+.profile-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-circle {
+    width: 38px; height: 38px; /* Slightly smaller */
+    border-radius: 50%;
+    background: #222;
+    border: 2px solid var(--gold-main);
+    display: flex; justify-content: center; align-items: center;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.user-texts {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.user-texts h3 {
+    font-size: 0.85rem; /* Crisp font */
+    line-height: 1.1;
+    margin-bottom: 2px;
+    color: #fff;
+    text-shadow: 0 1px 2px #000;
+}
+
+.user-texts span {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+/* Wallet Badge (3D Look) */
+.currency-badge {
+    background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(0,0,0,0.3));
+    padding: 4px 12px;
+    border-radius: 15px;
+    color: var(--gold-main);
+    font-weight: bold;
+    font-size: 0.85rem;
+    border: 1px solid rgba(212,175,55,0.3);
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+    display: flex; align-items: center; gap: 5px;
+}
+
+/* Icons within Header */
+.app-header button i {
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+}
