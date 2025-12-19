@@ -1,12 +1,8 @@
 /*
  * Filename: js/controllers/profileCtrl.js
- * Version: 5.0.0 (MASTER CONTROL)
- * Description: Controller for User Profile Management.
- * 
- * CAPABILITIES:
- * 1. Visual Editor: Opens a modal to modify the Player Card's Visual DNA (Skin/Kit).
- * 2. Persistence: Updates the 'cards' table in Supabase.
- * 3. Session Management: Handles secure Logout.
+ * Version: Noub Sports_beta 0.0.4 (EDIT FIX)
+ * Description: Controller for Profile Management (Locker Room).
+ * UPDATE: Added Hair Controls & Fixed Save Logic.
  */
 
 import { state } from '../core/state.js';
@@ -20,29 +16,22 @@ export class ProfileController {
     constructor() {
         this.avatarEngine = new AvatarEngine();
         this.authService = new AuthService();
-        
-        // Internal state for the editor
-        this.tempVisual = { skin: 1, kit: 1 };
+        this.tempVisual = { skin: 1, kit: 1, hair: 1 };
     }
 
-    /**
-     * OPENS THE VISUAL EDITOR MODAL
-     * Called when user clicks "Edit Appearance" on Home Card.
-     */
     openEditModal() {
         SoundManager.play('click');
         const user = state.getUser();
         if (!user) return;
 
-        // 1. Initialize Temp State from current User Data
+        // Init Temp State
         if (user.visualDna) {
             this.tempVisual = typeof user.visualDna === 'string' ? JSON.parse(user.visualDna) : user.visualDna;
         }
 
         const modalId = 'modal-profile-edit';
-
-        // 2. Build DOM if missing
         if (!document.getElementById(modalId)) {
+            // Build Modal HTML
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
                     <div class="modal-box">
@@ -52,11 +41,9 @@ export class ProfileController {
                         </div>
                         
                         <div id="editor-content">
-                            <!-- Preview Area -->
+                            <!-- Preview -->
                             <div class="avatar-studio" style="margin-bottom:20px;">
-                                <div class="avatar-preview" id="edit-avatar-display" style="height:180px;">
-                                    <!-- Dynamic Injection -->
-                                </div>
+                                <div class="avatar-preview" id="edit-avatar-display" style="height:200px;"></div>
                             </div>
 
                             <!-- Controls -->
@@ -77,6 +64,14 @@ export class ProfileController {
                                         <button class="btn-control" id="edit-kit-next">❯</button>
                                     </div>
                                 </div>
+                                <div class="control-row">
+                                    <label>الرأس / الشعر</label>
+                                    <div class="selector">
+                                        <button class="btn-control" id="edit-hair-prev">❮</button>
+                                        <span id="edit-lbl-hair" class="font-num">${this.tempVisual.hair || 1}</span>
+                                        <button class="btn-control" id="edit-hair-next">❯</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Actions -->
@@ -92,67 +87,52 @@ export class ProfileController {
                 </div>
             `);
 
-            // Bind Close Event
-            document.getElementById('btn-close-edit').addEventListener('click', () => {
-                document.getElementById(modalId).classList.add('hidden');
-            });
+            // Close Bind
+            document.getElementById('btn-close-edit').onclick = () => document.getElementById(modalId).classList.add('hidden');
         }
 
-        // 3. Show Modal
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
 
-        // 4. Initial Render of Preview
         this.updateEditorPreview(user.username);
-
-        // 5. Bind Editor Controls (Scoped to Modal)
         this.bindEditorEvents(user.username);
     }
 
-    /**
-     * Binds events for the Editor Modal buttons.
-     */
     bindEditorEvents(username) {
-        // Unbind previous to avoid duplicates (clone node trick or direct assignment)
-        // Here we use direct onclick for simplicity in modal context
-        
         const update = (type, dir) => {
             SoundManager.play('click');
-            let val = this.tempVisual[type] + dir;
-            if (val > 3) val = 1; // Max limit hardcoded for MVP
-            if (val < 1) val = 3;
+            let val = (this.tempVisual[type] || 1) + dir;
+            // Hardcoded limits for MVP (Sync with Constants in future)
+            const max = type === 'hair' ? 5 : 3; 
+            if (val > max) val = 1;
+            if (val < 1) val = max;
             this.tempVisual[type] = val;
             
-            // Update Label
             document.getElementById(`edit-lbl-${type}`).textContent = val;
-            // Update Visual
             this.updateEditorPreview(username);
         };
 
-        document.getElementById('edit-skin-prev').onclick = () => update('skin', -1);
-        document.getElementById('edit-skin-next').onclick = () => update('skin', 1);
-        document.getElementById('edit-kit-prev').onclick = () => update('kit', -1);
-        document.getElementById('edit-kit-next').onclick = () => update('kit', 1);
+        // Unbind/Rebind properly
+        const getEl = (id) => document.getElementById(id);
+        
+        getEl('edit-skin-prev').onclick = () => update('skin', -1);
+        getEl('edit-skin-next').onclick = () => update('skin', 1);
+        
+        getEl('edit-kit-prev').onclick = () => update('kit', -1);
+        getEl('edit-kit-next').onclick = () => update('kit', 1);
+        
+        getEl('edit-hair-prev').onclick = () => update('hair', -1);
+        getEl('edit-hair-next').onclick = () => update('hair', 1);
 
-        // Save Button
-        document.getElementById('btn-save-look').onclick = () => this.handleSave();
-
-        // Logout Button
-        document.getElementById('btn-logout').onclick = () => this.handleLogout();
+        getEl('btn-save-look').onclick = () => this.handleSave();
+        getEl('btn-logout').onclick = () => this.handleLogout();
     }
 
-    /**
-     * Renders the avatar inside the modal using the static Engine.
-     */
     updateEditorPreview(username) {
         const container = document.getElementById('edit-avatar-display');
-        const html = AvatarEngine.generateAvatarHTML(this.tempVisual, username);
-        container.innerHTML = html;
+        container.innerHTML = AvatarEngine.generateAvatarHTML(this.tempVisual, username);
     }
 
-    /**
-     * LOGIC: Save changes to Database.
-     */
     async handleSave() {
         const btn = document.getElementById('btn-save-look');
         btn.disabled = true;
@@ -161,39 +141,34 @@ export class ProfileController {
         try {
             const user = state.getUser();
             
-            // Update 'cards' table
+            // 1. Update DB
             const { error } = await supabase
                 .from('cards')
                 .update({ visual_dna: this.tempVisual })
                 .eq('owner_id', user.id)
-                .eq('type', 'GENESIS'); // Only update main card
+                .eq('type', 'GENESIS');
 
             if (error) throw error;
 
-            // Update Local State
+            // 2. Update Local State
             user.visualDna = this.tempVisual;
             state.setUser(user);
 
             SoundManager.play('success');
-            alert("تم تحديث مظهرك بنجاح!");
             
-            // Close Modal & Reload App to reflect changes everywhere
+            // 3. RELOAD to refresh all views (Cards, Avatars everywhere)
             window.location.reload();
 
         } catch (err) {
-            console.error(err);
             SoundManager.play('error');
             alert("فشل الحفظ: " + err.message);
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات';
+            btn.textContent = "حفظ التعديلات";
         }
     }
 
-    /**
-     * LOGIC: Logout
-     */
     async handleLogout() {
-        if(!confirm("هل أنت متأكد من تسجيل الخروج؟")) return;
+        if(!confirm("خروج؟")) return;
         await this.authService.logout();
     }
 }
