@@ -21,7 +21,7 @@
 @import url('components/modals.css');
 @import url('components/loaders.css');
 @import url('components/toasts.css');
-
+@import url('views/tactics.css');
 /* 4. Views Layer */
 @import url('views/splash.css');
 @import url('views/onboarding.css');
