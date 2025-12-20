@@ -1,60 +1,76 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/homeCtrl.js
- * Version: 6.5.0 (MASTER CONTROLLER - INTERACTIVE)
+ * Version: Noub Sports_beta 0.0.5 (PLATINUM EDITION)
  * Status: Production Ready
  * 
- * ARCHITECTURAL RESPONSIBILITIES:
- * 1. Dashboard Logic: Manages the 'Home' view, switching between Identity and Album.
- * 2. Visual Rendering: Renders the High-Fidelity Interactive Card (Shield/Rect).
- * 3. Interaction Handling: Manages Card Clicks (Toggle Overlay), and Button Actions.
- * 4. System Integration: Injects Notification Bell and Settings Trigger.
+ * -----------------------------------------------------------------------------
+ * ARCHITECTURAL OVERVIEW:
+ * -----------------------------------------------------------------------------
+ * The Master Controller for the "Locker Room" (User Dashboard).
+ * It acts as the central hub for the user's personal experience.
+ * 
+ * CORE RESPONSIBILITIES:
+ * 1. Identity Management: Renders the High-Fidelity Player Card (Visuals + Stats).
+ * 2. Collection Management: Fetches and displays the "Album" (Gifted Cards).
+ * 3. System Integration: 
+ *    - Injects the Notification System (Bell & Modal).
+ *    - Injects the Settings/Edit Trigger (Gear Icon).
+ *    - connect to ProfileController for visual editing.
+ * 4. UX/UI Logic: Handles Tab switching, 3D Card interactions, and Audio feedback.
+ * -----------------------------------------------------------------------------
  */
 
 import { NotificationService } from '../services/notificationService.js';
 import { ProfileController } from './profileCtrl.js';
-import { state } from '../core/state.js';
+import { state } from '../core/state.js'; // Singleton State
 import { supabase } from '../core/supabaseClient.js';
 import { AvatarEngine } from '../utils/avatarEngine.js';
 import { SoundManager } from '../utils/soundManager.js';
+import { Helpers } from '../utils/helpers.js';
 
 export class HomeController {
     
+    /**
+     * Constructor: Initializes dependencies and DOM references.
+     */
     constructor() {
-        // Initialize Dependencies
+        // Services & Sub-Controllers
         this.notifService = new NotificationService();
         this.profileCtrl = new ProfileController();
         
+        // Main Container
         this.viewContainer = document.getElementById('view-home');
         this.currentUser = null;
         
-        console.log("🏠 Home Controller: Ready.");
+        console.log("🏠 Home Controller: Fully Initialized.");
     }
 
     /**
-     * Main Render Entry Point.
+     * Main Entry Point: Renders the Dashboard based on User State.
+     * Called by AppClass upon successful authentication.
      * @param {Object} user - The authenticated User Model.
      */
     render(user) {
         if (!user) return;
         this.currentUser = user;
 
-        // 1. Update Global Header Info
+        // 1. Update Global Header (Name, Balance, Zone)
         this.updateHeaderUI(user);
 
         // 2. Initialize System Components (Bell & Settings)
         this.initNotificationSystem(user.id);
         this.initSettingsButton();
 
-        // 3. Render Layout Structure (Tabs)
+        // 3. Render the Main Layout (Tabs Container)
         this.renderLayout();
         
-        // 4. Default View: Identity Card
+        // 4. Load Default Tab (Identity Card)
         this.renderInteractiveCard(user);
     }
 
     /**
-     * Updates header texts (Name, Balance, Zone).
+     * Updates the persistent Global Header with dynamic data.
      */
     updateHeaderUI(user) {
         const nameEl = document.getElementById('header-name');
@@ -64,19 +80,21 @@ export class HomeController {
         if (nameEl) nameEl.textContent = user.username;
         if (balanceEl) balanceEl.textContent = user.balance;
 
+        // Zone Mapping (Enum to String)
         const zoneNames = {
             1: 'الفسطاط / المعادي',
             2: 'مصر القديمة / المنيل',
             3: 'حلوان / التبين',
             4: 'القاهرة الكبرى'
         };
+        
         if (zoneEl) {
             zoneEl.textContent = zoneNames[user.zoneId] || 'منطقة غير محددة';
         }
     }
 
     /**
-     * Renders the Tab Navigation Container.
+     * Renders the Internal Tabs System (Identity vs Album).
      */
     renderLayout() {
         this.viewContainer.innerHTML = `
@@ -90,6 +108,25 @@ export class HomeController {
                 <!-- Dynamic Content Container -->
                 <div id="home-dynamic-content"></div>
             </div>
+
+            <!-- Scoped Styles for Tabs -->
+            <style>
+                .home-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
+                .home-tabs { 
+                    display: flex; gap: 40px; margin-bottom: 20px; margin-top: 10px;
+                    border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; width: 80%; justify-content: center;
+                }
+                .htab { 
+                    background: none; border: none; color: #888; font-family: 'Cairo'; 
+                    font-weight: bold; cursor: pointer; font-size: 1rem; position: relative;
+                    padding-bottom: 5px; transition: color 0.3s;
+                }
+                .htab.active { color: #D4AF37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
+                .htab.active::after {
+                    content: ''; position: absolute; bottom: -9px; left: 0; width: 100%; height: 3px; background: #D4AF37; box-shadow: 0 0 10px #D4AF37;
+                }
+                #home-dynamic-content { width: 100%; display: flex; justify-content: center; perspective: 1000px; }
+            </style>
         `;
 
         // Bind Tab Click Events
@@ -104,59 +141,80 @@ export class HomeController {
         });
     }
 
+    /**
+     * UX Helper: Toggles active class on tabs.
+     */
     switchTab(btn) {
         document.querySelectorAll('.htab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         SoundManager.play('click');
     }
 
+    /* =========================================================================
+       SECTION 1: IDENTITY CARD RENDERING
+       ========================================================================= */
+
     /**
-     * Renders the Interactive 3D Card (Identity).
+     * Renders the Interactive Player Card.
+     * Features: Layered Avatar, Stats, Market Value, Rarity Border, and Action Overlay.
      */
     renderInteractiveCard(user) {
         const container = document.getElementById('home-dynamic-content');
+        if (!container) return;
         
-        // 1. Stats Setup
+        // 1. Setup Stats (Fallback logic for new users)
         const stats = { 
             rating: user.stats?.rating || 60, 
+            matches: user.stats?.matches || 0,
+            goals: user.stats?.goals || 0,
             pac: 65, sho: 55, pas: 60, 
             dri: 58, def: 50, phy: 62, 
             pos: user.position || 'FAN' 
         };
-        
-        // 2. Avatar Logic
-        let visual = user.visualDna || { skin: 1, kit: 1, hair: 1 };
+
+        // 2. Calculate Derived Metrics
+        const rarityClass = this.calculateRarityClass(stats.matches);
+        const marketValue = this.calculateMarketValue(stats, user.reputation || 100);
+
+        // 3. Generate Avatar HTML
+        let visual = user.visualDna || { skin: 1, kit: 1 };
         if (typeof visual === 'string') visual = JSON.parse(visual);
-        
         const avatarHtml = AvatarEngine.generateAvatarHTML(visual, user.username);
+        
+        // 4. Background Asset
         const bgUrl = "assets/images/backgrounds/street-bg.webp";
 
-        // 3. Construct HTML (Matches cards.css v6.5.0)
+        // 5. Construct HTML
         container.innerHTML = `
             <div class="card-container fade-in">
                 
-                <!-- THE ARTIFACT (Clickable Card) -->
-                <div class="player-card rarity-common" id="my-player-card" style="background-image: url('${bgUrl}');">
+                <!-- Market Value Badge -->
+                <div style="background: rgba(0,0,0,0.6); border: 1px solid var(--success); color: var(--success); padding: 5px 15px; border-radius: 20px; font-family: 'Orbitron'; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; margin-bottom: -10px; z-index: 50;">
+                    <i class="fa-solid fa-chart-line"></i>
+                    ${Helpers.formatCurrency(marketValue)}
+                </div>
+
+                <!-- THE CARD ARTIFACT -->
+                <div class="player-card ${rarityClass}" id="my-player-card" style="background-image: url('${bgUrl}');">
                     
-                    <!-- A. THE OVERLAY MENU (Hidden by default) -->
+                    <!-- A. OVERLAY MENU (Hidden by default) -->
                     <div class="card-actions-overlay" id="card-overlay">
-                        
                         <button class="action-btn-large" id="btn-edit-look">
                             <i class="fa-solid fa-shirt"></i> غرفة الملابس
                         </button>
                         
-                        <button class="action-btn-large" id="btn-open-album">
+                        <button class="action-btn-large" id="btn-go-album">
                             <i class="fa-solid fa-images"></i> ألبومي
                         </button>
                         
-                        <button class="action-btn-large" onclick="alert('مشاركة: قريباً')">
+                        <button class="action-btn-large" onclick="alert('خدمة المشاركة: قريباً')">
                             <i class="fa-solid fa-share-nodes"></i> مشاركة
                         </button>
 
-                        <span class="close-hint">اضغط في أي مكان للعودة</span>
+                        <span class="close-hint">اضغط للعودة</span>
                     </div>
 
-                    <!-- B. CARD CONTENT -->
+                    <!-- B. VISIBLE CONTENT -->
                     <div class="card-top">
                         <div class="card-rating text-gold">${stats.rating}</div>
                         <div class="card-pos">${stats.pos}</div>
@@ -181,13 +239,13 @@ export class HomeController {
                     </div>
                 </div>
             </div>`;
-
-        // 4. Bind Interactions
+        
+        // 6. Bind Interactions
         const card = document.getElementById('my-player-card');
-
-        // Toggle Overlay on Click
+        
+        // Toggle Overlay on Card Click
         card.addEventListener('click', (e) => {
-            // Prevent toggling if clicking a button inside overlay
+            // Prevent toggle if clicking a button inside
             if (e.target.closest('button')) return;
             
             card.classList.toggle('active-mode');
@@ -199,21 +257,48 @@ export class HomeController {
             this.profileCtrl.openEditModal();
         };
 
-        // Shortcut to Album Tab
-        document.getElementById('btn-open-album').onclick = () => {
-            document.getElementById('tab-album').click(); // Simulate tab click
+        document.getElementById('btn-go-album').onclick = () => {
+            // Switch Tab Programmatically
+            document.getElementById('tab-album').click();
         };
     }
 
     /**
-     * TAB 2: Render Album (Collected Cards).
+     * Logic: Determine Card Rarity based on Experience
+     */
+    calculateRarityClass(matches) {
+        if (matches >= 100) return 'rarity-diamond';
+        if (matches >= 30) return 'rarity-gold';
+        if (matches >= 10) return 'rarity-silver';
+        return 'rarity-common';
+    }
+
+    /**
+     * Logic: Calculate Market Value
+     * Formula: (Rating * 1000) + (Matches * 500) + (Goals * 1000)
+     */
+    calculateMarketValue(stats, reputation) {
+        const rating = stats.rating || 60;
+        const matches = stats.matches || 0;
+        const goals = stats.goals || 0;
+        // Simple Valuation Algorithm
+        return (rating * 1000) + (matches * 500) + (goals * 1000) + (reputation * 10);
+    }
+
+    /* =========================================================================
+       SECTION 2: ALBUM RENDERING
+       ========================================================================= */
+
+    /**
+     * TAB 2: Render Album (Gifted Cards Collection).
+     * Fetches cards from Supabase where 'type' is 'GIFT'.
      */
     async renderAlbum(userId) {
         const container = document.getElementById('home-dynamic-content');
         container.innerHTML = '<div class="loader-bar" style="margin:20px auto"></div>';
 
         try {
-            // Fetch GIFT cards
+            // Fetch collected cards
             const { data: cards, error } = await supabase
                 .from('cards')
                 .select('*')
@@ -233,7 +318,7 @@ export class HomeController {
                 return;
             }
 
-            // Render Grid
+            // Render Grid of Mini Cards
             container.innerHTML = `
                 <div class="market-grid" style="width:100%; padding:0 20px;">
                     ${cards.map(c => this.renderMiniCard(c)).join('')}
@@ -247,13 +332,11 @@ export class HomeController {
     }
 
     /**
-     * Helper: Mini Card for Album
+     * Helper: Renders a simplified card for the Album Grid.
      */
     renderMiniCard(card) {
         let visual = card.visual_dna;
         if(typeof visual === 'string') visual = JSON.parse(visual);
-        
-        // Simple avatar for mini card
         const skinColor = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'][visual.skin - 1] || '#ccc';
 
         return `
@@ -266,13 +349,17 @@ export class HomeController {
                 </div>
                 <div class="scout-info">
                     <h5>${card.display_name}</h5>
-                    <div class="scout-tags"><span style="color:var(--gold-main);">GIFT</span></div>
+                    <span style="font-size:0.6rem; color:var(--gold-main);">هدية موقعة</span>
                 </div>
             </div>`;
     }
 
+    /* =========================================================================
+       SECTION 3: SYSTEM INTEGRATION (NOTIFICATIONS & SETTINGS)
+       ========================================================================= */
+
     /**
-     * Header & Notification Logic
+     * Injects Settings Icon (Gear) in Global Header.
      */
     initSettingsButton() {
         const header = document.getElementById('global-header');
@@ -284,11 +371,15 @@ export class HomeController {
             </button>
         `);
 
+        // Bind to Profile Editor (Acts as Settings menu for now)
         document.getElementById('btn-settings').addEventListener('click', () => {
-            this.profileCtrl.openEditModal(); // Use Profile Editor as Settings for now
+            this.profileCtrl.openEditModal();
         });
     }
 
+    /**
+     * Injects Notification Bell & Sets up Polling.
+     */
     initNotificationSystem(userId) {
         const header = document.getElementById('global-header');
         if (document.getElementById('btn-notif')) return;
@@ -312,20 +403,35 @@ export class HomeController {
             const actions = await this.notifService.getPendingActions(userId);
             const badge = document.getElementById('notif-badge');
             if (actions.length > 0 && badge) badge.style.display = 'block';
-        } catch (e) { console.warn("Silent Notif Check Failed"); }
+        } catch (e) { 
+            console.warn("Silent Notif Check Failed"); 
+        }
     }
 
+    /**
+     * Builds and Opens the Notification Modal.
+     */
     async openNotificationModal(userId) {
         const modalId = 'modal-notifications';
+        
+        // Create Modal DOM if missing
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
                     <div class="modal-box">
-                        <div class="modal-header"><h3>مركز الإجراءات</h3><button class="close-btn" id="btn-close-notif">&times;</button></div>
-                        <div id="notif-list-container" class="notif-list"><div class="loader-bar" style="margin: 20px auto;"></div></div>
+                        <div class="modal-header">
+                            <h3>مركز الإجراءات</h3>
+                            <button class="close-btn" id="btn-close-notif">&times;</button>
+                        </div>
+                        <div id="notif-list-container" class="notif-list">
+                            <div class="loader-bar" style="margin: 20px auto;"></div>
+                        </div>
                     </div>
                 </div>`);
-            document.getElementById('btn-close-notif').addEventListener('click', () => document.getElementById(modalId).classList.add('hidden'));
+            
+            document.getElementById('btn-close-notif').addEventListener('click', () => {
+                document.getElementById(modalId).classList.add('hidden');
+            });
         }
 
         const modal = document.getElementById(modalId);
@@ -336,16 +442,28 @@ export class HomeController {
 
         try {
             const actions = await this.notifService.getPendingActions(userId);
+            
             if (actions.length === 0) {
-                container.innerHTML = `<div class="empty-notif"><i class="fa-regular fa-bell-slash" style="font-size:2rem; margin-bottom:10px;"></i><p>لا توجد إشعارات جديدة</p></div>`;
+                container.innerHTML = `
+                    <div class="empty-notif">
+                        <i class="fa-regular fa-bell-slash" style="font-size:2rem; margin-bottom:10px;"></i>
+                        <p>لا توجد إشعارات جديدة</p>
+                    </div>`;
                 return;
             }
 
+            // Render Notification Cards
             container.innerHTML = actions.map(act => `
                 <div class="notif-card">
                     <div class="notif-info">
-                        <div class="notif-icon"><i class="fa-solid ${act.type === 'MINT_REQUEST' ? 'fa-pen-fancy' : 'fa-handshake'}"></i></div>
-                        <div class="notif-text"><h4>${act.title}</h4><p>${act.desc}</p><small class="text-muted">${new Date(act.time).toLocaleDateString('ar-EG')}</small></div>
+                        <div class="notif-icon">
+                            <i class="fa-solid ${act.type === 'MINT_REQUEST' ? 'fa-pen-fancy' : 'fa-handshake'}"></i>
+                        </div>
+                        <div class="notif-text">
+                            <h4>${act.title}</h4>
+                            <p>${act.desc}</p>
+                            <small class="text-muted">${new Date(act.time).toLocaleDateString('ar-EG')}</small>
+                        </div>
                     </div>
                     <div class="notif-actions">
                         <button class="btn-accept" data-type="${act.type}" data-id="${act.id}">موافقة</button>
@@ -353,15 +471,22 @@ export class HomeController {
                     </div>
                 </div>`).join('');
 
+            // Bind Actions
             this.bindNotificationActions(userId, modal);
-        } catch (e) { container.innerHTML = `<p class="error-text">فشل التحميل: ${e.message}</p>`; }
+
+        } catch (e) { 
+            container.innerHTML = `<p class="error-text">فشل تحميل الإشعارات: ${e.message}</p>`; 
+        }
     }
 
     bindNotificationActions(userId, modal) {
         const handleAction = async (btn, actionType) => {
             const { type, id } = btn.dataset;
             if(!confirm(actionType === 'ACCEPT' ? "تأكيد الموافقة؟" : "تأكيد الرفض؟")) return;
-            btn.disabled = true; btn.textContent = "...";
+            
+            btn.disabled = true;
+            btn.textContent = "...";
+            
             try {
                 if (type === 'MINT_REQUEST') {
                     if(actionType === 'ACCEPT') await this.notifService.approveMint(id, userId);
@@ -370,12 +495,15 @@ export class HomeController {
                     if(actionType === 'ACCEPT') await this.notifService.confirmMatch(id);
                     else await this.notifService.rejectMatch(id);
                 }
+                
                 alert("تمت العملية بنجاح!");
                 modal.classList.add('hidden');
-                this.checkUnreadMessages(userId);
+                this.checkUnreadMessages(userId); // Refresh Badge
+                
             } catch (err) {
                 alert("خطأ: " + err.message);
                 btn.disabled = false;
+                btn.textContent = actionType === 'ACCEPT' ? "موافقة" : "رفض";
             }
         };
 
