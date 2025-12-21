@@ -1,62 +1,170 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/components/buttons.css
- * Version: 6.0.0 (Compact 3D Buttons)
- * Description: Button Styles.
- * UPDATE: Reduced padding, added 3D press effect.
+ * Version: Noub Sports_beta 0.0.6 (ROYAL 3D BUTTONS)
+ * Status: Production Ready
+ * 
+ * DESIGN PHILOSOPHY:
+ * Moves away from "Flat Design" to "Skeuomorphism" (Realism).
+ * Uses complex shadows and gradients to simulate physical materials (Gold, Glass, Metal).
  */
 
+/* =========================================
+   1. PRIMARY BUTTON (الزر الذهبي الرئيسي)
+   Used for: Login, Mint, Create, Confirm.
+   Look: Solid Gold Bar.
+   ========================================= */
 .btn-primary {
     width: 100%;
-    padding: 10px 0; /* Reduced from 16px */
-    height: 44px;    /* Fixed height for consistency */
+    padding: 14px 0;
+    margin-top: 15px;
     
-    /* Gradient with Depth */
-    background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-main) 100%);
+    /* 1. The Material (Gold Gradient) */
+    background: linear-gradient(
+        180deg, 
+        #FFD700 0%,   /* Bright Gold Top */
+        #D4AF37 50%,  /* Standard Gold Mid */
+        #aa8820 100%  /* Dark Gold Bottom */
+    );
     
-    border: none;
-    border-radius: 10px;
-    border-bottom: 3px solid #9e822b; /* 3D Bezel Effect */
+    /* 2. Shape & Border */
+    border: 1px solid #ffeebb; /* Highlight Edge */
+    border-radius: 14px;
     
-    color: #000;
+    /* 3. Typography */
+    color: #1a0f00; /* Dark Brown Text for Contrast */
+    font-family: var(--font-sport); /* Changa Font */
     font-weight: 800;
-    font-size: 1rem;
-    font-family: var(--font-cairo);
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
     
+    /* 4. 3D Depth & Glow */
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.5), /* Top Shine */
+        0 4px 15px rgba(212, 175, 55, 0.4),  /* Outer Glow */
+        0 2px 0 #8a7020; /* Physical Depth */
+        
     cursor: pointer;
-    margin-top: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    
-    transition: all 0.1s;
-    display: flex; justify-content: center; align-items: center; gap: 8px;
+    transition: all 0.15s ease-out;
+    display: flex; justify-content: center; align-items: center; gap: 10px;
 }
 
-/* Press Effect */
+/* Hover State */
+.btn-primary:hover {
+    filter: brightness(1.1); /* Shine brighter */
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.6),
+        0 6px 20px rgba(212, 175, 55, 0.6),
+        0 2px 0 #8a7020;
+    transform: translateY(-1px);
+}
+
+/* Press State (Click) */
 .btn-primary:active {
-    transform: translateY(2px);
-    border-bottom: 0px solid transparent; /* Collapse bezel */
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    transform: translateY(2px); /* Physically press down */
+    box-shadow: 
+        inset 0 2px 5px rgba(0,0,0,0.2), /* Inner shadow */
+        0 0 0 #8a7020; /* Remove depth */
 }
 
+/* Disabled State */
 .btn-primary:disabled {
-    opacity: 0.6;
-    filter: grayscale(0.8);
+    background: #333;
+    color: #555;
+    border: 1px solid #444;
+    box-shadow: none;
     cursor: not-allowed;
 }
 
-/* Small Control Buttons (Arrows) */
-.btn-control {
-    width: 32px; height: 32px; /* Compact square */
-    background: var(--bg-input);
-    border: 1px solid var(--gold-dim);
-    color: var(--gold-main);
-    border-radius: 8px;
+/* =========================================
+   2. SECONDARY BUTTON (الزر الثانوي / الزجاجي)
+   Used for: Cancel, Edit, Scout Actions.
+   Look: Dark Glass with Gold Rim.
+   ========================================= */
+.btn-action-secondary {
+    padding: 10px 20px;
+    border-radius: 20px;
+    
+    /* Glass Material */
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(5px);
+    
+    /* Gold Border */
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    
+    /* Text */
+    color: var(--text-muted);
+    font-family: var(--font-primary);
+    font-size: 0.85rem;
     font-weight: bold;
+    
     cursor: pointer;
+    transition: all 0.2s ease;
+    
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.btn-action-secondary:hover {
+    background: rgba(212, 175, 55, 0.15); /* Gold Tint */
+    border-color: var(--gold-main);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-action-secondary:active {
+    transform: scale(0.95);
+}
+
+.btn-action-secondary i {
+    color: var(--gold-main);
+}
+
+/* =========================================
+   3. CONTROL BUTTONS (الأسهم الصغيرة)
+   Used for: Avatar Studio Arrows.
+   Look: Small Tactile Squares.
+   ========================================= */
+.btn-control {
+    width: 38px; height: 38px;
+    background: linear-gradient(145deg, #1e1e1e, #151515);
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: var(--gold-main);
+    
     display: flex; justify-content: center; align-items: center;
-    transition: 0.2s;
+    cursor: pointer;
+    
+    /* Soft Shadow */
+    box-shadow: 
+        5px 5px 10px #0b0b0b, 
+        -5px -5px 10px #252525; /* Neumorphism style */
+        
+    transition: all 0.1s;
 }
 
 .btn-control:active {
-    background: var(--gold-main);
-    color: #000;
+    /* Pressed effect */
+    box-shadow: 
+        inset 5px 5px 10px #0b0b0b, 
+        inset -5px -5px 10px #252525;
+    color: #fff;
+}
+
+/* =========================================
+   4. DANGER BUTTON (الخطر)
+   Used for: Leave Team, Reject, Delete.
+   Look: Glowing Red.
+   ========================================= */
+.action-card.danger, .btn-reject {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    color: #ff6b6b !important;
+}
+
+.action-card.danger:hover, .btn-reject:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3) !important;
+    border-color: #ff6b6b !important;
 }
