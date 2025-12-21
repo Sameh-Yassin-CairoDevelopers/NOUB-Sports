@@ -1,29 +1,24 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/homeCtrl.js
- * Version: Noub Sports_beta 0.0.5 (PLATINUM EDITION)
+ * Version: Noub Sports_beta 0.0.5 (NO TABS EDITION)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
  * ARCHITECTURAL OVERVIEW:
  * -----------------------------------------------------------------------------
  * The Master Controller for the "Locker Room" (User Dashboard).
- * It acts as the central hub for the user's personal experience.
  * 
- * CORE RESPONSIBILITIES:
- * 1. Identity Management: Renders the High-Fidelity Player Card (Visuals + Stats).
- * 2. Collection Management: Fetches and displays the "Album" (Gifted Cards).
- * 3. System Integration: 
- *    - Injects the Notification System (Bell & Modal).
- *    - Injects the Settings/Edit Trigger (Gear Icon).
- *    - connect to ProfileController for visual editing.
- * 4. UX/UI Logic: Handles Tab switching, 3D Card interactions, and Audio feedback.
+ * UPDATES:
+ * 1. Removed Tab Navigation (Identity/Album). The view now focuses solely on the ID Card.
+ * 2. Album access is now routed through the Interactive Card Overlay.
+ * 3. Full integration with Notification System and Settings.
  * -----------------------------------------------------------------------------
  */
 
 import { NotificationService } from '../services/notificationService.js';
 import { ProfileController } from './profileCtrl.js';
-import { state } from '../core/state.js'; // Singleton State
+import { state } from '../core/state.js';
 import { supabase } from '../core/supabaseClient.js';
 import { AvatarEngine } from '../utils/avatarEngine.js';
 import { SoundManager } from '../utils/soundManager.js';
@@ -43,7 +38,7 @@ export class HomeController {
         this.viewContainer = document.getElementById('view-home');
         this.currentUser = null;
         
-        console.log("🏠 Home Controller: Fully Initialized.");
+        console.log("🏠 Home Controller: Ready (Direct View Mode).");
     }
 
     /**
@@ -62,10 +57,7 @@ export class HomeController {
         this.initNotificationSystem(user.id);
         this.initSettingsButton();
 
-        // 3. Render the Main Layout (Tabs Container)
-        this.renderLayout();
-        
-        // 4. Load Default Tab (Identity Card)
+        // 3. Render Identity Card DIRECTLY (No Layout/Tabs Wrapper)
         this.renderInteractiveCard(user);
     }
 
@@ -94,73 +86,12 @@ export class HomeController {
     }
 
     /**
-     * Renders the Internal Tabs System (Identity vs Album).
-     */
-    renderLayout() {
-        this.viewContainer.innerHTML = `
-            <div class="home-wrapper fade-in">
-                <!-- Navigation Tabs -->
-                <div class="home-tabs">
-                    <button class="htab active" id="tab-id">بطاقتي</button>
-                    <button class="htab" id="tab-album">ألبومي</button>
-                </div>
-
-                <!-- Dynamic Content Container -->
-                <div id="home-dynamic-content"></div>
-            </div>
-
-            <!-- Scoped Styles for Tabs -->
-            <style>
-                .home-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
-                .home-tabs { 
-                    display: flex; gap: 40px; margin-bottom: 20px; margin-top: 10px;
-                    border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; width: 80%; justify-content: center;
-                }
-                .htab { 
-                    background: none; border: none; color: #888; font-family: 'Cairo'; 
-                    font-weight: bold; cursor: pointer; font-size: 1rem; position: relative;
-                    padding-bottom: 5px; transition: color 0.3s;
-                }
-                .htab.active { color: #D4AF37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
-                .htab.active::after {
-                    content: ''; position: absolute; bottom: -9px; left: 0; width: 100%; height: 3px; background: #D4AF37; box-shadow: 0 0 10px #D4AF37;
-                }
-                #home-dynamic-content { width: 100%; display: flex; justify-content: center; perspective: 1000px; }
-            </style>
-        `;
-
-        // Bind Tab Click Events
-        document.getElementById('tab-id').addEventListener('click', (e) => {
-            this.switchTab(e.target);
-            this.renderInteractiveCard(this.currentUser);
-        });
-        
-        document.getElementById('tab-album').addEventListener('click', (e) => {
-            this.switchTab(e.target);
-            this.renderAlbum(this.currentUser.id);
-        });
-    }
-
-    /**
-     * UX Helper: Toggles active class on tabs.
-     */
-    switchTab(btn) {
-        document.querySelectorAll('.htab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        SoundManager.play('click');
-    }
-
-    /* =========================================================================
-       SECTION 1: IDENTITY CARD RENDERING
-       ========================================================================= */
-
-    /**
      * Renders the Interactive Player Card.
      * Features: Layered Avatar, Stats, Market Value, Rarity Border, and Action Overlay.
      */
     renderInteractiveCard(user) {
-        const container = document.getElementById('home-dynamic-content');
-        if (!container) return;
+        // Clear container first to ensure no duplicate views
+        this.viewContainer.innerHTML = '';
         
         // 1. Setup Stats (Fallback logic for new users)
         const stats = { 
@@ -176,8 +107,8 @@ export class HomeController {
         const rarityClass = this.calculateRarityClass(stats.matches);
         const marketValue = this.calculateMarketValue(stats, user.reputation || 100);
 
-        // 3. Generate Avatar HTML
-        let visual = user.visualDna || { skin: 1, kit: 1 };
+        // 3. Generate Avatar HTML using the Engine
+        let visual = user.visualDna || { skin: 1, kit: 1, hair: 1 };
         if (typeof visual === 'string') visual = JSON.parse(visual);
         const avatarHtml = AvatarEngine.generateAvatarHTML(visual, user.username);
         
@@ -185,11 +116,15 @@ export class HomeController {
         const bgUrl = "assets/images/backgrounds/street-bg.webp";
 
         // 5. Construct HTML
-        container.innerHTML = `
-            <div class="card-container fade-in">
+        this.viewContainer.innerHTML = `
+            <div class="card-container fade-in" style="height: 100%; justify-content: center;">
                 
                 <!-- Market Value Badge -->
-                <div style="background: rgba(0,0,0,0.6); border: 1px solid var(--success); color: var(--success); padding: 5px 15px; border-radius: 20px; font-family: 'Orbitron'; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; margin-bottom: -10px; z-index: 50;">
+                <div style="
+                    background: rgba(0,0,0,0.6); border: 1px solid var(--success); 
+                    color: var(--success); padding: 5px 15px; border-radius: 20px; 
+                    font-family: 'Orbitron'; font-weight: bold; font-size: 0.9rem;
+                    display: flex; align-items: center; gap: 8px; margin-bottom: -10px; z-index: 50;">
                     <i class="fa-solid fa-chart-line"></i>
                     ${Helpers.formatCurrency(marketValue)}
                 </div>
@@ -203,7 +138,7 @@ export class HomeController {
                             <i class="fa-solid fa-shirt"></i> غرفة الملابس
                         </button>
                         
-                        <button class="action-btn-large" id="btn-go-album">
+                        <button class="action-btn-large" id="btn-open-album">
                             <i class="fa-solid fa-images"></i> ألبومي
                         </button>
                         
@@ -245,7 +180,7 @@ export class HomeController {
         
         // Toggle Overlay on Card Click
         card.addEventListener('click', (e) => {
-            // Prevent toggle if clicking a button inside
+            // Prevent toggling if clicking a button inside overlay
             if (e.target.closest('button')) return;
             
             card.classList.toggle('active-mode');
@@ -257,45 +192,17 @@ export class HomeController {
             this.profileCtrl.openEditModal();
         };
 
-        document.getElementById('btn-go-album').onclick = () => {
-            // Switch Tab Programmatically
-            document.getElementById('tab-album').click();
+        document.getElementById('btn-open-album').onclick = () => {
+            this.renderAlbum(this.currentUser.id);
         };
     }
 
     /**
-     * Logic: Determine Card Rarity based on Experience
-     */
-    calculateRarityClass(matches) {
-        if (matches >= 100) return 'rarity-diamond';
-        if (matches >= 30) return 'rarity-gold';
-        if (matches >= 10) return 'rarity-silver';
-        return 'rarity-common';
-    }
-
-    /**
-     * Logic: Calculate Market Value
-     * Formula: (Rating * 1000) + (Matches * 500) + (Goals * 1000)
-     */
-    calculateMarketValue(stats, reputation) {
-        const rating = stats.rating || 60;
-        const matches = stats.matches || 0;
-        const goals = stats.goals || 0;
-        // Simple Valuation Algorithm
-        return (rating * 1000) + (matches * 500) + (goals * 1000) + (reputation * 10);
-    }
-
-    /* =========================================================================
-       SECTION 2: ALBUM RENDERING
-       ========================================================================= */
-
-    /**
-     * TAB 2: Render Album (Gifted Cards Collection).
-     * Fetches cards from Supabase where 'type' is 'GIFT'.
+     * Renders Album (Replaces Card View temporarily).
+     * Includes a "Back" button to return to Identity.
      */
     async renderAlbum(userId) {
-        const container = document.getElementById('home-dynamic-content');
-        container.innerHTML = '<div class="loader-bar" style="margin:20px auto"></div>';
+        this.viewContainer.innerHTML = '<div class="loader-bar" style="margin:20px auto"></div>';
 
         try {
             // Fetch collected cards
@@ -308,26 +215,41 @@ export class HomeController {
 
             if (error) throw error;
 
+            // Header with Back Button
+            let html = `
+                <div class="scout-header" style="width:90%; margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <button id="btn-back-home" style="background:none; border:none; color:var(--gold-main); font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-arrow-right"></i> عودة للكارت
+                    </button>
+                    <h3 style="text-align:center; color:#fff; margin:0;">ألبوم الهدايا (${cards?.length || 0})</h3>
+                </div>
+            `;
+
             if (!cards || cards.length === 0) {
-                container.innerHTML = `
+                html += `
                     <div class="empty-state" style="text-align:center; margin-top:30px;">
                         <i class="fa-solid fa-box-open" style="font-size:3rem; margin-bottom:15px; color:#555;"></i>
                         <p class="text-muted">الألبوم فارغ.</p>
                         <small style="color:#666;">اطلب توقيعات من اللاعبين في الكشاف.</small>
                     </div>`;
-                return;
+            } else {
+                html += `
+                    <div class="market-grid" style="width:100%; padding:0 20px; margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        ${cards.map(c => this.renderMiniCard(c)).join('')}
+                    </div>
+                `;
             }
 
-            // Render Grid of Mini Cards
-            container.innerHTML = `
-                <div class="market-grid" style="width:100%; padding:0 20px;">
-                    ${cards.map(c => this.renderMiniCard(c)).join('')}
-                </div>
-            `;
+            this.viewContainer.innerHTML = html;
+
+            // Bind Back Button
+            document.getElementById('btn-back-home').onclick = () => {
+                this.renderInteractiveCard(this.currentUser);
+            };
 
         } catch (e) {
             console.error(e);
-            container.innerHTML = '<p class="error-text">فشل تحميل الألبوم.</p>';
+            this.viewContainer.innerHTML = '<p class="error-text">فشل تحميل الألبوم.</p>';
         }
     }
 
@@ -340,26 +262,42 @@ export class HomeController {
         const skinColor = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'][visual.skin - 1] || '#ccc';
 
         return `
-            <div class="scout-card">
-                <div class="scout-card-top">
+            <div class="scout-card" style="background:var(--bg-surface); border-radius:12px; padding:10px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
+                <div class="scout-card-top" style="display:flex; justify-content:space-between; font-size:0.7rem; color:#888;">
                     <span class="scout-pos">#${card.serial_number}</span>
                 </div>
-                <div class="scout-avatar">
+                <div class="scout-avatar" style="font-size:1.5rem; margin:10px 0;">
                     <i class="fa-solid fa-user" style="color:${skinColor}"></i>
                 </div>
                 <div class="scout-info">
-                    <h5>${card.display_name}</h5>
+                    <h5 style="color:#fff; font-size:0.9rem; margin:0;">${card.display_name}</h5>
                     <span style="font-size:0.6rem; color:var(--gold-main);">هدية موقعة</span>
                 </div>
             </div>`;
     }
 
-    /* =========================================================================
-       SECTION 3: SYSTEM INTEGRATION (NOTIFICATIONS & SETTINGS)
-       ========================================================================= */
+    /**
+     * Logic: Determine Card Rarity based on Experience.
+     */
+    calculateRarityClass(matches) {
+        if (matches >= 100) return 'rarity-diamond';
+        if (matches >= 30) return 'rarity-gold';
+        if (matches >= 10) return 'rarity-silver';
+        return 'rarity-common';
+    }
 
     /**
-     * Injects Settings Icon (Gear) in Global Header.
+     * Logic: Calculate Market Value.
+     */
+    calculateMarketValue(stats, reputation) {
+        const rating = stats.rating || 60;
+        const matches = stats.matches || 0;
+        const goals = stats.goals || 0;
+        return (rating * 1000) + (matches * 500) + (goals * 1000) + (reputation * 10);
+    }
+
+    /**
+     * NEW: Init Settings Icon (Gear) in Global Header.
      */
     initSettingsButton() {
         const header = document.getElementById('global-header');
@@ -378,7 +316,7 @@ export class HomeController {
     }
 
     /**
-     * Injects Notification Bell & Sets up Polling.
+     * SYSTEM: Init Notification Bell & Modal logic.
      */
     initNotificationSystem(userId) {
         const header = document.getElementById('global-header');
@@ -408,9 +346,6 @@ export class HomeController {
         }
     }
 
-    /**
-     * Builds and Opens the Notification Modal.
-     */
     async openNotificationModal(userId) {
         const modalId = 'modal-notifications';
         
@@ -479,6 +414,9 @@ export class HomeController {
         }
     }
 
+    /**
+     * Binds Accept/Reject buttons inside the Notification Modal.
+     */
     bindNotificationActions(userId, modal) {
         const handleAction = async (btn, actionType) => {
             const { type, id } = btn.dataset;
