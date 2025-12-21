@@ -1,7 +1,7 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/utils/avatarEngine.js
- * Version: Noub Sports_beta 0.0.5 (ROYAL UPDATE)
+ * Version: Noub Sports_beta 0.0.7 (PROPORTION FIX)
  * Status: Production Ready
  * 
  * DESCRIPTION:
@@ -16,7 +16,7 @@
  */
 
 // ==========================================
-// 1. CONFIGURATION CONSTANTS
+// 1. CONFIGURATION CONSTANTS (سهولة التعديل)
 // ==========================================
 
 const AVATAR_CONFIG = {
