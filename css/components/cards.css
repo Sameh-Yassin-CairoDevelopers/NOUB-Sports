@@ -1,116 +1,103 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/components/cards.css
- * Version: Noub Sports_beta 0.0.3 (RARITY ENGINE)
+ * Version: Noub Sports_beta 0.0.7 (FULL COMPACT ARTIFACT)
  * Status: Production Ready
  * 
  * DESCRIPTION:
- * Defines the visual architecture of the Digital Player Asset.
+ * Defines the visual architecture of the Digital Player Asset (The Card).
+ * This file handles the 3D geometry, texture layers, rarity tiers, and 
+ * the interactive overlay menu.
  * 
- * UPDATES:
- * 1. Rarity Tiers: Added styling for Silver, Gold, and Diamond tiers.
- * 2. Visual Value: Enhanced shadows and borders to reflect player worth.
- * 3. Base Architecture: Rectangular Shield with 3D Bezel.
+ * CORE FEATURES:
+ * 1. Compact Dimensions: 270px x 430px (Optimized for mobile viewports).
+ * 2. 3D Bezel System: Multi-layer box-shadows to simulate depth and gold rims.
+ * 3. Holographic Sheen: CSS Animation for premium feel.
+ * 4. Interactive Overlay: Glassmorphism menu revealed on click.
  */
 
-/* 1. Card Container (The Stage) */
+/* =========================================
+   1. THE STAGE (Container)
+   ========================================= */
 .card-container {
+    /* Perspective is key for 3D rotation effects */
+    perspective: 1200px;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-top: 15px;
-    perspective: 1200px;
-    gap: 20px;
+    padding: 0; /* Zero padding to prevent scroll */
 }
 
-/* 2. The Artifact (Base Card Structure) */
+/* =========================================
+   2. THE ARTIFACT (Card Body)
+   ========================================= */
 .player-card {
-    width: 290px;
-    height: 460px;
+    /* Compact Dimensions (~10% reduction from v6.0) */
+    width: 270px;
+    height: 430px;
+    
     position: relative;
     color: #fff;
     
-    /* Base Shape */
+    /* Shape & Borders */
     border-radius: 22px;
-    border: 3px solid #333; /* Default Border */
+    border: 3px solid var(--gold-dim); /* Base Gold Border */
     
-    /* Default Background (Fallback) */
-    background-color: #111;
+    /* 3D Depth Shadows ( The "Bezel" Effect ) */
+    box-shadow: 
+        0 0 0 1px #000,                  /* Inner black separator */
+        0 0 25px rgba(212, 175, 55, 0.15), /* Subtle Gold Glow */
+        0 20px 60px rgba(0, 0, 0, 0.8);    /* Deep Ground Shadow */
+
+    /* Default Background (Fallback if image missing) */
+    background: radial-gradient(circle at 50% 30%, #2a2a2e 0%, #000 80%);
     background-size: cover;
     background-position: center;
     
-    /* Physics */
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden; /* Contains the Sheen animation */
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smooth Physics */
+    cursor: pointer;
     transform-style: preserve-3d;
 }
 
-/* -----------------------------------------------------------
-   RARITY TIERS (The Progression System)
------------------------------------------------------------ */
-
-/* Tier 1: Common (Starter) */
-.player-card.rarity-common {
-    border-color: #5d5d5d;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+/* Interactive State: Active Mode (Toggled via JS) */
+.player-card.active-mode {
+    transform: scale(1.02); /* Slight Zoom */
+    border-color: #fff;     /* Highlight Border */
+    box-shadow: 0 0 40px rgba(212, 175, 55, 0.3); /* Enhanced Glow */
 }
 
-/* Tier 2: Silver (Veteran - 10+ Matches) */
-.player-card.rarity-silver {
-    border-color: #C0C0C0;
-    box-shadow: 
-        0 0 0 1px #000,
-        0 0 15px rgba(192, 192, 192, 0.3),
-        0 20px 50px rgba(0,0,0,0.9);
-}
-.player-card.rarity-silver .card-rating {
-    text-shadow: 0 0 10px rgba(192, 192, 192, 0.5);
+/* Interactive State: Hover (Desktop Only) */
+@media (hover: hover) {
+    .player-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 30px 70px rgba(0,0,0,0.9);
+    }
 }
 
-/* Tier 3: Gold (Pro - 30+ Matches) */
-.player-card.rarity-gold {
-    border-color: #D4AF37;
-    box-shadow: 
-        0 0 0 1px #000,
-        0 0 25px rgba(212, 175, 55, 0.4),
-        0 30px 60px rgba(0,0,0,0.9);
-}
-.player-card.rarity-gold .card-rating {
-    color: #FFD700;
-    text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-}
-
-/* Tier 4: Diamond (Legend - 100+ Matches / High Reputation) */
-.player-card.rarity-diamond {
-    border-color: #b9f2ff;
-    box-shadow: 
-        0 0 0 1px #000,
-        0 0 30px rgba(185, 242, 255, 0.5),
-        0 30px 60px rgba(0,0,0,0.9);
-    background-image: linear-gradient(135deg, rgba(0,0,0,0.8), rgba(20, 100, 200, 0.3));
-}
-.player-card.rarity-diamond .card-rating {
-    background: linear-gradient(to bottom, #fff, #b9f2ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 5px rgba(185, 242, 255, 0.8));
-}
-
-/* -----------------------------------------------------------
-   VISUAL EFFECTS
------------------------------------------------------------ */
-
-/* The Holographic Sheen (Living Card) */
+/* =========================================
+   3. VISUAL EFFECTS (Animation)
+   ========================================= */
+/* The Holographic Sheen */
 .player-card::after {
     content: "";
     position: absolute;
     top: 0; left: -100%;
     width: 60%; height: 100%;
-    background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+    
+    /* Diagonal Light Beam */
+    background: linear-gradient(
+        to right, 
+        transparent, 
+        rgba(255, 255, 255, 0.15), 
+        transparent
+    );
+    
     transform: skewX(-25deg);
-    animation: sheen 6s infinite;
+    animation: sheen 6s infinite; /* Loop every 6s */
     pointer-events: none;
     z-index: 20;
 }
@@ -121,138 +108,221 @@
     100% { left: 200%; }
 }
 
-/* 3. Card Internal Layout */
+/* =========================================
+   4. RARITY TIERS (Progression Styles)
+   ========================================= */
+/* Common: Basic Grey/Standard */
+.player-card.rarity-common { 
+    border-color: #777; 
+}
 
-/* Top Section */
+/* Silver: Metallic Shine */
+.player-card.rarity-silver {
+    border-color: #C0C0C0;
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.2), 0 20px 60px #000;
+}
+
+/* Gold: Premium Glow */
+.player-card.rarity-gold {
+    border-color: #D4AF37;
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.3), 0 20px 60px #000;
+}
+
+/* Diamond: Blue Neon / Elite */
+.player-card.rarity-diamond {
+    border-color: #b9f2ff;
+    box-shadow: 0 0 30px rgba(185, 242, 255, 0.4), 0 20px 60px #000;
+}
+
+/* =========================================
+   5. CARD CONTENT LAYOUT (The Face)
+   ========================================= */
+
+/* A. Top Info (Rating & Position) */
 .card-top {
-    position: absolute; top: 20px; left: 20px;
-    display: flex; flex-direction: column; align-items: center;
+    position: absolute;
+    top: 20px; left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     z-index: 15;
 }
+
 .card-rating {
-    font-family: var(--font-orbitron);
-    font-size: 2.8rem; font-weight: 900; line-height: 0.9;
-    color: var(--text-white); text-shadow: 2px 2px 4px #000;
-}
-.card-pos {
-    font-size: 1rem; font-weight: 800; text-transform: uppercase;
-    margin-top: 4px; color: var(--gold-main); text-shadow: 1px 1px 2px #000;
-}
-.card-flag { 
-    margin-top: 5px; filter: drop-shadow(0 2px 2px #000); font-size: 1.2rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.4rem; /* Compact Size */
+    font-weight: 900;
+    line-height: 0.9;
+    color: var(--text-white);
+    text-shadow: 2px 2px 4px #000;
 }
 
-/* Avatar Placement */
+.card-pos {
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-top: 4px;
+    color: var(--gold-main);
+    text-shadow: 1px 1px 2px #000;
+}
+
+.card-flag {
+    margin-top: 5px;
+    filter: drop-shadow(0 2px 2px #000);
+    font-size: 1.2rem;
+}
+
+/* B. Avatar Area (The Hero) */
 .card-image-area {
     position: absolute;
-    top: 60px; left: 50%;
+    top: 55px; /* Pushed down slightly */
+    left: 50%;
     transform: translateX(-50%);
-    width: 220px; height: 220px;
+    width: 200px; height: 200px; /* Matched to AvatarEngine Size */
     z-index: 5;
 }
 
-/* Bottom Data Panel */
+/* C. Bottom Info Panel (Glass Gradient) */
 .card-info {
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    height: 155px;
+    position: absolute;
+    bottom: 0; left: 0; width: 100%;
+    height: 145px; /* Compact Height */
+    
+    /* Gradient for readability over any background image */
     background: linear-gradient(to top, #000 20%, rgba(0,0,0,0.8) 70%, transparent 100%);
-    display: flex; flex-direction: column; justify-content: flex-end;
-    padding-bottom: 25px;
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 20px;
     z-index: 10;
 }
 
 .player-name {
     text-align: center;
-    font-family: var(--font-sport);
-    font-size: 1.8rem;
+    font-family: var(--font-sport); /* Changa */
+    font-size: 1.6rem;
     color: var(--gold-main);
     text-transform: uppercase;
-    text-shadow: 0 2px 10px #000;
+    text-shadow: 0 2px 8px #000;
     margin-bottom: 8px;
     letter-spacing: 1px;
 }
 
 .separator-line {
-    width: 70%; height: 1px;
+    width: 70%;
+    height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    margin: 0 auto 10px auto;
+    margin: 0 auto 8px auto;
 }
 
-/* Stats Grid */
+/* D. Stats Grid (2 Columns) */
 .card-stats-grid {
     display: grid; 
     grid-template-columns: 1fr 1fr;
-    width: 80%; margin: 0 auto;
-    font-family: var(--font-orbitron);
-    font-size: 0.9rem;
-    row-gap: 4px; column-gap: 20px;
+    width: 85%;
+    margin: 0 auto;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    row-gap: 3px; column-gap: 15px;
 }
 
 .stat-box {
-    display: flex; justify-content: space-between; align-items: center;
-    color: #fff; text-shadow: 1px 1px 2px #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
 }
-.stat-box span { font-weight: bold; color: var(--gold-light); }
+.stat-box span {
+    font-weight: bold;
+    color: var(--gold-light);
+}
 
-/* 4. The Action Buttons (Royal Upgrade) */
+/* =========================================
+   6. INTERACTION OVERLAY (The Menu)
+   ========================================= */
+.card-actions-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    
+    /* Dark Glass Background */
+    background: rgba(15, 16, 20, 0.92);
+    backdrop-filter: blur(8px);
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    
+    /* Hidden by default */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    
+    transition: all 0.3s ease;
+    z-index: 100; /* Above everything inside card */
+}
+
+/* Visible State */
+.player-card.active-mode .card-actions-overlay {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Royal Buttons inside Overlay */
 .action-btn-large {
     width: 85%;
-    padding: 18px;
-    margin: 8px 0;
+    padding: 15px;
     
-    /* الخلفية: زجاجية داكنة مع تدرج ذهبي خافت */
-    background: linear-gradient(
-        145deg, 
-        rgba(255, 255, 255, 0.05) 0%, 
-        rgba(0, 0, 0, 0.6) 100%
-    );
+    /* Royal Gradient Background */
+    background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.6) 100%);
     
-    /* الإطار: مضيء */
     border: 1px solid rgba(212, 175, 55, 0.4);
-    border-left: 4px solid var(--gold-main); /* لمسة جمالية جانبية */
+    border-left: 4px solid var(--gold-main); /* Gold Accent on Left */
+    border-radius: 12px;
     
-    border-radius: 16px;
-    
-    /* الخط والأيقونة */
     color: #fff;
-    font-family: 'Cairo';
+    font-family: var(--font-primary);
     font-weight: bold;
-    font-size: 1.1rem;
+    font-size: 1rem;
     
     cursor: pointer;
-    display: flex; align-items: center; justify-content: flex-start; /* محاذاة لليمين */
-    padding-left: 25px; gap: 15px;
+    display: flex; align-items: center; justify-content: flex-start;
+    padding-left: 20px; gap: 12px;
     
-    /* الظلال والعمق */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    
-    position: relative;
-    overflow: hidden;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
-/* الأيقونة داخل الزر */
-.action-btn-large i {
-    font-size: 1.4rem;
-    color: var(--gold-main);
-    filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.6)); /* توهج الأيقونة */
-    transition: transform 0.3s;
-}
-
-/* Hover Effect (عند المرور) */
 .action-btn-large:hover {
-    background: linear-gradient(145deg, rgba(212, 175, 55, 0.2), rgba(0, 0, 0, 0.8));
+    background: linear-gradient(145deg, rgba(212,175,55,0.2), rgba(0,0,0,0.8));
     border-color: var(--gold-main);
-    padding-left: 35px; /* حركة انزلاق ناعمة */
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+    transform: translateX(-3px); /* Slide effect */
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
 }
 
-.action-btn-large:hover i {
-    transform: scale(1.2) rotate(-10deg);
-}
-
-/* Click Effect (عند الضغط) */
 .action-btn-large:active {
     transform: scale(0.98);
+}
+
+.action-btn-large i {
+    font-size: 1.2rem;
+    color: var(--gold-main);
+    filter: drop-shadow(0 0 5px rgba(212,175,55,0.5));
+}
+
+.close-hint {
+    position: absolute;
+    bottom: 20px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse { 
+    0%, 100% { opacity: 0.6; } 
+    50% { opacity: 1; } 
 }
