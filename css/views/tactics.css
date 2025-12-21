@@ -1,41 +1,52 @@
 /*
  * Filename: css/views/tactics.css
- * Version: 1.0.0
- * Description: Styles for the Tactics Board Module.
+ * Version: 2.0.0 (OVERLAY FIX)
+ * Description: Styles for the Tactics Board.
+ * FIX: Changed positioning to FIXED to ensure it covers the entire app.
  */
+
+/* 1. Main Wrapper (The Overlay) */
+#view-tactics {
+    position: fixed; /* Critical Fix: Float above everything */
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: #0f1014; /* Solid black background */
+    z-index: 5000; /* Higher than Navbar (1000) and Header (100) */
+    display: flex;
+    flex-direction: column;
+    padding: 0; /* Remove default padding */
+}
 
 .tactics-wrapper {
     display: flex;
     flex-direction: column;
     height: 100%;
     padding: 10px;
-    background: #111;
+    padding-top: 50px; /* Safe area for header */
 }
 
-/* 1. The Pitch */
+/* 2. The Pitch (Responsive) */
 .field-container {
     flex: 1; /* Take available space */
-    background: linear-gradient(180deg, #2a6f44 0%, #1e5233 100%);
+    background: 
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 50px,
+            rgba(0,0,0,0.05) 50px,
+            rgba(0,0,0,0.05) 100px
+        ),
+        linear-gradient(180deg, #2a6f44 0%, #1e5233 100%);
+        
     border: 3px solid rgba(255,255,255,0.8);
     border-radius: 8px;
     position: relative;
     overflow: hidden;
     box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
     margin: 10px 0;
-}
-
-/* Pitch Patterns (Stripes) */
-.field-container::after {
-    content: '';
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 50px,
-        rgba(0,0,0,0.05) 50px,
-        rgba(0,0,0,0.05) 100px
-    );
-    pointer-events: none;
+    touch-action: none; /* Critical for Dragging on Mobile */
 }
 
 /* Markings */
@@ -49,7 +60,7 @@
     transform: translate(-50%, -50%);
 }
 
-/* 2. Tokens (Players) */
+/* 3. Tokens (Players) */
 .tactic-token {
     width: 40px; height: 40px;
     background: var(--gold-main);
@@ -62,7 +73,8 @@
     cursor: grab;
     z-index: 10;
     box-shadow: 0 4px 5px rgba(0,0,0,0.5);
-    touch-action: none; /* Prevents scroll on mobile */
+    touch-action: none;
+    user-select: none;
     transform: translate(0, 0); /* Init for JS */
 }
 
@@ -77,12 +89,22 @@
     z-index: 20;
 }
 
-/* 3. Controls */
+/* 4. Controls (Header & Footer) */
 .tactics-top-bar {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px; background: var(--bg-surface); border-radius: 12px;
+    padding: 10px 15px; background: var(--bg-surface); border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.mode-btn {
+    background: #333; color: #fff; border: none; padding: 5px 12px;
+    border-radius: 6px; cursor: pointer; font-weight: bold;
+    font-family: var(--font-orbitron);
+}
+.mode-btn.active {
+    background: var(--gold-main); color: #000;
 }
 
 .tactics-footer {
-    display: flex; gap: 10px;
+    display: flex; gap: 10px; margin-bottom: 20px;
 }
