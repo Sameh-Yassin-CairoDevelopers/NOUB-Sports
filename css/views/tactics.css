@@ -1,22 +1,39 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/views/tactics.css
- * Version: 2.0.0 (OVERLAY FIX)
- * Description: Styles for the Tactics Board.
- * FIX: Changed positioning to FIXED to ensure it covers the entire app.
+ * Version: Noub Sports_beta 0.0.7 (TACTICS MASTER)
+ * Status: Production Ready
+ * 
+ * DESCRIPTION:
+ * Styles for the interactive Tactics Board Overlay.
+ * 
+ * SECTIONS:
+ * 1. Overlay Container (Z-Index Management).
+ * 2. Pitch Graphics (CSS Drawing for lines/goals).
+ * 3. Token Physics (Draggable Items Styling).
+ * 4. Control Interface (Header/Footer).
  */
 
-/* 1. Main Wrapper (The Overlay) */
+/* =========================================
+   1. MAIN OVERLAY CONTAINER
+   ========================================= */
 #view-tactics {
-    position: fixed; /* Critical Fix: Float above everything */
+    position: fixed; /* Critical: Floats above the entire app */
     top: 0; 
     left: 0; 
     width: 100%; 
     height: 100%;
-    background: #0f1014; /* Solid black background */
-    z-index: 5000; /* Higher than Navbar (1000) and Header (100) */
+    
+    /* Deep Dark Background to focus attention */
+    background-color: #0f1014;
+    
+    /* Z-Index Hierarchy: Must be > Navbar (1000) & Modals (2000) */
+    z-index: 5000; 
+    
     display: flex;
     flex-direction: column;
-    padding: 0; /* Remove default padding */
+    padding: 0; /* Override default view padding */
+    animation: fadeIn 0.3s ease-out;
 }
 
 .tactics-wrapper {
@@ -24,87 +41,183 @@
     flex-direction: column;
     height: 100%;
     padding: 10px;
-    padding-top: 50px; /* Safe area for header */
+    padding-top: 20px; /* Safe area */
 }
 
-/* 2. The Pitch (Responsive) */
+/* =========================================
+   2. THE PITCH (FIELD)
+   ========================================= */
 .field-container {
-    flex: 1; /* Take available space */
-    background: 
-        repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 50px,
-            rgba(0,0,0,0.05) 50px,
-            rgba(0,0,0,0.05) 100px
-        ),
-        linear-gradient(180deg, #2a6f44 0%, #1e5233 100%);
-        
-    border: 3px solid rgba(255,255,255,0.8);
+    flex: 1; /* Occupy all remaining vertical space */
+    width: 100%;
+    margin: 15px 0;
+    
+    /* Grass Effect: Vertical Gradient */
+    background: linear-gradient(180deg, #2e7d52 0%, #1e5233 100%);
+    
+    /* Pitch Border */
+    border: 4px solid rgba(255, 255, 255, 0.9);
     border-radius: 8px;
+    
     position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
-    margin: 10px 0;
-    touch-action: none; /* Critical for Dragging on Mobile */
+    overflow: hidden; /* Contains tokens within bounds */
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.6); /* Inner shadow for depth */
+    
+    /* Interaction Rules */
+    touch-action: none; /* Disables browser scrolling while dragging */
 }
 
-/* Markings */
+/* --- Pitch Markings (Painted via CSS) --- */
+
+/* Center Line */
 .pitch-line.center-line {
-    position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-    background: rgba(255,255,255,0.4);
+    position: absolute;
+    top: 50%; left: 0;
+    width: 100%; height: 2px;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translateY(-50%);
 }
+
+/* Center Circle */
 .pitch-circle {
-    position: absolute; top: 50%; left: 50%; width: 80px; height: 80px;
-    border: 2px solid rgba(255,255,255,0.4); border-radius: 50%;
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 80px; height: 80px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
     transform: translate(-50%, -50%);
 }
 
-/* 3. Tokens (Players) */
-.tactic-token {
-    width: 40px; height: 40px;
-    background: var(--gold-main);
-    color: #000;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    display: flex; justify-content: center; align-items: center;
-    font-weight: bold; font-family: var(--font-orbitron);
+/* Penalty Areas (The Missing Piece) */
+.goal-box {
     position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%; /* Standard 5-a-side proportion */
+    height: 15%;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.05); /* Slight tint */
+}
+
+.goal-box.top {
+    top: 0;
+    border-top: none; /* Connects to baseline */
+}
+
+.goal-box.bottom {
+    bottom: 0;
+    border-bottom: none; /* Connects to baseline */
+}
+
+/* =========================================
+   3. PLAYER TOKENS (The 3D Coins)
+   ========================================= */
+.tactic-token {
+    width: 38px; height: 38px;
+    position: absolute;
+    z-index: 100;
+    
+    /* Centering Number */
+    display: flex; justify-content: center; align-items: center;
+    font-family: var(--font-orbitron);
+    font-weight: bold;
+    font-size: 1rem;
+    
+    /* Base Physics */
+    border-radius: 50%;
     cursor: grab;
-    z-index: 10;
-    box-shadow: 0 4px 5px rgba(0,0,0,0.5);
-    touch-action: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+    
+    /* Prevent text selection */
     user-select: none;
-    transform: translate(0, 0); /* Init for JS */
+    -webkit-user-select: none;
 }
 
-.tactic-token.gk-token {
-    background: #000; color: #fff; border-color: var(--gold-main);
+/* TEAM A: GOLD (My Team) */
+.tactic-token.token-gold {
+    background: radial-gradient(circle at 30% 30%, #ffd700, #d4af37);
+    border: 2px solid #fff;
+    color: #000;
 }
 
+/* TEAM B: RED (Opponent) */
+.tactic-token.token-red {
+    background: radial-gradient(circle at 30% 30%, #ff4d4d, #cc0000);
+    border: 2px solid #fff;
+    color: #fff;
+}
+
+/* Goalkeeper Distinction */
+.tactic-token.is-gk {
+    border: 3px solid #000; /* Thicker border for GK */
+    z-index: 101; /* Sits above defenders */
+}
+
+/* Dragging State (Active) */
 .tactic-token.dragging {
     cursor: grabbing;
-    transform: scale(1.2);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.6);
-    z-index: 20;
+    transform: scale(1.3); /* Pop up effect */
+    box-shadow: 0 15px 30px rgba(0,0,0,0.6); /* Lifted shadow */
+    z-index: 200;
 }
 
-/* 4. Controls (Header & Footer) */
+/* =========================================
+   4. CONTROLS (Header & Footer)
+   ========================================= */
 .tactics-top-bar {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 15px; background: var(--bg-surface); border-radius: 12px;
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    background: var(--bg-surface);
+    padding: 10px 15px;
+    border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.1);
 }
 
-.mode-btn {
-    background: #333; color: #fff; border: none; padding: 5px 12px;
-    border-radius: 6px; cursor: pointer; font-weight: bold;
-    font-family: var(--font-orbitron);
+.tactics-modes {
+    display: flex; gap: 5px;
+    background: rgba(0,0,0,0.3);
+    padding: 3px;
+    border-radius: 8px;
 }
+
+.mode-btn {
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: var(--font-orbitron);
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--text-muted);
+}
+
 .mode-btn.active {
-    background: var(--gold-main); color: #000;
+    background: var(--gold-main);
+    color: #000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
 .tactics-footer {
-    display: flex; gap: 10px; margin-bottom: 20px;
+    display: flex; gap: 12px;
+    margin-top: auto; /* Push to bottom if space allows */
+}
+
+#btn-close-tactics {
+    width: 35px; height: 35px;
+    background: rgba(255,255,255,0.1);
+    border: none; border-radius: 50%;
+    color: #fff; cursor: pointer;
+}
+#btn-close-tactics:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+
+/* Reset Button Style */
+#btn-reset-tactic {
+    width: 50px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid #444;
+    color: #fff;
 }
