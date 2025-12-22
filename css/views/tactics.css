@@ -1,17 +1,18 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/views/tactics.css
- * Version: Noub Sports_beta 0.0.7 (TACTICS MASTER)
+ * Version: Noub Sports_beta 0.0.8 (MASTER VISUALS)
  * Status: Production Ready
  * 
  * DESCRIPTION:
- * Styles for the interactive Tactics Board Overlay.
+ * Styles for the Tactics Board Overlay.
+ * Implements a realistic pitch view and 3D token physics for players.
  * 
- * SECTIONS:
- * 1. Overlay Container (Z-Index Management).
- * 2. Pitch Graphics (CSS Drawing for lines/goals).
- * 3. Token Physics (Draggable Items Styling).
- * 4. Control Interface (Header/Footer).
+ * CORE FEATURES:
+ * 1. Z-Index Management: Ensures board sits above all other UI layers (Level 5000).
+ * 2. Responsive Pitch: Scales correctly on mobile screens.
+ * 3. 3D Tokens: Styled to look like physical weighted coins/chips.
+ * 4. Geometry: Precise CSS drawing for pitch lines and goal areas.
  */
 
 /* =========================================
@@ -41,7 +42,8 @@
     flex-direction: column;
     height: 100%;
     padding: 10px;
-    padding-top: 20px; /* Safe area */
+    padding-top: 50px; /* Safe area for device notch/status bar */
+    padding-bottom: 20px;
 }
 
 /* =========================================
@@ -52,51 +54,68 @@
     width: 100%;
     margin: 15px 0;
     
-    /* Grass Effect: Vertical Gradient */
-    background: linear-gradient(180deg, #2e7d52 0%, #1e5233 100%);
+    /* Realistic Grass Gradient (Night Mode) */
+    background: linear-gradient(180deg, #1e5233 0%, #2e7d52 50%, #1e5233 100%);
     
     /* Pitch Border */
-    border: 4px solid rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
+    border: 4px solid rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
     
     position: relative;
     overflow: hidden; /* Contains tokens within bounds */
-    box-shadow: inset 0 0 80px rgba(0,0,0,0.6); /* Inner shadow for depth */
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.8); /* Inner shadow for stadium feel */
     
-    /* Interaction Rules */
-    touch-action: none; /* Disables browser scrolling while dragging */
+    /* Interaction Rules: Critical for Dragging */
+    touch-action: none; /* Disables browser scrolling while dragging tokens */
 }
 
 /* --- Pitch Markings (Painted via CSS) --- */
+
+/* Grass Stripes Pattern */
+.field-container::before {
+    content: '';
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 40px,
+        rgba(255,255,255,0.03) 40px,
+        rgba(255,255,255,0.03) 80px
+    );
+    pointer-events: none;
+}
 
 /* Center Line */
 .pitch-line.center-line {
     position: absolute;
     top: 50%; left: 0;
     width: 100%; height: 2px;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.6);
     transform: translateY(-50%);
+    pointer-events: none;
 }
 
 /* Center Circle */
 .pitch-circle {
     position: absolute;
     top: 50%; left: 50%;
-    width: 80px; height: 80px;
-    border: 2px solid rgba(255, 255, 255, 0.5);
+    width: 90px; height: 90px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
     border-radius: 50%;
     transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
-/* Penalty Areas (The Missing Piece) */
+/* Penalty Areas (The Goals) - CENTERED */
 .goal-box {
     position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 50%; /* Start at center */
+    transform: translateX(-50%); /* Shift back by 50% to align center */
     width: 60%; /* Standard 5-a-side proportion */
-    height: 15%;
-    border: 2px solid rgba(255, 255, 255, 0.6);
+    height: 120px; /* Fixed height for realism */
+    border: 2px solid rgba(255, 255, 255, 0.7);
     background: rgba(255, 255, 255, 0.05); /* Slight tint */
+    pointer-events: none;
 }
 
 .goal-box.top {
@@ -113,20 +132,26 @@
    3. PLAYER TOKENS (The 3D Coins)
    ========================================= */
 .tactic-token {
-    width: 38px; height: 38px;
+    width: 42px; height: 42px;
     position: absolute;
     z-index: 100;
     
     /* Centering Number */
     display: flex; justify-content: center; align-items: center;
-    font-family: var(--font-orbitron);
-    font-weight: bold;
-    font-size: 1rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.1rem;
     
     /* Base Physics */
     border-radius: 50%;
     cursor: grab;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    
+    /* 3D Depth Shadow */
+    box-shadow: 
+        0 4px 6px rgba(0,0,0,0.6), /* Drop Shadow */
+        inset 0 2px 4px rgba(255,255,255,0.4), /* Top Highlight */
+        inset 0 -2px 4px rgba(0,0,0,0.4); /* Bottom Shadow */
+        
     transition: transform 0.1s;
     
     /* Prevent text selection */
@@ -136,29 +161,30 @@
 
 /* TEAM A: GOLD (My Team) */
 .tactic-token.token-gold {
-    background: radial-gradient(circle at 30% 30%, #ffd700, #d4af37);
+    background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
     border: 2px solid #fff;
-    color: #000;
+    color: #332200;
 }
 
 /* TEAM B: RED (Opponent) */
 .tactic-token.token-red {
-    background: radial-gradient(circle at 30% 30%, #ff4d4d, #cc0000);
+    background: radial-gradient(circle at 30% 30%, #ff6b6b, #cc0000);
     border: 2px solid #fff;
     color: #fff;
 }
 
 /* Goalkeeper Distinction */
 .tactic-token.is-gk {
-    border: 3px solid #000; /* Thicker border for GK */
-    z-index: 101; /* Sits above defenders */
+    border: 3px solid #000; /* Distinct border */
+    width: 46px; height: 46px; /* Slightly larger */
+    z-index: 101;
 }
 
 /* Dragging State (Active) */
 .tactic-token.dragging {
     cursor: grabbing;
-    transform: scale(1.3); /* Pop up effect */
-    box-shadow: 0 15px 30px rgba(0,0,0,0.6); /* Lifted shadow */
+    transform: scale(1.3) translateY(-10px); /* Lift up effect */
+    box-shadow: 0 15px 30px rgba(0,0,0,0.7); /* Deep lifted shadow */
     z-index: 200;
 }
 
@@ -170,23 +196,24 @@
     justify-content: space-between; 
     align-items: center;
     background: var(--bg-surface);
-    padding: 10px 15px;
+    padding: 12px 20px;
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 
 .tactics-modes {
-    display: flex; gap: 5px;
+    display: flex; gap: 8px;
     background: rgba(0,0,0,0.3);
-    padding: 3px;
-    border-radius: 8px;
+    padding: 4px;
+    border-radius: 10px;
 }
 
 .mode-btn {
     border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-family: var(--font-orbitron);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
     font-weight: bold;
     cursor: pointer;
     font-size: 0.9rem;
@@ -198,12 +225,12 @@
 .mode-btn.active {
     background: var(--gold-main);
     color: #000;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(212,175,55,0.3);
 }
 
 .tactics-footer {
-    display: flex; gap: 12px;
-    margin-top: auto; /* Push to bottom if space allows */
+    display: flex; gap: 15px;
+    margin-top: auto; 
 }
 
 #btn-close-tactics {
@@ -211,13 +238,23 @@
     background: rgba(255,255,255,0.1);
     border: none; border-radius: 50%;
     color: #fff; cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    transition: background 0.2s;
 }
-#btn-close-tactics:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+#btn-close-tactics:hover { background: rgba(239, 68, 68, 0.4); color: #fff; }
 
-/* Reset Button Style */
+/* Reset Button (Red) */
 #btn-reset-tactic {
-    width: 50px;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid #444;
-    color: #fff;
+    width: 60px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #ff6b6b;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 1.2rem;
 }
+#btn-reset-tactic:active { transform: scale(0.95); }
+
+/* Animation */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
