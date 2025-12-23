@@ -1,35 +1,34 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/scoutCtrl.js
- * Version: Noub Sports_beta 0.0.1 (MASTER SCOUT)
+ * Version: Noub Sports_beta 3.0.0 (FULL VISUAL RENDER)
  * Status: Production Ready
  * 
- * -----------------------------------------------------------------------------
  * ARCHITECTURAL OVERVIEW:
- * -----------------------------------------------------------------------------
- * This controller acts as the primary interface for the "Marketplace".
- * It handles the discovery of both Players (for Social Minting) and Teams (for Joining).
+ * Handles the logic for the Marketplace (Scout).
  * 
- * CORE RESPONSIBILITIES:
- * 1. Data Fetching: Orchestrates parallel fetching of Trending Data & Grid Data.
- * 2. Layout Rendering: Manages the Search Bar, Filter Pills, and Grid Container.
- * 3. Event Delegation: Binds click events for Cards (Players/Teams) and Filters.
- * 4. Modal Management: Dynamically builds and opens details modals for deep interaction.
- * -----------------------------------------------------------------------------
+ * VISUAL UPGRADE:
+ * Implements the "Miniature Identity" logic. Instead of simple icons, 
+ * it renders the full Avatar Engine output scaled down via CSS.
+ * 
+ * FEATURES:
+ * 1. Rarity Engine: Auto-calculates card border class (Common/Silver/Gold) based on stats.
+ * 2. Smart Rendering: Injects the complex Avatar HTML into the Scaled Wrapper.
+ * 3. Deep Linking: Encodes full player objects for Modal hydration.
  */
 
 import { MarketService } from '../services/marketService.js';
 import { SocialService } from '../services/socialService.js';
-import { TeamService } from '../services/teamService.js'; // Added for 'Join Team' logic
+import { TeamService } from '../services/teamService.js';
 import { state } from '../core/state.js';
 import { SoundManager } from '../utils/soundManager.js';
-import { AvatarEngine } from '../utils/avatarEngine.js';
+import { AvatarEngine } from '../utils/avatarEngine.js'; // Critical for rendering visual DNA
 import { Helpers } from '../utils/helpers.js';
 
 export class ScoutController {
     
     /**
-     * Constructor: Initializes Services and State.
+     * Constructor: Initializes Core Services.
      */
     constructor() {
         this.marketService = new MarketService();
@@ -38,18 +37,18 @@ export class ScoutController {
         
         this.viewContainer = document.getElementById('view-scout');
         
-        // Caching for Client-Side Search
+        // Cache state for filtering
         this.cachedData = []; 
         this.currentFilter = 'PLAYER'; // Default View
         this.isGlobal = false;         // Default Scope (Local)
     }
 
     /**
-     * Main Entry Point.
-     * Triggered by Router when tab is accessed.
+     * Initialization Routine.
+     * Triggered by the Router when the user enters the Scout Tab.
      */
     async init() {
-        console.log("🔍 ScoutController: Initializing...");
+        console.log("🔍 ScoutController: Initializing Visual Engine...");
         
         // 1. Auth Guard
         const user = state.getUser();
@@ -58,17 +57,18 @@ export class ScoutController {
             return;
         }
 
-        // 2. Loading State
+        // 2. Render Loading State
         this.viewContainer.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
 
         try {
-            // 3. Fetch Trending Data (Always Local Zone)
+            // 3. Parallel Fetching (Trending + Initial List)
+            // Fetching trending players first to populate the rail
             const trending = await this.marketService.getTrendingPlayers(user.zoneId);
             
-            // 4. Render Base Layout
+            // 4. Render the Static Layout
             this.renderLayout(trending);
             
-            // 5. Load Initial List (Players)
+            // 5. Load the Main Grid (Players by default)
             await this.loadList(user.zoneId, 'PLAYER', false);
 
         } catch (err) {
@@ -78,17 +78,17 @@ export class ScoutController {
     }
 
     /**
-     * Renders the Static Frame (Header, Filters, Trending Rail).
-     * @param {Array} trending - List of trending players.
+     * Renders the Base Skeleton (Header, Search, Trending Rail).
+     * @param {Array} trending - List of trending player objects.
      */
     renderLayout(trending) {
         this.viewContainer.innerHTML = `
             <div class="scout-container fade-in">
                 
-                <!-- A. Header Controls -->
+                <!-- A. HEADER & CONTROLS -->
                 <div class="scout-header">
-                    <!-- Scope Switch -->
-                    <div style="display:flex; justify-content:center; margin-bottom:15px;">
+                    <!-- Scope Switch (Local vs Global) -->
+                    <div class="scope-wrapper">
                         <button class="scope-btn active" id="btn-scope-local">
                             <i class="fa-solid fa-location-dot"></i> منطقتي
                         </button>
@@ -97,7 +97,7 @@ export class ScoutController {
                         </button>
                     </div>
 
-                    <!-- Search Bar -->
+                    <!-- Search Input -->
                     <div class="search-bar-wrapper">
                         <i class="fa-solid fa-search"></i>
                         <input type="text" id="inp-search" placeholder="ابحث عن لاعب أو فريق...">
@@ -111,17 +111,17 @@ export class ScoutController {
                     </div>
                 </div>
 
-                <!-- B. Trending Section -->
+                <!-- B. TRENDING RAIL (Hot Players) -->
                 ${trending.length > 0 ? `
                     <div class="trending-section">
                         <h4>🔥 حديث المنطقة</h4>
                         <div class="trending-scroll">
-                            ${trending.map(p => this.renderMiniCard(p)).join('')}
+                            ${trending.map(p => this.renderMiniTrendingCard(p)).join('')}
                         </div>
                     </div>
                 ` : ''}
 
-                <!-- C. Dynamic Grid -->
+                <!-- C. MAIN GRID CONTAINER -->
                 <div class="market-grid-section">
                     <h4 id="grid-title">النتائج</h4>
                     <div id="market-grid" class="market-grid">
@@ -131,31 +131,29 @@ export class ScoutController {
             </div>
         `;
 
-        // Bind Static Events
+        // Bind Static Event Listeners
         this.bindLayoutEvents();
     }
 
     /**
-     * Data Fetching Logic.
-     * Switches between MarketService (Players) and TeamService/Market (Teams).
+     * Data Fetching & State Management.
+     * Decides whether to fetch Players or Teams based on filter.
      */
     async loadList(zoneId, filterType, isGlobal) {
         const grid = document.getElementById('market-grid');
-        grid.innerHTML = '<div class="loader-bar"></div>';
+        grid.innerHTML = '<div class="loader-bar"></div>'; // Loading Spinner
         this.currentFilter = filterType;
 
         try {
             let data = [];
 
             if (filterType === 'TEAM') {
-                // Fetch Teams
                 data = await this.marketService.getTeamsInZone(zoneId, isGlobal);
             } else {
-                // Fetch Players/Fans
                 data = await this.marketService.getPlayersInZone(zoneId, state.getUser().id, filterType, isGlobal);
             }
 
-            this.cachedData = data;
+            this.cachedData = data; // Cache for client-side search
             this.renderGrid(data);
 
         } catch (e) {
@@ -165,57 +163,80 @@ export class ScoutController {
     }
 
     /**
-     * Grid Renderer.
-     * Decides which Card Component to use (PlayerCard vs TeamCard).
+     * Main Grid Renderer.
+     * Iterates through data and selects the correct Card Component.
      */
     renderGrid(items) {
         const grid = document.getElementById('market-grid');
         
         if (!items || items.length === 0) {
-            grid.innerHTML = '<p class="text-muted text-center" style="grid-column: span 2;">لا توجد نتائج.</p>';
+            grid.innerHTML = '<p class="text-muted text-center" style="grid-column: span 2;">لا توجد نتائج مطابقة.</p>';
             return;
         }
 
-        // Render based on Filter Type
+        // Render based on Type
         if (this.currentFilter === 'TEAM') {
             grid.innerHTML = items.map(t => this.renderTeamCard(t)).join('');
-            this.bindTeamClicks(); // Specific binding for Teams
+            this.bindTeamClicks(); 
         } else {
+            // This is where the visual upgrade happens for Players/Fans
             grid.innerHTML = items.map(p => this.renderPlayerCard(p)).join('');
-            this.bindPlayerClicks(); // Specific binding for Players
+            this.bindPlayerClicks(); 
         }
     }
 
     /* =========================================================================
-       HTML COMPONENT GENERATORS
+       COMPONENT GENERATORS (The Visual Logic)
        ========================================================================= */
 
+    /**
+     * Generates the High-Fidelity Mini Player Card.
+     * Uses CSS Scaling to fit the full Avatar Engine output into the grid.
+     */
     renderPlayerCard(p) {
-        let visual = p.visual_dna || { skin: 1 };
+        // 1. Prepare Visual DNA
+        let visual = p.visual_dna || { skin: 1, kit: 1, hair: 1 };
         if (typeof visual === 'string') visual = JSON.parse(visual);
         
-        const skinColors = ['#ccc', '#F5C6A5', '#C68642', '#8D5524'];
-        const skinHex = skinColors[(visual.skin - 1)] || '#ccc';
+        // 2. Generate Full Avatar HTML (Head + Body + Accessories)
+        // We pass the name to appear on the shirt inside the generator
+        const avatarHtml = AvatarEngine.generateAvatarHTML(visual, p.display_name);
+
+        // 3. Calculate Rarity for Border Styling
+        const rarityClass = this.calculateRarityClass(p.stats);
         const isFan = p.activity_type === 'FAN';
         
+        // 4. Encode Data for Modal Interaction
         const pDataSafe = encodeURIComponent(JSON.stringify(p));
 
         return `
-            <div class="scout-card player-mode" data-player="${pDataSafe}">
+            <div class="scout-card player-mode ${rarityClass}" data-player="${pDataSafe}">
+                
+                <!-- Top Info -->
                 <div class="scout-card-top">
                     <span class="scout-pos">${p.position || 'FAN'}</span>
-                    ${!isFan ? `<span class="scout-rating text-gold">${p.stats?.rating || 60}</span>` : ''}
+                    ${!isFan ? `<span class="scout-rating">${p.stats?.rating || 60}</span>` : ''}
                 </div>
-                <div class="scout-avatar">
-                    <i class="fa-solid fa-user" style="color: ${skinHex};"></i>
+                
+                <!-- The Scaled Avatar Container -->
+                <!-- The CSS class .scout-avatar-wrapper handles the shrink transform -->
+                <div class="scout-avatar-wrapper">
+                    ${avatarHtml}
                 </div>
+
+                <!-- Bottom Info -->
                 <div class="scout-info">
                     <h5>${p.display_name}</h5>
-                    <div class="scout-tags"><span>${isFan ? 'مشجع' : 'لاعب'}</span></div>
+                    <div class="scout-tags">
+                        <span>${isFan ? 'مشجع' : 'لاعب حر'}</span>
+                    </div>
                 </div>
             </div>`;
     }
 
+    /**
+     * Generates Team Card.
+     */
     renderTeamCard(t) {
         let colors = { primary: '#333', secondary: '#000' };
         if (t.logo_dna) {
@@ -227,20 +248,28 @@ export class ScoutController {
         return `
             <div class="scout-card team-mode" data-team="${tDataSafe}" style="border-left: 4px solid ${colors.primary}">
                 <div class="scout-card-top">
-                    <span class="scout-pos" style="background:${colors.primary}; color:#fff;">فريق</span>
-                    <span class="scout-rating text-gold">${t.total_matches || 0}م</span>
+                    <span class="scout-pos" style="background:${colors.primary};">TEAM</span>
+                    <span class="scout-rating text-gold">${t.total_matches || 0}</span>
                 </div>
-                <div class="scout-avatar team-logo" style="background: linear-gradient(45deg, ${colors.primary}, ${colors.secondary}); color: #fff; border-radius: 50%; display:flex; justify-content:center; align-items:center; font-size: 1.5rem; border: 2px solid #fff;">
+                
+                <!-- Team Logo Scaler -->
+                <div class="team-logo-scaler" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary});">
                     <i class="fa-solid fa-shield-cat"></i>
                 </div>
+                
                 <div class="scout-info">
                     <h5>${t.name}</h5>
-                    <div class="scout-tags"><span style="color:var(--success);">ACTIVE</span></div>
+                    <div class="scout-tags">
+                        <span style="color:var(--success); font-weight:bold;">${t.status}</span>
+                    </div>
                 </div>
             </div>`;
     }
 
-    renderMiniCard(p) {
+    /**
+     * Generates Mini Card for Trending Rail.
+     */
+    renderMiniTrendingCard(p) {
         return `
             <div class="mini-trend-card">
                 <div class="mini-avatar"><i class="fa-solid fa-fire text-gold"></i></div>
@@ -248,18 +277,32 @@ export class ScoutController {
             </div>`;
     }
 
+    /**
+     * Helper: Determines Rarity Class based on Experience.
+     */
+    calculateRarityClass(stats) {
+        const matches = stats?.matches || 0;
+        if (matches >= 100) return 'rarity-diamond';
+        if (matches >= 50) return 'rarity-gold';
+        if (matches >= 20) return 'rarity-silver';
+        return 'rarity-common';
+    }
+
     /* =========================================================================
-       EVENT BINDING & INTERACTIONS
+       EVENT HANDLERS & BINDINGS
        ========================================================================= */
 
     bindLayoutEvents() {
         // Scope Toggles
-        document.getElementById('btn-scope-local').onclick = (e) => { 
-            this.isGlobal = false; this.updateScopeUI(e.target); 
+        const setScope = (isGlobal, btnId) => {
+            this.isGlobal = isGlobal;
+            document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(btnId).classList.add('active');
+            this.loadList(state.getUser().zoneId, this.currentFilter, this.isGlobal);
         };
-        document.getElementById('btn-scope-global').onclick = (e) => { 
-            this.isGlobal = true; this.updateScopeUI(e.target); 
-        };
+
+        document.getElementById('btn-scope-local').onclick = () => setScope(false, 'btn-scope-local');
+        document.getElementById('btn-scope-global').onclick = () => setScope(true, 'btn-scope-global');
 
         // Filter Pills
         document.querySelectorAll('.pill').forEach(btn => {
@@ -267,12 +310,11 @@ export class ScoutController {
                 SoundManager.play('click');
                 document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
-                
                 this.loadList(state.getUser().zoneId, e.target.dataset.filter, this.isGlobal);
             });
         });
 
-        // Live Search
+        // Live Search Input
         document.getElementById('inp-search')?.addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
             const filtered = this.cachedData.filter(item => {
@@ -283,15 +325,6 @@ export class ScoutController {
         });
     }
 
-    updateScopeUI(targetBtn) {
-        document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('active'));
-        targetBtn.classList.add('active');
-        this.loadList(state.getUser().zoneId, this.currentFilter, this.isGlobal);
-    }
-
-    /**
-     * Binds Click Events specifically for Player Cards
-     */
     bindPlayerClicks() {
         document.querySelectorAll('.scout-card.player-mode').forEach(card => {
             card.addEventListener('click', () => {
@@ -301,9 +334,6 @@ export class ScoutController {
         });
     }
 
-    /**
-     * Binds Click Events specifically for Team Cards
-     */
     bindTeamClicks() {
         document.querySelectorAll('.scout-card.team-mode').forEach(card => {
             card.addEventListener('click', () => {
@@ -314,40 +344,53 @@ export class ScoutController {
     }
 
     /* =========================================================================
-       MODALS LOGIC
+       MODAL LOGIC
        ========================================================================= */
 
     /**
-     * Modal: Player Detail (Deep Dive)
+     * Opens Player Detail Modal (The Full Profile).
      */
     openPlayerDetailModal(player) {
         SoundManager.play('click');
         const modalId = 'modal-player-detail';
         
+        // Lazy Load Modal DOM
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
                     <div class="modal-box">
-                        <div class="modal-header"><h3>ملف اللاعب</h3><button class="close-btn" onclick="document.getElementById('${modalId}').classList.add('hidden')">&times;</button></div>
+                        <div class="modal-header">
+                            <h3>ملف اللاعب</h3>
+                            <button class="close-btn" id="btn-close-pdetail">&times;</button>
+                        </div>
                         <div id="player-detail-content"></div>
                     </div>
                 </div>`);
+            
+            document.getElementById('btn-close-pdetail').onclick = () => 
+                document.getElementById(modalId).classList.add('hidden');
         }
 
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
-        
         const content = document.getElementById('player-detail-content');
         
-        // Generate Visuals
+        // Full Size Avatar for Modal
         const avatarHtml = AvatarEngine.generateAvatarHTML(player.visual_dna, player.display_name);
-        const marketVal = ((player.stats?.rating || 60) * 1000) + ((player.mint_count || 1) * 500);
+        const marketVal = this.marketService ? 
+            ((player.stats?.rating || 60) * 1000) : 0; // Simplified calculation
 
         content.innerHTML = `
             <div class="player-detail-header">
-                <div style="height:150px; margin-bottom:10px;">${avatarHtml}</div>
-                <h2 class="text-gold">${player.display_name}</h2>
-                <div style="color:var(--success); font-weight:bold; margin-top:10px;">القيمة: ${Helpers.formatCurrency(marketVal)}</div>
+                <!-- Large Avatar Container -->
+                <div style="height:220px; position:relative; margin-bottom:10px; border-bottom:1px solid #333;">
+                    ${avatarHtml}
+                </div>
+                
+                <h2 class="text-gold" style="text-transform:uppercase; letter-spacing:2px;">${player.display_name}</h2>
+                <div style="color:var(--success); font-weight:bold; margin-top:5px;">
+                    <i class="fa-solid fa-money-bill-wave"></i> القيمة: ${Helpers.formatCurrency(marketVal)}
+                </div>
             </div>
 
             ${player.activity_type !== 'FAN' ? `
@@ -356,13 +399,11 @@ export class ScoutController {
                     <div class="ds-item"><span class="ds-val">${player.stats?.matches || 0}</span><span class="ds-lbl">مباريات</span></div>
                     <div class="ds-item"><span class="ds-val text-gold">${player.stats?.rating || 60}</span><span class="ds-lbl">تقييم</span></div>
                 </div>
-            ` : '<p class="text-center text-muted">بيانات المشجعين محدودة.</p>'}
+            ` : '<p class="text-center text-muted" style="margin:20px 0;">بيانات المشجعين محدودة.</p>'}
 
-            <div class="history-section">
-                <button id="btn-modal-mint" class="btn-primary" style="margin-top:20px;">
-                    <i class="fa-solid fa-signature"></i> طلب نسخة موقعة
-                </button>
-            </div>
+            <button id="btn-modal-mint" class="btn-primary" style="margin-top:20px;">
+                <i class="fa-solid fa-signature"></i> طلب نسخة موقعة (Autograph)
+            </button>
         `;
 
         document.getElementById('btn-modal-mint').onclick = () => {
@@ -371,9 +412,6 @@ export class ScoutController {
         };
     }
 
-    /**
-     * Modal: Team Detail (Deep Dive + Join)
-     */
     openTeamDetailModal(team) {
         SoundManager.play('click');
         const modalId = 'modal-team-detail';
@@ -382,10 +420,13 @@ export class ScoutController {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
                     <div class="modal-box">
-                        <div class="modal-header"><h3>ملف الفريق</h3><button class="close-btn" onclick="document.getElementById('${modalId}').classList.add('hidden')">&times;</button></div>
+                        <div class="modal-header"><h3>ملف الفريق</h3><button class="close-btn" id="btn-close-tdetail">&times;</button></div>
                         <div id="team-detail-content"></div>
                     </div>
                 </div>`);
+            
+            document.getElementById('btn-close-tdetail').onclick = () => 
+                document.getElementById(modalId).classList.add('hidden');
         }
 
         const modal = document.getElementById(modalId);
@@ -397,8 +438,8 @@ export class ScoutController {
 
         content.innerHTML = `
             <div class="player-detail-header">
-                <div class="team-logo-circle" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary}); width:100px; height:100px; border-radius:50%; margin:0 auto 10px auto; display:flex; justify-content:center; align-items:center; border:4px solid #fff;">
-                    <i class="fa-solid fa-shield-cat" style="font-size:3rem; color:#fff;"></i>
+                <div class="team-logo-circle" style="background: linear-gradient(135deg, ${colors.primary}, ${colors.secondary}); width:120px; height:120px; border-radius:50%; margin:0 auto 15px auto; display:flex; justify-content:center; align-items:center; border:4px solid #fff; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+                    <i class="fa-solid fa-shield-cat" style="font-size:3.5rem; color:#fff;"></i>
                 </div>
                 <h2 class="text-gold">${team.name}</h2>
                 <div class="team-stats-row" style="margin-top:20px;">
@@ -408,7 +449,7 @@ export class ScoutController {
             </div>
             
             <button id="btn-join-req" class="btn-primary" style="margin-top:20px;">
-                <i class="fa-solid fa-user-plus"></i> طلب انضمام
+                <i class="fa-solid fa-user-plus"></i> طلب انضمام للفريق
             </button>
         `;
 
@@ -418,9 +459,6 @@ export class ScoutController {
         };
     }
 
-    /**
-     * Action: Request Card Mint
-     */
     async handleMintRequest(targetId) {
         if(targetId === state.getUser().id) return alert("لا يمكنك طلب كارت من نفسك.");
         if(!confirm("تأكيد إرسال الطلب؟")) return;
@@ -428,16 +466,13 @@ export class ScoutController {
         try { 
             await this.socialService.requestMint(state.getUser().id, targetId);
             SoundManager.play('success');
-            alert("تم الإرسال!");
+            alert("تم إرسال طلب التوقيع!");
         } catch (e) { 
             SoundManager.play('error');
             alert(e.message); 
         }
     }
 
-    /**
-     * Action: Request Team Join
-     */
     async handleJoinRequest(teamId) {
         if(!confirm("إرسال طلب انضمام لهذا الفريق؟")) return;
 
@@ -445,7 +480,7 @@ export class ScoutController {
             await this.teamService.joinTeam(state.getUser().id, teamId);
             SoundManager.play('success');
             alert("تم الانضمام بنجاح!");
-            window.location.reload(); // Refresh to update My Team status
+            window.location.reload(); 
         } catch (e) {
             SoundManager.play('error');
             alert(e.message);
