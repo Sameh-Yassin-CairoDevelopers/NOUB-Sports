@@ -1,37 +1,36 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/views/scout.css
- * Version: Noub Sports_beta 0.0.1 (VISUAL RICHNESS)
- * Description: Styling for the Scout/Market Module.
+ * Version: Noub Sports_beta 3.0.0 (VISUAL IDENTITY UPGRADE)
+ * Status: Production Ready
  * 
- * SECTIONS:
- * 1. Layout & Header (Search, Scopes).
- * 2. Filter Pills (The Toggles).
- * 3. Trending Rail (Horizontal Scroll).
- * 4. Grid System (The Marketplace).
- * 5. Card Components (Polymorphic: Player vs Team styling).
+ * DESCRIPTION:
+ * Defines the styling for the Scout Marketplace and Album Grids.
+ * 
+ * CORE ARCHITECTURE CHANGES:
+ * 1. Mini-Card Geometry: Adjusted height and padding to fit full avatar.
+ * 2. Avatar Scaling Engine: Uses CSS Transforms to shrink the high-res avatar 
+ *    into the small card container without losing proportions.
+ * 3. Rarity System: Visual classes (Gold, Silver, Diamond) for immediate value recognition.
  */
 
-/* 1. View Layout */
+/* =========================================
+   1. VIEW LAYOUT & UTILITIES
+   ========================================= */
 #view-scout {
     padding: 20px;
-    padding-bottom: 120px; /* Extra space for Bottom Navbar */
+    padding-bottom: 120px; /* Space for Global Navbar */
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
-/* 2. Header Section */
+/* --- Header & Scope Controls --- */
 .scout-header {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-bottom: 25px;
+    display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;
 }
 
-/* Scope Buttons (Local vs Global) */
 .scope-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 5px;
+    display: flex; justify-content: center; margin-bottom: 5px;
 }
 
 .scope-btn {
@@ -45,15 +44,8 @@
     font-size: 0.85rem;
     transition: all 0.3s ease;
 }
-
-.scope-btn:first-child {
-    border-radius: 0 12px 12px 0; /* RTL rounded right */
-    border-left: none;
-}
-
-.scope-btn:last-child {
-    border-radius: 12px 0 0 12px; /* RTL rounded left */
-}
+.scope-btn:first-child { border-radius: 0 12px 12px 0; border-left: none; }
+.scope-btn:last-child { border-radius: 12px 0 0 12px; }
 
 .scope-btn.active {
     background: var(--gold-main);
@@ -63,47 +55,29 @@
     box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
 }
 
-/* Search Bar */
+/* --- Search Bar --- */
 .search-bar-wrapper {
     background: var(--bg-input);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 30px;
     padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: flex; align-items: center; gap: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     transition: border-color 0.3s;
 }
-
-.search-bar-wrapper:focus-within {
-    border-color: var(--gold-main);
-}
-
-.search-bar-wrapper i {
-    color: var(--gold-main);
-    font-size: 1.1rem;
-}
-
+.search-bar-wrapper:focus-within { border-color: var(--gold-main); }
+.search-bar-wrapper i { color: var(--gold-main); font-size: 1.1rem; }
 .search-bar-wrapper input {
-    background: transparent;
-    border: none;
-    padding: 0;
-    width: 100%;
-    font-size: 1rem;
-    color: #fff;
-    font-family: var(--font-primary);
+    background: transparent; border: none; padding: 0; width: 100%;
+    font-size: 1rem; color: #fff; font-family: var(--font-primary);
 }
 
-/* Filter Pills */
+/* --- Filter Pills --- */
 .filter-pills {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding-bottom: 5px;
-    scrollbar-width: none; /* Hide scrollbar Firefox */
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;
+    scrollbar-width: none;
 }
-.filter-pills::-webkit-scrollbar { display: none; } /* Hide Chrome */
+.filter-pills::-webkit-scrollbar { display: none; }
 
 .pill {
     background: rgba(255,255,255,0.05);
@@ -115,17 +89,10 @@
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-primary);
+    display: flex; align-items: center; gap: 8px;
     transition: all 0.2s;
 }
-
-.pill:hover {
-    background: rgba(255,255,255,0.1);
-}
-
+.pill:hover { background: rgba(255,255,255,0.1); }
 .pill.active {
     background: var(--gold-main);
     color: #000;
@@ -133,26 +100,18 @@
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
 }
 
-/* 3. Trending Section (Rail) */
-.trending-section {
-    margin-bottom: 30px;
-    animation: fadeIn 0.5s ease-out;
-}
-
+/* =========================================
+   2. TRENDING RAIL (Mini Horizontal Cards)
+   ========================================= */
+.trending-section { margin-bottom: 30px; animation: fadeIn 0.5s ease-out; }
 .trending-section h4 { 
-    color: var(--gold-main); 
-    margin-bottom: 15px; 
-    font-size: 0.95rem; 
-    border-right: 3px solid var(--gold-main); 
-    padding-right: 10px;
-    font-family: var(--font-sport);
+    color: var(--gold-main); margin-bottom: 15px; font-size: 0.95rem; 
+    border-right: 3px solid var(--gold-main); padding-right: 10px; 
+    font-family: var(--font-sport); 
 }
 
 .trending-scroll {
-    display: flex;
-    gap: 15px;
-    overflow-x: auto;
-    padding-bottom: 10px;
+    display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;
     scrollbar-width: none;
 }
 
@@ -166,28 +125,17 @@
     flex-shrink: 0;
     box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
-
-.mini-avatar {
-    font-size: 1.5rem;
-    margin-bottom: 5px;
-}
-
+.mini-trend-card .mini-avatar { font-size: 1.5rem; margin-bottom: 5px; }
 .mini-trend-card span { 
-    display: block; 
-    font-size: 0.75rem; 
-    margin-top: 5px; 
-    color: #fff; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    max-width: 80px;
+    display: block; font-size: 0.75rem; margin-top: 5px; color: #fff; 
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
 }
 
-/* 4. Main Grid Section */
+/* =========================================
+   3. THE MARKET GRID
+   ========================================= */
 .market-grid-section h4 { 
-    color: var(--text-muted); 
-    margin-bottom: 15px; 
-    font-size: 0.9rem; 
+    color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem; 
 }
 
 .market-grid {
@@ -198,126 +146,156 @@
 }
 
 /* =========================================
-   5. CARD COMPONENTS (Player & Team)
+   4. THE CARD COMPONENT (SCALABLE IDENTITY)
    ========================================= */
 
+/* A. Base Card Structure */
 .scout-card {
     position: relative;
-    height: 230px; /* Taller for rich background */
+    height: 260px; /* Increased Height to accommodate full body */
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.1);
     
-    /* Default Background (Stadium Night) */
-    background: 
-        linear-gradient(to top, #000 10%, rgba(0,0,0,0.3) 100%),
-        url('../../assets/images/backgrounds/futsal-night.webp');
+    /* Default Background */
+    background: linear-gradient(to top, #000 10%, rgba(20,20,20,0.5) 100%),
+                url('../../assets/images/backgrounds/futsal-night.webp');
     background-size: cover;
     background-position: center;
     
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-    overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    overflow: hidden; /* Clips the scaling avatar */
     cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    
+    /* Base Border (Common) */
+    border: 2px solid #555; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
 .scout-card:hover {
     transform: translateY(-5px);
-    border-color: var(--gold-main);
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+    z-index: 10;
 }
 
-/* Top Badge Area */
+/* B. Rarity Tiers (Visual Distinction) */
+
+/* 1. Common (Gray) */
+.scout-card.rarity-common { border-color: #666; }
+
+/* 2. Silver (Metallic) */
+.scout-card.rarity-silver {
+    border-color: #C0C0C0;
+    box-shadow: 0 0 15px rgba(192, 192, 192, 0.15), 0 5px 10px #000;
+}
+
+/* 3. Gold (Premium) */
+.scout-card.rarity-gold {
+    border-color: #D4AF37;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.25), 0 5px 10px #000;
+}
+
+/* 4. Diamond (Elite) */
+.scout-card.rarity-diamond {
+    border-color: #b9f2ff;
+    box-shadow: 0 0 25px rgba(185, 242, 255, 0.4), 0 5px 15px #000;
+    animation: pulseBorder 3s infinite;
+}
+
+@keyframes pulseBorder {
+    0% { border-color: #b9f2ff; }
+    50% { border-color: #00eaff; }
+    100% { border-color: #b9f2ff; }
+}
+
+/* C. Top Info (Position & Rating) */
 .scout-card-top {
-    position: absolute;
-    top: 10px; left: 10px; right: 10px;
-    display: flex;
-    justify-content: space-between;
-    z-index: 2;
+    position: absolute; top: 10px; left: 10px; right: 10px;
+    display: flex; justify-content: space-between; z-index: 5;
 }
 
 .scout-pos {
-    background: rgba(0,0,0,0.7);
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    color: #fff;
+    background: rgba(0,0,0,0.8);
+    padding: 2px 8px; border-radius: 6px;
+    font-size: 0.7rem; font-weight: bold; color: #fff;
     border: 1px solid rgba(255,255,255,0.2);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 
 .scout-rating {
     font-family: var(--font-orbitron);
-    font-size: 1.1rem;
-    color: var(--gold-main);
-    text-shadow: 0 2px 4px #000;
-    font-weight: 900;
+    font-size: 1.2rem; font-weight: 900;
+    color: #fff; text-shadow: 0 2px 4px #000;
 }
 
-/* Avatar Center */
-.scout-avatar {
+/* D. THE AVATAR SCALER (The Magic Trick) */
+/* This container centers the avatar and shrinks it down */
+.scout-avatar-wrapper {
     position: absolute;
-    top: 45px; left: 50%;
-    transform: translateX(-50%);
-    font-size: 4.5rem; /* Large icon */
+    top: 50%; left: 50%;
+    
+    /* 
+     * Native Size of AvatarEngine is roughly 300px height.
+     * We translate it to center, then scale it down.
+     */
+    transform: translate(-50%, -60%) scale(0.55); 
+    
+    width: 200px; /* Base width expected by engine */
+    height: 300px; /* Base height expected by engine */
+    
+    pointer-events: none; /* Let clicks pass through to card */
     z-index: 1;
-    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.8));
-    transition: transform 0.3s;
+    
+    display: flex; justify-content: center; align-items: flex-end;
 }
 
-.scout-card:hover .scout-avatar {
-    transform: translateX(-50%) scale(1.1); /* Zoom effect on hover */
-}
-
-/* Bottom Info */
+/* E. Bottom Info (Name Gradient) */
 .scout-info {
-    position: relative;
-    z-index: 2;
+    position: relative; z-index: 5;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 20%, transparent 100%);
+    padding: 15px 10px 10px 10px;
     text-align: center;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); /* Readability gradient */
-    padding-top: 20px;
-    border-radius: 0 0 16px 16px;
+    width: 100%;
 }
 
 .scout-info h5 {
-    margin: 5px 0;
+    margin: 0;
     font-size: 1rem;
     color: #fff;
     text-shadow: 0 2px 5px #000;
     font-family: var(--font-sport);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-transform: uppercase;
 }
 
+.scout-tags {
+    margin-top: 4px;
+}
 .scout-tags span {
-    font-size: 0.65rem;
-    background: rgba(255,255,255,0.1);
-    padding: 3px 8px;
-    border-radius: 6px;
-    color: #ddd;
-    border: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.65rem; color: #aaa;
+    text-transform: uppercase; letter-spacing: 1px;
 }
 
-/* Specific Style for Team Cards */
+/* =========================================
+   5. TEAM CARD SPECIFICS (Different Style)
+   ========================================= */
 .scout-card.team-mode {
-    /* Different background for teams to distinguish them */
-    background: 
-        linear-gradient(to top, #111 20%, rgba(20,20,30,0.6) 100%),
-        url('../../assets/images/backgrounds/youth-center.webp');
+    background: linear-gradient(to top, #111 20%, rgba(20,20,30,0.6) 100%),
+                url('../../assets/images/backgrounds/youth-center.webp');
     background-size: cover;
 }
 
-.scout-avatar.team-logo {
-    font-size: 2rem;
-    width: 70px; height: 70px;
+.scout-card.team-mode .team-logo-scaler {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -60%);
+    width: 90px; height: 90px;
     display: flex; justify-content: center; align-items: center;
+    
+    border-radius: 50%;
+    border: 4px solid #fff;
     box-shadow: 0 5px 15px rgba(0,0,0,0.6);
 }
 
-/* Animations */
+.scout-card.team-mode .team-logo-scaler i {
+    font-size: 2.5rem; color: #fff;
+}
+
+/* Animation */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
