@@ -1,20 +1,27 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/homeCtrl.js
- * Version: Noub Sports_beta 3.1.0 (MASTER VISUAL FIX)
+ * Version: Noub Sports_beta 4.2.0 (GOLDEN MASTER)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
  * ARCHITECTURAL OVERVIEW:
  * -----------------------------------------------------------------------------
  * The Master Controller for the "Locker Room" (User Dashboard).
- * Responsible for rendering the User Identity, Global Header updates, 
- * Notification System, and the Digital Album.
+ * It acts as the primary interface for the Authenticated User.
  * 
- * [UPDATED IN V3.1.0]:
- * - Synchronized 'Album View' rendering logic with 'Scout View'.
- * - Implemented 'Avatar Scaling' to display full-body players on small cards.
- * - Added comprehensive JSDoc comments for academic standards.
+ * CORE RESPONSIBILITIES:
+ * 1. Identity Rendering: Displays the interactive Player Card with real-time stats.
+ * 2. Header Management: Updates the Global Header (Name, Zone) and binds the 
+ *    Notification Bell events without duplicating DOM elements.
+ * 3. Album Management: Fetches and renders the "Gifted Cards" collection using 
+ *    the new visual scaling engine to match the Scout view.
+ * 4. Notification System: Manages the Modal logic for accepting/rejecting requests.
+ * 
+ * DEPENDENCIES:
+ * - NotificationService: For fetching alerts.
+ * - ProfileController: For the "Edit Look" modal.
+ * - AvatarEngine: For generating the visual representation of players.
  * -----------------------------------------------------------------------------
  */
 
@@ -30,7 +37,7 @@ export class HomeController {
     
     /**
      * Constructor: Initializes dependencies and DOM references.
-     * Establishes connection with Sub-Controllers (Profile) and Services.
+     * Establishes connection with Sub-Controllers and Services.
      */
     constructor() {
         // Services & Sub-Controllers
@@ -48,7 +55,7 @@ export class HomeController {
 
     /**
      * Main Entry Point: Renders the Dashboard based on User State.
-     * Called by AppClass upon successful authentication.
+     * Called by AppClass upon successful authentication or navigation.
      * 
      * @param {Object} user - The authenticated User Model.
      */
@@ -56,14 +63,14 @@ export class HomeController {
         if (!user) return;
         this.currentUser = user;
 
-        // 1. Update Global Header (Name, Balance, Zone)
+        // 1. Update Global Header UI (Text & Zone)
         this.updateHeaderUI(user);
 
-        // 2. Initialize System Components (Bell & Settings)
-        this.initNotificationSystem(user.id);
-        this.initSettingsButton();
+        // 2. Bind Header Events (Notification Bell)
+        // Note: We do not inject HTML here anymore to avoid conflicts with index.html
+        this.bindHeaderEvents(user.id);
 
-        // 3. Render Identity Card DIRECTLY (No Layout/Tabs Wrapper)
+        // 3. Render Identity Card (The Hero Section)
         this.renderInteractiveCard(user);
     }
 
@@ -75,11 +82,9 @@ export class HomeController {
      */
     updateHeaderUI(user) {
         const nameEl = document.getElementById('header-name');
-        const balanceEl = document.getElementById('header-balance');
         const zoneEl = document.getElementById('header-zone');
 
         if (nameEl) nameEl.textContent = user.username;
-        if (balanceEl) balanceEl.textContent = user.balance;
 
         // Zone Mapping (Enum to String)
         const zoneNames = {
@@ -91,6 +96,54 @@ export class HomeController {
         
         if (zoneEl) {
             zoneEl.textContent = zoneNames[user.zoneId] || 'منطقة غير محددة';
+        }
+    }
+
+    /**
+     * Binds events to the Static Header Buttons defined in index.html.
+     * Uses node cloning to strip previous event listeners (preventing duplication).
+     * 
+     * @param {string} userId - Current User ID.
+     */
+    bindHeaderEvents(userId) {
+        // A. Bind Notification Bell
+        const btnNotif = document.getElementById('btn-header-notif');
+        
+        if (btnNotif) {
+            // Clone and replace to clear old listeners from previous renders
+            const newBtn = btnNotif.cloneNode(true);
+            btnNotif.parentNode.replaceChild(newBtn, btnNotif);
+            
+            // Attach new listener
+            newBtn.addEventListener('click', () => {
+                SoundManager.play('click');
+                this.openNotificationModal(userId);
+            });
+            
+            // Initial Check for Unread Messages (Red Dot Logic)
+            this.checkUnreadMessages(userId);
+        }
+        
+        // Note: The Hamburger Menu is handled globally by MenuController.
+    }
+
+    /**
+     * Checks DB for pending actions and toggles the red badge.
+     * 
+     * @param {string} userId - Current User ID.
+     */
+    async checkUnreadMessages(userId) {
+        try {
+            const actions = await this.notifService.getPendingActions(userId);
+            const badge = document.getElementById('header-notif-badge');
+            
+            if (actions.length > 0 && badge) {
+                badge.classList.remove('hidden'); // Show Red Dot
+            } else if (badge) {
+                badge.classList.add('hidden');    // Hide Red Dot
+            }
+        } catch (e) { 
+            console.warn("Silent Notif Check Failed"); 
         }
     }
 
@@ -171,6 +224,7 @@ export class HomeController {
                         <div class="card-flag"><i class="fa-solid fa-location-dot"></i></div>
                     </div>
                     
+                    <!-- Native Scale for Main Card -->
                     <div class="card-image-area">
                         ${avatarHtml}
                     </div>
@@ -221,7 +275,8 @@ export class HomeController {
      * Renders the Album View.
      * Replaces the Card View temporarily. Includes a "Back" button.
      * 
-     * [UPDATE]: Now uses the 'market-grid' layout to match Scout view.
+     * [VISUAL UPDATE]: Uses 'market-grid' layout and 'renderFullAlbumCard'
+     * to match the visual fidelity of the Scout Marketplace.
      * 
      * @param {string} userId - ID of the current user.
      */
@@ -283,7 +338,8 @@ export class HomeController {
     /**
      * [NEW METHOD V3.1]: Generates a High-Fidelity Album Card.
      * Replaces the old 'renderMiniCard'.
-     * Uses AvatarEngine to generate full HTML and CSS scaling to fit the grid.
+     * Uses AvatarEngine to generate full HTML and CSS scaling (.scout-avatar-wrapper) 
+     * to fit the grid perfectly while showing the full body.
      * 
      * @param {Object} card - The card data object.
      * @returns {string} HTML string of the card component.
@@ -299,10 +355,7 @@ export class HomeController {
         
         // 3. Calculate Rarity based on stored stats
         const matches = card.stats?.matches || 0;
-        let rarityClass = 'rarity-common';
-        if (matches >= 100) rarityClass = 'rarity-diamond';
-        else if (matches >= 30) rarityClass = 'rarity-gold';
-        else if (matches >= 10) rarityClass = 'rarity-silver';
+        let rarityClass = this.calculateRarityClass(matches);
 
         // 4. Render using the EXACT structure as ScoutController
         return `
@@ -332,7 +385,7 @@ export class HomeController {
     }
 
     /* =========================================================================
-       SECTION 3: UTILITIES & SYSTEM
+       SECTION 3: UTILITIES (RARITY & MARKET VALUE)
        ========================================================================= */
 
     /**
@@ -355,60 +408,9 @@ export class HomeController {
         return (rating * 1000) + (matches * 500) + (goals * 1000) + (reputation * 10);
     }
 
-    /**
-     * SYSTEM: Init Settings Icon (Gear) in Global Header.
-     * Prevents duplication if button already exists.
-     */
-    initSettingsButton() {
-        const header = document.getElementById('global-header');
-        if (document.getElementById('btn-settings')) return;
-
-        header.insertAdjacentHTML('afterbegin', `
-            <button id="btn-settings" style="background:none; border:none; color:var(--text-muted); font-size:1.1rem; margin-right:10px; cursor:pointer; transition: color 0.2s;">
-                <i class="fa-solid fa-gear"></i>
-            </button>
-        `);
-
-        // Bind to Profile Editor (Acts as Settings menu)
-        document.getElementById('btn-settings').addEventListener('click', () => {
-            this.profileCtrl.openEditModal();
-        });
-    }
-
-    /**
-     * SYSTEM: Init Notification Bell & Modal logic.
-     * Checks for unread messages on load.
-     */
-    initNotificationSystem(userId) {
-        const header = document.getElementById('global-header');
-        if (document.getElementById('btn-notif')) return;
-
-        header.insertAdjacentHTML('afterbegin', `
-            <button id="btn-notif" style="background:none; border:none; color:#fff; font-size:1.2rem; margin-left:15px; position:relative; cursor:pointer; transition:transform 0.2s;">
-                <i class="fa-solid fa-bell"></i>
-                <span id="notif-badge" style="display:none; position:absolute; top:-2px; right:-2px; width:9px; height:9px; background:var(--danger); border-radius:50%; border:1px solid var(--bg-surface);"></span>
-            </button>
-        `);
-
-        document.getElementById('btn-notif').addEventListener('click', () => { 
-            this.openNotificationModal(userId); 
-        });
-        
-        this.checkUnreadMessages(userId);
-    }
-
-    /**
-     * Checks DB for pending actions and toggles the red badge.
-     */
-    async checkUnreadMessages(userId) {
-        try {
-            const actions = await this.notifService.getPendingActions(userId);
-            const badge = document.getElementById('notif-badge');
-            if (actions.length > 0 && badge) badge.style.display = 'block';
-        } catch (e) { 
-            console.warn("Silent Notif Check Failed"); 
-        }
-    }
+    /* =========================================================================
+       SECTION 4: NOTIFICATION SYSTEM
+       ========================================================================= */
 
     /**
      * Builds and opens the Notification Modal.
@@ -417,7 +419,7 @@ export class HomeController {
     async openNotificationModal(userId) {
         const modalId = 'modal-notifications';
         
-        // Create Modal DOM if missing
+        // 1. Create Modal DOM if missing
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
@@ -437,6 +439,7 @@ export class HomeController {
             });
         }
 
+        // 2. Show Modal & Load Data
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
         
@@ -446,6 +449,7 @@ export class HomeController {
         try {
             const actions = await this.notifService.getPendingActions(userId);
             
+            // Empty State
             if (actions.length === 0) {
                 container.innerHTML = `
                     <div class="empty-notif" style="text-align:center; padding:20px;">
@@ -455,7 +459,7 @@ export class HomeController {
                 return;
             }
 
-            // Render Notification Cards
+            // Render Cards
             container.innerHTML = actions.map(act => `
                 <div class="notif-card">
                     <div class="notif-info">
@@ -484,28 +488,38 @@ export class HomeController {
 
     /**
      * Binds Accept/Reject buttons inside the Notification Modal.
+     * Uses the NotificationService to execute the logic.
      */
     bindNotificationActions(userId, modal) {
         const handleAction = async (btn, actionType) => {
             const { type, id } = btn.dataset;
+            
+            // Safety Check
             if(!confirm(actionType === 'ACCEPT' ? "تأكيد الموافقة؟" : "تأكيد الرفض؟")) return;
             
+            // Optimistic UI
             btn.disabled = true;
             btn.textContent = "...";
             
             try {
+                // Execute Service Call based on Type
                 if (type === 'MINT_REQUEST') {
                     if(actionType === 'ACCEPT') await this.notifService.approveMint(id, userId);
                     else await this.notifService.rejectMint(id);
                 } else if (type === 'MATCH_VERIFY') {
                     if(actionType === 'ACCEPT') await this.notifService.confirmMatch(id);
                     else await this.notifService.rejectMatch(id);
+                } else if (type === 'OPS_UPDATE') {
+                    // Just clear notification for info updates
+                    // (Assuming a markAsRead service exists, handled implicitly via reload for now)
                 }
                 
                 SoundManager.play('success');
                 alert("تمت العملية بنجاح!");
                 modal.classList.add('hidden');
-                this.checkUnreadMessages(userId); // Refresh Badge
+                
+                // Refresh Badge
+                this.checkUnreadMessages(userId); 
                 
             } catch (err) {
                 SoundManager.play('error');
