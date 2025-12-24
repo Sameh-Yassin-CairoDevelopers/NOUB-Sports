@@ -1,85 +1,109 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/core/appClass.js
- * Version: Noub Sports_beta 0.0.5 (MASTER FULL INTEGRATION)
+ * Version: Noub Sports_beta 4.2.0 (MASTER ORCHESTRATOR)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
- * ARCHITECTURAL RESPONSIBILITIES:
+ * ARCHITECTURAL OVERVIEW:
  * -----------------------------------------------------------------------------
- * 1. Bootstrapping: Initializes Telegram SDK, State, and Auth Services.
- * 2. Auth Guard: Validates User Session before rendering critical views.
- * 3. Routing Engine: Directed Graph logic for Guest vs Authenticated Users.
- * 4. Module Orchestration: Instantiates all Feature Controllers and wires
- *    them to the Global Navigation events.
+ * The "App" class serves as the Bootloader and Central Orchestrator of the SPA.
+ * It follows the "Facade Pattern" to initialize subsystems and route traffic.
+ * 
+ * CORE RESPONSIBILITIES:
+ * 1. Bootstrapping: Initializes critical infrastructure (Telegram SDK, State, Auth).
+ * 2. Auth Guard (Security): Validates user sessions before rendering restricted views.
+ * 3. Routing Logic: Directs users to Onboarding (Guest) or Dashboard (Auth).
+ * 4. Module Orchestration: Instantiates and binds all Feature Controllers, 
+ *    ensuring they are ready to handle events from the global UI.
+ * 
+ * MODULES INTEGRATED:
+ * - Core: Router, State, Telegram, Auth.
+ * - Features: Onboarding, Home, Team, Arena, Scout, Tactics.
+ * - New System: MenuController (Navigation) & OperationsController (SOS Market).
  * -----------------------------------------------------------------------------
  */
 
+// --- 1. Core Infrastructure Imports ---
 import { Router } from './router.js';
 import { TelegramService } from './telegram.js';
 import { state } from './state.js'; // Singleton State Store
 import { AuthService } from '../services/authService.js';
 
-// --- Feature Controllers Imports ---
+// --- 2. Feature Controller Imports ---
 import { OnboardingController } from '../controllers/onboardingCtrl.js';
 import { HomeController } from '../controllers/homeCtrl.js';
 import { TeamController } from '../controllers/teamCtrl.js';
 import { ArenaController } from '../controllers/arenaCtrl.js';
 import { ScoutController } from '../controllers/scoutCtrl.js';
-import { TacticsController } from '../controllers/tacticsCtrl.js'; // The Tactics Board
+import { TacticsController } from '../controllers/tacticsCtrl.js';
 
+// --- 3. New System Imports (V4 Expansion) ---
+import { MenuController } from '../controllers/menuCtrl.js';        // Manages Side Drawer
+import { OperationsController } from '../controllers/operationsCtrl.js'; // Manages SOS Room
+
+/**
+ * The Main Application Class.
+ * Instantiated once in main.js.
+ */
 export class App {
     
     /**
-     * Constructor: Initializes Core Dependencies & Feature Controllers.
-     * Controllers are instantiated early to ensure they are ready for event binding.
+     * Constructor: Initializes Dependencies.
+     * We instantiate controllers immediately to ensure their event listeners 
+     * (like those for Deep Linking) are bound before any user interaction occurs.
      */
     constructor() {
-        // 1. Core Utilities
+        // A. Core Utilities
         this.router = new Router();
         this.telegram = new TelegramService();
         
-        // 2. Data Services
+        // B. Data Services
         this.auth = new AuthService();
         
-        // 3. View Controllers (All Modules)
+        // C. View Controllers (Legacy Modules)
         this.homeCtrl = new HomeController();
         this.teamCtrl = new TeamController();
         this.arenaCtrl = new ArenaController();
         this.scoutCtrl = new ScoutController();
-        this.tacticsCtrl = new TacticsController(); // Board Logic
+        this.tacticsCtrl = new TacticsController();
         
-        console.log("🚀 App Core: Controllers Loaded.");
+        // D. System Controllers (New Modules)
+        this.menuCtrl = new MenuController(); 
+        this.opsCtrl = new OperationsController();
+        
+        console.log("🚀 App Core: All Controllers & Subsystems Loaded.");
     }
 
     /**
-     * Main Entry Point.
-     * Executed once when DOM is ready.
+     * Main Entry Point (The Boot Sequence).
+     * Executed once when the DOM is fully loaded.
      */
     async init() {
         console.log("🚀 System Boot Sequence Initiated...");
         
-        // A. Initialize Environment (Telegram Colors/Haptics)
+        // 1. Initialize Environment (Telegram Colors, Haptics, Theme)
         this.telegram.init();
 
         try {
-            // B. Authentication Check (Critical Path)
-            // Checks both Telegram ID and Persistent Email Sessions
+            // 2. Authentication Check (Critical Path)
+            // Checks both Telegram ID Context and Persistent LocalStorage/Email Sessions.
             const user = await this.auth.checkUser();
             
-            // C. Decide Route based on Auth Result
+            // 3. Routing Decision based on Auth Result
             this.handleRouting(user);
             
         } catch (error) {
             console.error("⛔ Critical Boot Error:", error);
-            // Fail-safe: Redirect to Onboarding on error to prevent white screen
+            // Fail-safe: Force routing to guest mode on error to prevent white screen
             this.handleRouting(null);
         }
     }
 
     /**
      * Routing Logic Engine.
-     * Controls the visibility of Splash, Header, Navbar, and Views.
+     * Manages the Global UI Shell (Header, Navbar) visibility based on Auth State.
+     * 
      * @param {Object|null} user - The authenticated User Model or null.
      */
     handleRouting(user) {
@@ -88,7 +112,7 @@ export class App {
         const header = document.getElementById('global-header');
         const navbar = document.getElementById('global-navbar');
         
-        // 1. Dismiss Splash Screen (Smooth Fade Out)
+        // 1. Dismiss Splash Screen (Smooth Fade Out Animation)
         if(splash) {
             splash.style.opacity = '0';
             setTimeout(() => {
@@ -101,18 +125,18 @@ export class App {
             // --- PATH A: AUTHENTICATED USER ---
             console.log(`✅ Session Validated: ${user.username}`);
             
-            // 2. Persist User in Global State (Singleton)
+            // 1. Persist User in Singleton State
             state.setUser(user);
             
-            // 3. Initial Render (Home Dashboard)
+            // 2. Initial Render (Dashboard/Identity)
             this.homeCtrl.render(user);
             this.router.navigate('view-home');
             
-            // 4. Unlock Global UI Shell
+            // 3. Unlock Global UI Shell (Header & Navbar)
             if(header) header.classList.remove('hidden');
             if(navbar) navbar.classList.remove('hidden');
 
-            // 5. Bind Global Navigation Events (Wiring Tabs to Logic)
+            // 4. Bind Bottom Navigation Events
             this.bindModuleTriggers();
 
         } else {
@@ -133,35 +157,36 @@ export class App {
 
     /**
      * Binds Navigation Bar buttons to their respective Controllers.
-     * Ensures data is refreshed ("Pulled") every time a tab is visited.
-     * Connects the Floating Action Button to the Tactics Board.
+     * Ensures data is "Pulled" (Refreshed) every time a tab is visited.
      */
     bindModuleTriggers() {
-        // 1. Home Tab -> Refresh Header & Card
+        // 1. Home Tab -> Refreshes Header & Identity Card
         document.getElementById('nav-home')?.addEventListener('click', () => {
             const currentUser = state.getUser();
             if (currentUser) this.homeCtrl.render(currentUser);
         });
 
-        // 2. Arena Tab -> Load Matches Feed
+        // 2. Arena Tab -> Loads Match Feed & SOS Status
         document.getElementById('nav-arena')?.addEventListener('click', () => {
             console.log("🏟️ Module Load: Arena");
             this.arenaCtrl.init(); // Triggers data fetch
         });
 
-        // 3. Scout Tab -> Load Market & Trending
+        // 3. Scout Tab -> Loads Marketplace & Trending
         document.getElementById('nav-scout')?.addEventListener('click', () => {
             console.log("🔍 Module Load: Scout");
             this.scoutCtrl.init(); // Triggers data fetch
         });
 
-        // 4. Team Tab -> Load Dashboard or Create Form
+        // 4. Team Tab -> Loads Dashboard or Create Form
         document.getElementById('nav-team')?.addEventListener('click', () => {
             console.log("🛡️ Module Load: Team");
             this.teamCtrl.init(); // Triggers data fetch
         });
         
-        // 5. Action Button (Center) -> Tactics Board
+        // 5. Action Button (The Central Floating Orb)
+        // Currently mapped to open the Tactics Board Overlay directly.
+        // Can be remapped to Operations or a Quick Menu later.
         document.getElementById('nav-action')?.addEventListener('click', () => {
              console.log("♟️ Opening Tactics Board...");
              this.tacticsCtrl.init(); // Show the Board Overlay
