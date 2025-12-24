@@ -1,55 +1,90 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/layout/header.css
- * Version: 6.0.0 (3D Glass Upgrade)
- * Description: Top Navigation Bar styling.
- * UPDATE: Added Depth, Glassmorphism, and Gold Bezel.
+ * Version: Noub Sports_beta 2.0.0 (COMMAND CAPSULE & DRAWER)
+ * Status: Production Ready
+ * 
+ * -----------------------------------------------------------------------------
+ * ARCHITECTURAL OVERVIEW:
+ * -----------------------------------------------------------------------------
+ * Defines the styling for the Top Navigation Assembly.
+ * 
+ * DESIGN PHILOSOPHY:
+ * 1. The Command Capsule: Instead of a full-width bar, the header is now a 
+ *    floating, glassmorphic capsule centered at the top. This focuses user 
+ *    attention and maximizes screen real estate.
+ * 2. The Side Drawer: A slide-out navigation menu (Hamburger) that houses 
+ *    secondary actions, keeping the main interface clean.
+ * 3. Z-Index Hierarchy:
+ *    - Base Content: 1
+ *    - Header Capsule: 100
+ *    - Menu Overlay: 1000
+ *    - Menu Drawer: 1001
+ * -----------------------------------------------------------------------------
  */
 
+/* =========================================
+   1. THE COMMAND CAPSULE (Floating Header)
+   ========================================= */
 .app-header {
+    /* Positioning: Floating & Centered */
     position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: var(--header-height);
+    top: 15px; /* Floats 15px from top */
+    left: 50%;
+    transform: translateX(-50%); /* Center alignment logic */
+    
+    /* Dimensions: Constrained for aesthetics */
+    width: 92%; 
+    max-width: 480px; /* Matches mobile view constraint */
+    height: 60px;
+    
+    /* Layering */
     z-index: 100;
     
-    /* 1. Glass Background */
-    background: linear-gradient(
-        to bottom, 
-        rgba(20, 22, 28, 1) 0%, 
-        rgba(30, 32, 40, 0.9) 100%
-    );
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-
-    /* 2. 3D Bezel (Bottom Edge) */
-    border-bottom: 1px solid rgba(212, 175, 55, 0.2); /* Gold hint */
+    /* VISUAL MATERIAL: Dark Glass */
+    background: rgba(26, 28, 35, 0.85); /* Semi-transparent dark */
+    backdrop-filter: blur(12px);       /* The Frost Effect */
+    -webkit-backdrop-filter: blur(12px);
     
-    /* 3. Shadow for Depth */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    /* BORDER & SHAPE */
+    border-radius: 35px; /* Full Capsule Shape */
+    border: 1px solid rgba(255, 255, 255, 0.08); /* Subtle Bezel */
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.5), /* Deep Shadow */
+        0 0 0 1px rgba(0, 0, 0, 0.5);   /* Inner Outline */
 
-    /* Layout */
+    /* LAYOUT: Flexbox for Profile (Right) & Controls (Left) */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 15px;
-    transition: all 0.3s ease;
+    padding: 0 8px 0 15px; /* Adjusted padding for capsule curves */
+    
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Profile Section */
+/* -------------------------------------------
+   1.1 User Identity (Right Side)
+   ------------------------------------------- */
 .profile-summary {
     display: flex;
     align-items: center;
     gap: 10px;
+    cursor: pointer; /* Indicates clickable profile */
 }
 
 .avatar-circle {
-    width: 38px; height: 38px; /* Slightly smaller */
+    width: 42px; height: 42px;
     border-radius: 50%;
     background: #222;
-    border: 2px solid var(--gold-main);
+    border: 2px solid var(--gold-main); /* Gold Rim */
     display: flex; justify-content: center; align-items: center;
     overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.avatar-circle i {
+    font-size: 1.2rem;
+    color: #fff;
 }
 
 .user-texts {
@@ -59,11 +94,11 @@
 }
 
 .user-texts h3 {
-    font-size: 0.85rem; /* Crisp font */
-    line-height: 1.1;
-    margin-bottom: 2px;
+    font-size: 0.9rem;
     color: #fff;
-    text-shadow: 0 1px 2px #000;
+    line-height: 1.1;
+    font-family: var(--font-sport);
+    letter-spacing: 0.5px;
 }
 
 .user-texts span {
@@ -71,20 +106,187 @@
     color: var(--text-muted);
 }
 
-/* Wallet Badge (3D Look) */
-.currency-badge {
-    background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(0,0,0,0.3));
-    padding: 4px 12px;
-    border-radius: 15px;
-    color: var(--gold-main);
-    font-weight: bold;
-    font-size: 0.85rem;
-    border: 1px solid rgba(212,175,55,0.3);
-    box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
-    display: flex; align-items: center; gap: 5px;
+/* -------------------------------------------
+   1.2 Header Controls (Left Side)
+   ------------------------------------------- */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* Icons within Header */
-.app-header button i {
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+/* Ghost Buttons (Transparent until hovered) */
+.icon-btn-ghost {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.icon-btn-ghost:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.9);
+}
+
+/* Notification Badge (The Red Dot) */
+.badge-dot {
+    position: absolute;
+    top: 8px; right: 10px;
+    width: 8px; height: 8px;
+    background-color: var(--danger); /* Red */
+    border-radius: 50%;
+    border: 1px solid var(--bg-surface);
+    box-shadow: 0 0 5px var(--danger);
+    animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+
+/* =========================================
+   2. THE SIDE MENU DRAWER (Hamburger)
+   ========================================= */
+
+/* 2.1 The Backdrop Overlay */
+.menu-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7); /* Dim Background */
+    backdrop-filter: blur(4px);      /* Focus effect */
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s;
+}
+
+/* State: Open */
+.menu-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 2.2 The Sliding Drawer */
+.side-menu-drawer {
+    position: fixed;
+    top: 0; 
+    left: 0; /* Slides from Left (RTL logic: starts off-screen left) */
+    width: 75%;
+    max-width: 320px;
+    height: 100%;
+    
+    background: linear-gradient(160deg, #1a1c23 0%, #0f1014 100%);
+    border-right: 1px solid rgba(212, 175, 55, 0.1); /* Gold Border on edge */
+    box-shadow: 10px 0 30px rgba(0,0,0,0.8);
+    
+    z-index: 1001;
+    
+    /* Animation Initial State: Hidden to the left */
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+/* State: Open */
+.menu-overlay.active .side-menu-drawer {
+    transform: translateX(0); /* Slide In */
+}
+
+/* 2.3 Menu Header */
+.menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.menu-header h2 {
+    font-family: var(--font-sport);
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+}
+
+/* 2.4 Menu Items List */
+.menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto; /* Scrollable if long */
+}
+
+.menu-item {
+    background: transparent;
+    border: none;
+    padding: 12px 15px;
+    border-radius: 12px;
+    
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    
+    color: #fff;
+    font-family: var(--font-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: right;
+    
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.menu-item i {
+    width: 25px; /* Fixed width for alignment */
+    text-align: center;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+/* Hover/Active State */
+.menu-item:hover, .menu-item:active {
+    background: rgba(212, 175, 55, 0.1); /* Gold Tint */
+}
+
+.menu-item:hover i {
+    color: var(--gold-main);
+}
+
+/* Highlighted Item (e.g. Operations Room) */
+.menu-item.highlight {
+    background: rgba(239, 68, 68, 0.1); /* Red Tint */
+    color: #ff6b6b;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.menu-item.highlight i {
+    color: #ff6b6b;
+}
+
+/* Dividers */
+.menu-divider {
+    border: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.05);
+    margin: 5px 0;
+}
+
+/* =========================================
+   3. RESPONSIVE ADAPTATION
+   ========================================= */
+@media (min-width: 600px) {
+    /* Ensure Drawer doesn't look too wide on desktop */
+    .side-menu-drawer {
+        border-right: 1px solid rgba(255,255,255,0.1);
+    }
 }
