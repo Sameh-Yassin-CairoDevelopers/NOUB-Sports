@@ -1,21 +1,18 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/operationsCtrl.js
- * Version: 1.0.0 (THE OPERATIONS HEADQUARTERS)
+ * Version: 1.1.0 (STABILITY FIX)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
  * ARCHITECTURAL OVERVIEW:
  * -----------------------------------------------------------------------------
  * This controller manages the dedicated "Operations Room" View (view-operations).
- * It serves as the central marketplace for urgent match resources (Jokers & Refs).
  * 
- * CORE RESPONSIBILITIES:
- * 1. Feed Management: Fetches, filters, and renders active 'WANTED' requests.
- * 2. Transaction Handling: Manages the "Post" and "Accept" workflows using Atomic locks.
- * 3. Deep Linking Receiver: Listens for 'trigger-post-request' events dispatched
- *    by the MenuController to open specific modals immediately upon navigation.
- * 4. UI/UX: Implements a tabbed filtering interface and dynamic modal forms.
+ * [CRITICAL FIX v1.1.0]:
+ * - Implemented "Defensive Rendering" in loadFeed().
+ * - Solved the crash occurring when accessing via Deep Links (Side Menu).
+ * - Ensures DOM elements exist before attempting manipulation.
  * -----------------------------------------------------------------------------
  */
 
@@ -39,11 +36,14 @@ export class OperationsController {
         this.currentFilter = 'ALL'; // Default filter state
         
         // BIND DEEP LINK LISTENER
-        // This allows the Side Menu to trigger actions inside this controller
-        // even if the user wasn't originally on this view.
+        // Allows Side Menu to trigger actions.
         window.addEventListener('trigger-post-request', (e) => {
             const { type } = e.detail;
             console.log(`🚨 Ops: Deep Link Triggered for ${type}`);
+            
+            // [FIX]: Ensure layout exists before opening modal visually
+            this.ensureLayoutRendered();
+            
             this.openPostModal(type);
         });
         
@@ -52,7 +52,7 @@ export class OperationsController {
 
     /**
      * Main Initialization Logic.
-     * Called by the Router when the user navigates to 'view-operations'.
+     * Called manually or by Router.
      */
     async init() {
         const user = state.getUser();
@@ -66,6 +66,21 @@ export class OperationsController {
 
         // 2. Load Data (Feed)
         await this.loadFeed(user.zoneId);
+    }
+
+    /**
+     * [HELPER]: Ensures the static layout exists in the DOM.
+     * Prevents null pointer errors when accessing via Deep Links.
+     */
+    ensureLayoutRendered() {
+        // Check if the feed container exists. If not, render the whole layout.
+        if (!document.getElementById('ops-feed-container')) {
+            console.log("🚨 Ops: Layout missing, forcing render...");
+            this.renderLayout();
+            // Optionally fetch background data silently
+            const user = state.getUser();
+            if(user) this.loadFeed(user.zoneId);
+        }
     }
 
     /**
@@ -137,18 +152,26 @@ export class OperationsController {
             });
         });
 
-        // FAB Button Logic (Opens Selection Sheet)
-        document.getElementById('btn-fab-post').onclick = () => {
-            this.openPostTypeSelection();
-        };
+        // FAB Button Logic
+        const fab = document.getElementById('btn-fab-post');
+        if (fab) {
+            fab.onclick = () => this.showPostOptions();
+        }
     }
 
     /**
      * CORE: Data Fetching & Rendering.
-     * @param {number} zoneId - User's geographic zone.
+     * [FIXED]: Includes safety check for DOM container.
      */
     async loadFeed(zoneId) {
+        // SAFETY CHECK: Ensure layout exists before selecting container
+        this.ensureLayoutRendered();
+
         const container = document.getElementById('ops-feed-container');
+        
+        // Double check to prevent race condition crashes
+        if (!container) return; 
+
         container.innerHTML = '<div class="loader-bar" style="margin:20px auto"></div>';
 
         try {
@@ -178,13 +201,12 @@ export class OperationsController {
 
         } catch (err) {
             console.error(err);
-            container.innerHTML = `<p class="error-text">فشل الاتصال بغرفة العمليات.</p>`;
+            if (container) container.innerHTML = `<p class="error-text">فشل الاتصال بغرفة العمليات.</p>`;
         }
     }
 
     /**
      * COMPONENT: Generates HTML for a Single Request Card.
-     * Uses color coding for different types.
      */
     renderMissionCard(req) {
         const isJoker = req.type === 'WANTED_JOKER';
@@ -194,16 +216,14 @@ export class OperationsController {
         // Theme Config
         const theme = {
             icon: isJoker ? 'fa-person-running' : (isRef ? 'fa-scale-balanced' : 'fa-hand-point-up'),
-            color: isJoker ? '#ef4444' : (isRef ? '#fbbf24' : '#10b981'), // Red, Yellow, Green
+            color: isJoker ? '#ef4444' : (isRef ? '#fbbf24' : '#10b981'),
             title: isJoker ? 'مهمة: لاعب جوكر' : (isRef ? 'مهمة: حكم ساحة' : 'عرض توفر'),
             btnText: isAvailable ? 'استدعاء للكابتن' : 'قبول المهمة'
         };
 
         // Time Formatting
         const timeStr = new Date(req.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
-        
-        // Determine Ownership (Is this MY request?)
-        const isMine = req.requester.username === state.getUser().username; // Better check IDs in prod
+        const isMine = req.requester.username === state.getUser().username; 
 
         return `
             <div class="ops-card" style="
@@ -242,7 +262,7 @@ export class OperationsController {
                 </div>
 
                 <!-- Action Button -->
-                ${!isMe ? `
+                ${!isMine ? `
                     <button class="btn-accept-req" data-id="${req.id}" style="
                         width:100%; padding:10px; border:none; border-radius:8px;
                         background: ${theme.color}; color: #000; font-weight:bold; cursor:pointer;
@@ -296,12 +316,10 @@ export class OperationsController {
                 </div>
             `);
 
-            // Close logic
             document.getElementById(modalId).addEventListener('click', (e) => {
                 if(e.target.id === modalId) document.getElementById(modalId).classList.add('hidden');
             });
 
-            // Bind Selections
             document.getElementById('btn-sel-joker').onclick = () => { document.getElementById(modalId).classList.add('hidden'); this.openPostModal('WANTED_JOKER'); };
             document.getElementById('btn-sel-ref').onclick = () => { document.getElementById(modalId).classList.add('hidden'); this.openPostModal('WANTED_REF'); };
             document.getElementById('btn-sel-ready').onclick = () => { document.getElementById(modalId).classList.add('hidden'); this.postAvailabilityFlow(); };
@@ -312,13 +330,11 @@ export class OperationsController {
 
     /**
      * Opens the Input Modal to Create a Request.
-     * Handles both 'WANTED_JOKER' and 'WANTED_REF'.
      */
     openPostModal(type) {
         const modalId = 'modal-ops-post';
         const title = type === 'WANTED_JOKER' ? 'طلب لاعب جوكر' : 'طلب حكم ساحة';
 
-        // 1. Build Modal if missing
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
@@ -356,24 +372,18 @@ export class OperationsController {
                 </div>
             `);
 
-            // Close Logic
             document.getElementById('btn-close-ops-post').onclick = () => {
                 document.getElementById(modalId).classList.add('hidden');
-                document.getElementById(modalId).remove(); // Cleanup DOM to reset state next time
+                document.getElementById(modalId).remove(); 
             };
         }
 
-        // 2. Adjust UI based on Type
         const posGroup = document.getElementById('group-ops-pos');
-        if (type === 'WANTED_REF') {
-            posGroup.style.display = 'none'; // Refs don't have positions
-        }
+        if (type === 'WANTED_REF') posGroup.style.display = 'none';
 
-        // 3. Show Modal
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
 
-        // 4. Bind Submit
         document.getElementById('form-ops-post').onsubmit = (e) => {
             e.preventDefault();
             this.handlePostSubmit(type, modalId);
@@ -389,7 +399,6 @@ export class OperationsController {
         const teams = document.getElementById('inp-ops-teams').value || 'مباراة ودية';
         const pos = type === 'WANTED_JOKER' ? document.getElementById('inp-ops-pos').value : 'REF';
 
-        // Validation
         if (!venue || !time) return alert("البيانات ناقصة.");
 
         const reqData = {
@@ -406,9 +415,10 @@ export class OperationsController {
             SoundManager.play('success');
             alert("تم النشر! سيصلك إشعار عند قبول الطلب.");
             
-            // Close & Refresh
             document.getElementById(modalId).classList.add('hidden');
             document.getElementById(modalId).remove();
+            
+            // Safe Reload
             this.loadFeed(state.getUser().zoneId);
 
         } catch (err) {
@@ -418,7 +428,7 @@ export class OperationsController {
     }
 
     /**
-     * Logic: Player Availability Flow (Simple)
+     * Logic: Player Availability Flow.
      */
     async postAvailabilityFlow() {
         const pos = prompt("ما هو مركزك المفضل؟");
@@ -427,7 +437,7 @@ export class OperationsController {
         try {
             await this.emergencyService.postAvailability(state.getUser().id, state.getUser().zoneId, pos);
             SoundManager.play('success');
-            alert("تم نشر حالتك! انتظر اتصالاً.");
+            alert("تم تسجيل حالتك! ستظهر الآن للكباتن.");
             this.loadFeed(state.getUser().zoneId);
         } catch(e) { 
             SoundManager.play('error');
@@ -441,7 +451,6 @@ export class OperationsController {
 
     /**
      * Logic: Accept a Request.
-     * Calls Service -> Updates UI -> Triggers Notification (Server side logic assumed).
      */
     async handleAccept(reqId) {
         if (!confirm("هل أنت متأكد من قبول هذه المهمة؟")) return;
@@ -461,7 +470,7 @@ export class OperationsController {
             
             alert("تم قبول المهمة! تواصل مع الكابتن الآن.");
             
-            // Full Refresh to be safe
+            // Safe refresh
             setTimeout(() => this.loadFeed(state.getUser().zoneId), 500);
 
         } catch (e) {
