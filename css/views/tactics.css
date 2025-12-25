@@ -1,56 +1,78 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/views/tactics.css
- * Version: Noub Sports_beta 2.5.0 (ENGINEERING MODE)
+ * Version: Noub Sports_beta 2.6.0 (FINAL ENGINEERING MASTER)
  * Status: Production Ready
  * 
  * DESCRIPTION:
- * Defines the "Drafting Table" layout with a Top Toolbar.
- * Implements precise rectangular pitch geometry suited for local pitches.
+ * The Master Stylesheet for the Tactics Board Module.
+ * 
+ * ARCHITECTURAL LAYERS:
+ * 1. Layout Container: Full-screen overlay with Z-Index management.
+ * 2. Control Hub: Top Toolbar with flexbox grouping.
+ * 3. Geometry Engine: CSS-based drawing of the pitch (Rectangular Model).
+ * 4. Asset Library: Styling for dynamic tokens (Players, Tools, Vectors).
  */
 
 /* =========================================
-   1. MAIN LAYOUT (Full Screen)
+   1. MAIN LAYOUT (Full Screen Overlay)
    ========================================= */
 #view-tactics {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    
+    /* Deep Black Background for Contrast */
     background-color: #0f1014;
+    
+    /* Highest Z-Index Layer */
     z-index: 5000;
-    display: flex; flex-direction: column;
+    
+    display: flex; 
+    flex-direction: column;
     animation: fadeIn 0.2s ease-out;
 }
 
 .tactics-wrapper {
-    display: flex; flex-direction: column;
+    display: flex; 
+    flex-direction: column;
     height: 100%;
-    padding: 0; /* Remove padding to maximize pitch area */
+    padding: 0; /* Zero padding to maximize pitch visibility */
     position: relative;
 }
 
 /* =========================================
    2. TOP TOOLBAR (The Control Hub)
    ========================================= */
-/* Container for all controls at the top */
+/* Main Container */
 .tactics-toolbar-container {
-    background: #1a1c23;
-    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    background: #1a1c23; /* Surface Color */
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2); /* Subtle Gold Line */
+    
+    /* Spacing & Safe Area */
     padding: 10px 15px;
-    padding-top: max(10px, env(safe-area-inset-top)); /* Notch support */
+    padding-top: max(10px, env(safe-area-inset-top)); 
+    height: 70px; /* Fixed Height for consistency */
+    
+    /* Layout */
     display: flex;
     justify-content: space-between;
     align-items: center;
+    
     box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-    z-index: 5002;
-    height: 70px; /* Fixed Height */
+    z-index: 5002; /* Above Pitch */
 }
 
-/* Grouping Controls */
+/* Button Groups */
 .toolbar-group {
-    display: flex; gap: 8px; align-items: center;
+    display: flex; 
+    gap: 8px; 
+    align-items: center;
 }
 
-/* Base Button Style (Compact & Pro) */
+/* Base Button Component */
 .tool-btn {
     width: 36px; height: 36px;
     border: 1px solid #333;
@@ -58,13 +80,20 @@
     color: #aaa;
     border-radius: 8px;
     cursor: pointer;
-    display: flex; justify-content: center; align-items: center;
+    
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    
     font-size: 0.9rem;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.tool-btn:active { transform: scale(0.95); }
 
-/* Active State (e.g. 5vs5 selected) */
+.tool-btn:active { 
+    transform: scale(0.95); 
+}
+
+/* Active / Selected State */
 .tool-btn.active {
     background: var(--gold-main);
     color: #000;
@@ -72,20 +101,30 @@
     box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
 }
 
-/* DELETE BUTTON (Context Aware) */
+/* Context Action: Delete (Red) */
 .tool-btn.btn-delete {
-    color: #ef4444; border-color: rgba(239, 68, 68, 0.3);
-    opacity: 0.5; cursor: not-allowed;
+    color: #ef4444; 
+    border-color: rgba(239, 68, 68, 0.3);
+    opacity: 0.5; 
+    cursor: not-allowed;
+    transition: opacity 0.2s;
 }
+
+/* Enabled State for Delete */
 .tool-btn.btn-delete.enabled {
-    opacity: 1; cursor: pointer;
+    opacity: 1; 
+    cursor: pointer;
     background: rgba(239, 68, 68, 0.1);
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 }
 
-/* CLOSE BUTTON */
+/* Close Button */
 .btn-close-board {
-    background: none; border: none; color: #fff; font-size: 1.2rem;
+    background: none; 
+    border: none; 
+    color: #fff; 
+    font-size: 1.2rem;
+    cursor: pointer;
 }
 
 /* =========================================
@@ -93,21 +132,27 @@
    ========================================= */
 .field-wrapper {
     flex: 1;
-    display: flex; justify-content: center; align-items: center;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
     padding: 10px;
     background: #0f1014;
     overflow: hidden;
 }
 
 .field-container {
-    width: 100%; height: 100%;
-    max-width: 600px; /* Constrain width on tablets */
+    width: 100%; 
+    height: 100%;
+    max-width: 600px; /* Maximize width on tablets */
     position: relative;
-    border: 4px solid rgba(255, 255, 255, 0.85); /* Touchlines */
-    border-radius: 4px; /* Sharp corners like real courts */
-    touch-action: none; /* Critical for dragging */
     
-    /* Pro Turf: Dark Green with Subtle Stripes */
+    /* Touchlines */
+    border: 4px solid rgba(255, 255, 255, 0.85); 
+    border-radius: 4px; /* Slight radius for aesthetic */
+    
+    touch-action: none; /* Disables browser scroll handling */
+    
+    /* Pro Turf: Dark Green with 40px Stripes */
     background: repeating-linear-gradient(
         0deg,
         #2e7d52,
@@ -115,41 +160,51 @@
         #256b44 40px,
         #256b44 80px
     );
-    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    box-shadow: 0 0 50px rgba(0,0,0,0.8); /* Vignette */
 }
 
-/* --- Pitch Markings (CSS Geometry) --- */
+/* --- Pitch Markings --- */
 
 /* 1. Center Line */
 .pitch-line.center-line {
-    position: absolute; top: 50%; left: 0; width: 100%; height: 2px;
-    background: rgba(255, 255, 255, 0.7); transform: translateY(-50%);
+    position: absolute; 
+    top: 50%; left: 0; 
+    width: 100%; height: 2px;
+    background: rgba(255, 255, 255, 0.7); 
+    transform: translateY(-50%);
     pointer-events: none;
 }
 
 /* 2. Center Circle */
 .pitch-circle {
-    position: absolute; top: 50%; left: 50%;
+    position: absolute; 
+    top: 50%; left: 50%;
     width: 90px; height: 90px;
     border: 2px solid rgba(255, 255, 255, 0.7);
     border-radius: 50%;
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
+
 .pitch-spot-center {
-    position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; 
-    background: #fff; border-radius: 50%; transform: translate(-50%, -50%);
+    position: absolute; 
+    top: 50%; left: 50%; 
+    width: 8px; height: 8px; 
+    background: #fff; 
+    border-radius: 50%; 
+    transform: translate(-50%, -50%);
     pointer-events: none;
 }
 
-/* 3. Penalty Areas (RECTANGULAR BOXES) */
-/* Standard Amateur Pitch: Rectangular box, no arcs */
+/* 3. Penalty Areas (Rectangular Box Model) */
 .penalty-box {
-    position: absolute; left: 50%; transform: translateX(-50%);
-    width: 60%; /* Proportional width */
-    height: 16%; /* Proportional depth (~10-12m) */
+    position: absolute; 
+    left: 50%; 
+    transform: translateX(-50%);
+    width: 60%; /* Proportional Width */
+    height: 16%; /* Proportional Depth */
     border: 2px solid rgba(255, 255, 255, 0.7);
-    background: rgba(255, 255, 255, 0.02); /* Very subtle tint */
+    background: rgba(255, 255, 255, 0.02); /* Tint */
     pointer-events: none;
 }
 
@@ -163,30 +218,41 @@
 
 /* 4. Penalty Spots */
 .penalty-spot {
-    position: absolute; left: 50%; transform: translateX(-50%);
-    width: 6px; height: 6px; background: #fff; border-radius: 50%;
+    position: absolute; 
+    left: 50%; 
+    transform: translateX(-50%);
+    width: 6px; height: 6px; 
+    background: #fff; 
+    border-radius: 50%;
     pointer-events: none;
 }
-.penalty-spot.top { top: 14%; } /* Inside the box */
+.penalty-spot.top { top: 14%; }
 .penalty-spot.bottom { bottom: 14%; }
 
-/* 5. Goal Nets (Trapezoid Projection) */
+/* 5. Goal Nets (Dynamic Mesh Projection) */
 .goal-net {
-    position: absolute; left: 50%; transform: translateX(-50%);
+    position: absolute; 
+    left: 50%; 
+    transform: translateX(-50%);
     width: 25%; height: 30px;
+    
     border: 2px solid rgba(255,255,255,0.6);
+    
     /* Crosshatch Pattern */
     background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 1px, transparent 1px, transparent 5px),
                       repeating-linear-gradient(-45deg, rgba(255,255,255,0.2) 1px, transparent 1px, transparent 5px);
-    z-index: 0;
+    z-index: 0; /* Below Players */
 }
 .goal-net.top { top: -32px; border-bottom: none; }
 .goal-net.bottom { bottom: -32px; border-top: none; }
 
 /* 6. Corner Arcs */
 .corner-arc {
-    position: absolute; width: 25px; height: 25px;
-    border: 2px solid rgba(255,255,255,0.7); border-radius: 50%; pointer-events: none;
+    position: absolute; 
+    width: 25px; height: 25px;
+    border: 2px solid rgba(255,255,255,0.7); 
+    border-radius: 50%; 
+    pointer-events: none;
 }
 .corner-arc.tl { top: -12.5px; left: -12.5px; }
 .corner-arc.tr { top: -12.5px; right: -12.5px; }
@@ -198,61 +264,105 @@
    4. ASSETS (Interactive Elements)
    ========================================= */
 
-/* Common Draggable */
+/* Base Draggable Component */
 .draggable-item {
-    position: absolute; z-index: 100; cursor: grab;
+    position: absolute; 
+    z-index: 100; 
+    cursor: grab;
     transition: transform 0.1s, box-shadow 0.2s;
     touch-action: none;
+    
+    /* Ensure Center Origin for Rotation */
+    transform-origin: center center;
 }
 
-/* SELECTION STATE (The Glow) */
+/* SELECTION HIGHLIGHT (Gold Halo) */
 .draggable-item.is-selected {
     z-index: 200;
     filter: brightness(1.2);
-    box-shadow: 0 0 0 2px #fff, 0 0 15px var(--gold-main); /* Gold Halo */
-}
-.draggable-item.is-selected::after {
-    /* Optional: Small indicator dot */
-    content: ''; position: absolute; top: -5px; right: -5px;
-    width: 8px; height: 8px; background: var(--danger); border-radius: 50%;
-    border: 1px solid #fff;
+    /* Outline ensures layout doesn't shift */
+    outline: 2px dashed var(--gold-main); 
+    outline-offset: 4px;
 }
 
-/* Players */
+/* --- A. PLAYERS (TOKENS) --- */
 .tactic-token {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 40px; height: 40px; 
+    border-radius: 50%;
     display: flex; justify-content: center; align-items: center;
     font-family: 'Orbitron'; font-weight: bold; font-size: 1.1rem;
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
-.token-gold { background: radial-gradient(#ffd700, #b8860b); border: 2px solid #fff; color: #332200; }
-.token-red { background: radial-gradient(#ff6b6b, #cc0000); border: 2px solid #fff; color: #fff; }
-.is-gk { border: 3px solid #000; }
 
-/* Tools */
+.token-gold { 
+    background: radial-gradient(#ffd700, #b8860b); 
+    border: 2px solid #fff; 
+    color: #332200; 
+}
+
+.token-red { 
+    background: radial-gradient(#ff6b6b, #cc0000); 
+    border: 2px solid #fff; 
+    color: #fff; 
+}
+
+/* Goalkeeper Distinction */
+.is-gk { 
+    border: 3px solid #000; 
+}
+
+/* --- B. TOOLS (CONE & BALL) --- */
 .tool-cone {
     width: 0; height: 0;
-    border-left: 10px solid transparent; border-right: 10px solid transparent;
+    border-left: 10px solid transparent; 
+    border-right: 10px solid transparent;
     border-bottom: 20px solid #ff9100;
     filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
 }
+
 .tool-ball {
-    width: 22px; height: 22px; background: #fff; border-radius: 50%;
+    width: 22px; height: 22px; 
     background: radial-gradient(circle at 30% 30%, #fff, #ddd 40%, #111 95%);
+    border-radius: 50%;
     box-shadow: 0 3px 6px rgba(0,0,0,0.4);
 }
 
-/* NEW: ARROW TOOL */
+/* --- C. ARROW TOOL (FIXED ROTATION) --- */
+/* Bounding Box */
 .tool-arrow {
-    width: 60px; height: 20px;
-    display: flex; align-items: center;
-    transform-origin: center;
+    width: 80px; height: 20px; 
+    display: flex; align-items: center; justify-content: center;
 }
-.arrow-shaft { flex: 1; height: 6px; background: #fff; border-radius: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+/* Structural Container */
+.arrow-container {
+    width: 100%; height: 100%; 
+    position: relative;
+    display: flex; align-items: center;
+}
+
+/* The Shaft */
+.arrow-shaft {
+    position: absolute;
+    left: 0;
+    top: 50%; 
+    transform: translateY(-50%);
+    width: calc(100% - 15px); /* Total width minus Head */
+    height: 6px; 
+    background: #fff; 
+    border-radius: 2px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* The Head */
 .arrow-head {
+    position: absolute;
+    right: 0; /* Anchored Right */
+    top: 50%; 
+    transform: translateY(-50%);
     width: 0; height: 0;
     border-top: 10px solid transparent;
     border-bottom: 10px solid transparent;
-    border-left: 15px solid #fff; /* Points Right by default */
+    border-left: 15px solid #fff; /* Triangle pointing Right */
     filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
 }
