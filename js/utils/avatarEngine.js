@@ -72,34 +72,16 @@ const AVATAR_CONFIG = {
         null,                  // 01. Clean
         'fa-glasses',          // 02. Glasses
         'fa-mask',             // 03. Mask
-        'fa-head-side-mask',   // 04. Medical
-        'fa-eye-slash',        // 05. Patch
-        'fa-user-secret',      // 06. Spy
-        'fa-mask-ventilator',  // 07. Bane Style
-        'fa-bandage',          // 08. Injured
-        'fa-microscope',       // 09. Scientist
         'fa-infinity',         // 10. Cyclops
-        'fa-video'             // 11. CCTV
     ],
 
     // LAYER 6: HEADGEAR / HAIR (Top of Head)
     HEAD_GEAR: [
         null,                  // 01. Shaved
         'fa-hat-cowboy',       // 02. Cowboy
-        'fa-hat-wizard',       // 03. Wizard
         'fa-graduation-cap',   // 04. Cap
         'fa-helmet-safety',    // 05. Helmet
         'fa-crown',            // 06. Crown
-        'fa-user-astronaut',   // 07. Astro
-        'fa-ribbon',           // 08. Ribbon
-        'fa-mitten',           // 09. Mohawk
-        'fa-user-graduate',    // 10. Student
-        'fa-user-doctor',      // 11. Doc
-        'fa-bell',             // 12. Bell
-        'fa-lightbulb',        // 13. Idea
-        'fa-cloud',            // 14. Cloud
-        'fa-sun',              // 15. Sun
-        'fa-headphones'        // 16. DJ
     ],
 
     // PRESET PALETTE (For Grid UI)
@@ -261,3 +243,4 @@ export class AvatarEngine {
         return AVATAR_CONFIG;
     }
 }
+
