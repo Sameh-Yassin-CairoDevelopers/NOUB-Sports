@@ -1,25 +1,27 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/arenaCtrl.js
- * Version: Noub Sports_beta 4.5.0 (GOLDEN MASTER)
+ * Version: Noub Sports_beta 5.0.0 (GOLDEN STANDARD)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
  * ARCHITECTURAL OVERVIEW:
  * -----------------------------------------------------------------------------
- * The "Arena" is the heart of the competitive experience. This controller manages
- * the live match feed, the press headlines engine, and the captain's match submission interface.
+ * The "Arena Controller" is the central hub for the competitive aspect of the application.
+ * It strictly adheres to the MVC (Model-View-Controller) pattern.
  * 
  * CORE RESPONSIBILITIES:
- * 1. Feed Management: Fetches live matches and renders them with AI-generated headlines.
- * 2. Captain's Tools: Provides the interface for creating matches, selecting lineups, 
- *    and recording scores (Write Access).
- * 3. Emergency Link: Acts as the gateway to the "Operations Room" (SOS) via a 
- *    dedicated deep-link button.
+ * 1. Read Operations (The Feed): Fetches match data and renders it using the 
+ *    "News Engine" format (Headlines & Articles).
+ * 2. Write Operations (The Captain's Console): Provides a secure interface for 
+ *    team captains to record match results and select lineups.
+ * 3. Navigation Bridge: Acts as the launchpad for the "Operations Room" via 
+ *    the emergency (SOS) button.
  * 
- * DESIGN PATTERN:
- * - Tabbed Interface: Swaps between "Feed" (Read) and "Create" (Write) views.
- * - Role-Based Rendering: Only Captains see the "Create" tab.
+ * [UPDATES IN V5.0.0]:
+ * - Removed legacy 'Emergency Modal' code (Refactored to OperationsController).
+ * - Implemented direct routing for the SOS button.
+ * - Restored full 'Create Match' form logic with Roster Grid.
  * -----------------------------------------------------------------------------
  */
 
@@ -33,64 +35,69 @@ export class ArenaController {
     
     /**
      * Constructor: Initializes services and internal state.
-     * Caches the main view container for performance.
+     * Caches the main view container for DOM manipulation performance.
      */
     constructor() {
-        // Data Services
+        // 1. Initialize Data Services
         this.matchService = new MatchService();
         this.teamService = new TeamService();
         
-        // DOM Reference
+        // 2. Cache DOM Container
         this.viewContainer = document.getElementById('view-arena');
         
-        // State Cache
-        this.myTeamData = null; // Stores team info if user is a Captain
-        this.roster = [];       // Stores team players for lineup selection
+        // 3. Initialize Internal State
+        this.myTeamData = null; // Stores team info if the user is a Captain
+        this.roster = [];       // Stores the list of team players for lineup selection
         
-        console.log("🏟️ ArenaController: Initialized & Ready.");
+        console.log("🏟️ ArenaController: Initialized & Ready (Standard Edition).");
     }
 
     /**
      * Main Initialization Logic.
      * Triggered by the App Router when accessing the Arena Tab.
+     * Executes the Auth Guard and Role Check sequences.
      */
     async init() {
         const currentUser = state.getUser();
         
-        // 1. Auth Guard
+        // A. Auth Guard: Prevent guest access
         if (!currentUser) {
-            this.viewContainer.innerHTML = `<div class="error-state">يجب تسجيل الدخول للوصول للساحة.</div>`;
+            this.viewContainer.innerHTML = `
+                <div class="error-state">
+                    <i class="fa-solid fa-lock" style="font-size:2rem; margin-bottom:10px;"></i>
+                    <p>يجب تسجيل الدخول للوصول للساحة.</p>
+                </div>`;
             return;
         }
 
-        // 2. Loading State
+        // B. Render Loading State
         this.viewContainer.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
 
         try {
-            // 3. Fetch Role & Team Data
-            // We need to know if the user is a Captain to show the "Create" tab.
+            // C. Role & Data Fetching
+            // We need to check if the user is a CAPTAIN to decide whether to show the "Create" tab.
             const myTeam = await this.teamService.getMyTeam(currentUser.id);
             const isCaptain = myTeam?.my_role === 'CAPTAIN';
 
             if (isCaptain) {
                 this.myTeamData = myTeam;
-                // Pre-fetch roster for the creation form
+                // Pre-fetch the roster to be ready for the Create Form
                 this.roster = await this.teamService.getTeamRoster(myTeam.id);
             }
 
-            // 4. Render Layout & Load Feed
+            // D. Render Layout & Load Initial Data
             this.renderLayout(isCaptain);
             await this.loadLiveFeed(currentUser.zoneId);
 
         } catch (err) {
             console.error("Arena Init Error:", err);
-            this.viewContainer.innerHTML = `<div class="error-state">حدث خطأ في تحميل بيانات الساحة.</div>`;
+            this.viewContainer.innerHTML = `<div class="error-state">حدث خطأ أثناء تحميل البيانات. يرجى المحاولة لاحقاً.</div>`;
         }
     }
 
     /**
-     * Renders the Static Layout (Tabs + Header).
-     * [CRITICAL UPDATE]: The SOS Button now redirects to 'view-operations' instead of opening a modal.
+     * Renders the Static Layout (Tabs + Header Controls).
+     * Establishes the structure for the view.
      * 
      * @param {boolean} isCaptain - Determines visibility of the "Create" tab.
      */
@@ -98,7 +105,7 @@ export class ArenaController {
         this.viewContainer.innerHTML = `
             <div class="arena-container fade-in">
                 
-                <!-- HEADER ROW: Tabs + SOS Action -->
+                <!-- HEADER ROW: Navigation Tabs + SOS Action -->
                 <div style="display:flex; gap:10px; margin-bottom:15px; align-items:center;">
                     
                     <!-- Tabs Navigation -->
@@ -114,6 +121,7 @@ export class ArenaController {
                     </div>
                     
                     <!-- SOS BUTTON (Gateway to Operations Room) -->
+                    <!-- This button redirects to the dedicated Operations View -->
                     <button id="btn-sos" style="
                         background: rgba(239, 68, 68, 0.15); 
                         border: 1px solid #ef4444; 
@@ -129,6 +137,7 @@ export class ArenaController {
                 </div>
 
                 <!-- DYNAMIC CONTENT CONTAINER -->
+                <!-- This area is repainted based on the active tab -->
                 <div id="arena-content"></div>
             </div>
         `;
@@ -151,32 +160,33 @@ export class ArenaController {
             });
         });
 
-        // [FIXED] Bind SOS Button to Router
+        // Bind SOS Button to Router (Deep Linking)
         document.getElementById('btn-sos').onclick = () => {
             SoundManager.play('notify');
-            // Navigate to the dedicated Operations View
+            // Navigate to the full Operations Page
             window.router('view-operations');
         };
     }
 
     /* =========================================================================
-       SECTION 1: THE MATCH FEED (PRESS ENGINE)
+       SECTION 1: THE MATCH FEED (PRESS ENGINE INTEGRATION)
        ========================================================================= */
 
     /**
      * Loads the live match feed for the user's zone.
-     * Renders match cards with AI-generated headlines from 'match_data'.
+     * Renders match cards with AI-generated headlines fetched from 'match_data'.
      * 
-     * @param {number} zoneId - The Zone ID to filter matches.
+     * @param {number} zoneId - The Zone ID to filter matches by.
      */
     async loadLiveFeed(zoneId) {
         const container = document.getElementById('arena-content');
         container.innerHTML = '<div class="loader-bar" style="margin:20px auto"></div>';
         
         try {
+            // Fetch data from Service
             const matches = await this.matchService.getLiveFeed(zoneId);
             
-            // Empty State
+            // Empty State Handling
             if (!matches.length) { 
                 container.innerHTML = `
                     <div class="empty-state">
@@ -186,14 +196,15 @@ export class ArenaController {
                 return; 
             }
 
-            // Map Data to HTML
+            // Map Data to HTML Components
             container.innerHTML = matches.map(m => {
                 // Extract Press Data (Headline & Body)
+                // Note: 'match_data' is a JSONB column containing the generated news.
                 const headline = m.match_data?.headline || "مباراة قوية في المنطقة";
                 const isConfirmed = m.status === 'CONFIRMED';
                 const date = Helpers.formatDate(new Date(m.played_at));
                 
-                // Encode object for Modal interaction
+                // Safe Encode object for Modal interaction to avoid quote breaking
                 const matchSafe = encodeURIComponent(JSON.stringify(m));
 
                 return `
@@ -210,7 +221,7 @@ export class ArenaController {
                         </div>
                     </div>
 
-                    <!-- Scoreboard -->
+                    <!-- Scoreboard Component -->
                     <div class="scoreboard">
                         <div class="sb-team">
                             <div class="sb-logo" style="background:${m.team_a?.logo_dna?.primary || '#333'}"></div>
@@ -225,6 +236,7 @@ export class ArenaController {
                         </div>
                     </div>
                     
+                    <!-- Status Badge -->
                     ${isConfirmed ? 
                         `<div class="match-status status-confirmed">خبر رسمي</div>` : 
                         `<div class="match-status status-pending">في انتظار التوثيق</div>`
@@ -232,8 +244,8 @@ export class ArenaController {
                 </div>`;
             }).join('');
 
-            // Global Handler for opening details
-            // Defined on window to be accessible from innerHTML onclick
+            // Global Handler for opening match details (Press Report)
+            // Attached to window to be accessible from the innerHTML string
             window.openMatchDetails = (dataStr) => {
                 const match = JSON.parse(decodeURIComponent(dataStr));
                 this.showMatchReportModal(match);
@@ -241,19 +253,21 @@ export class ArenaController {
 
         } catch (e) {
             console.error(e);
-            container.innerHTML = '<p class="error-text">فشل تحميل الأخبار.</p>';
+            container.innerHTML = '<p class="error-text">فشل تحميل الأخبار. يرجى التحقق من الشبكة.</p>';
         }
     }
 
     /**
      * Shows the "Match Report" Modal (The Press Article).
      * Displays the full narrative body text generated by NewsEngine.
+     * 
+     * @param {Object} match - The full match data object.
      */
     showMatchReportModal(match) {
         SoundManager.play('click');
         const modalId = 'modal-match-report';
         
-        // Lazy Load Modal DOM
+        // Lazy Load Modal DOM (Singleton Pattern)
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
@@ -271,7 +285,7 @@ export class ArenaController {
         modal.classList.remove('hidden');
         const content = document.getElementById('match-report-content');
 
-        const bodyText = match.match_data?.body || "لا توجد تفاصيل إضافية.";
+        const bodyText = match.match_data?.body || "لا توجد تفاصيل إضافية لهذا الخبر.";
 
         content.innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
@@ -290,12 +304,13 @@ export class ArenaController {
     }
 
     /* =========================================================================
-       SECTION 2: CREATE MATCH FORM (CAPTAIN ONLY)
+       SECTION 2: CREATE MATCH FORM (CAPTAIN'S CONSOLE)
        ========================================================================= */
 
     /**
      * Renders the Match Creation Form.
-     * Fetches Opponents and Venues dynamically.
+     * Dynamically fetches Opponents and Venues to populate dropdowns.
+     * Renders the "Roster Grid" for lineup selection.
      */
     async renderCreateForm() {
         const container = document.getElementById('arena-content');
@@ -304,7 +319,7 @@ export class ArenaController {
         try {
             const user = state.getUser();
             
-            // Parallel Fetch for efficiency
+            // Parallel Fetch for efficiency (Opponents & Venues)
             const [opponents, venues] = await Promise.all([
                 this.matchService.getOpponents(user.zoneId, this.myTeamData.id),
                 this.matchService.getVenues(user.zoneId)
@@ -312,7 +327,7 @@ export class ArenaController {
 
             container.innerHTML = `
                 <div class="match-form-box fade-in">
-                    <h3 style="color:var(--gold-main); text-align:center;">تسجيل صافرة النهاية</h3>
+                    <h3 style="color:var(--gold-main); text-align:center; margin-bottom:20px;">تسجيل صافرة النهاية</h3>
                     <form id="form-match">
                         
                         <!-- Opponent Selection -->
@@ -333,22 +348,31 @@ export class ArenaController {
                             </select>
                         </div>
 
-                        <!-- Score Input -->
-                        <div class="score-inputs">
-                            <div class="si-box"><label>نحن</label><input type="number" id="inp-score-my" value="0" min="0"></div>
-                            <div class="si-box"><label>هم</label><input type="number" id="inp-score-opp" value="0" min="0"></div>
+                        <!-- Score Inputs -->
+                        <div class="score-inputs" style="display:flex; gap:15px; margin-bottom:20px;">
+                            <div class="si-box" style="flex:1;">
+                                <label>نحن</label>
+                                <input type="number" id="inp-score-my" value="0" min="0" style="text-align:center;">
+                            </div>
+                            <div class="si-box" style="flex:1;">
+                                <label>هم</label>
+                                <input type="number" id="inp-score-opp" value="0" min="0" style="text-align:center;">
+                            </div>
                         </div>
 
-                        <!-- Lineup Selector (Checkboxes) -->
+                        <!-- Lineup Selector (Roster Grid) -->
                         <div class="form-group">
-                            <label>التشكيلة الأساسية</label>
-                            <div class="roster-grid">
+                            <label>التشكيلة الأساسية (من لعب؟)</label>
+                            <div class="roster-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; max-height:200px; overflow-y:auto; padding:10px; background:var(--bg-input); border-radius:12px;">
                                 ${this.roster.map(p => `
-                                    <label class="player-chk">
-                                        <input type="checkbox" name="lineup" value="${p.userId}">
-                                        <span class="chk-box">${p.name}</span>
+                                    <label class="player-chk" style="position:relative; cursor:pointer;">
+                                        <input type="checkbox" name="lineup" value="${p.userId}" style="position:absolute; opacity:0;">
+                                        <span class="chk-box" style="display:block; padding:10px; background:#222; border:1px solid #333; border-radius:8px; text-align:center; font-size:0.85rem;">
+                                            ${p.name}
+                                        </span>
                                     </label>`).join('')}
                             </div>
+                            <!-- Inline CSS for Checkbox Selection logic is handled globally in main.css (.player-chk input:checked + span) -->
                         </div>
 
                         <button type="submit" class="btn-primary" id="btn-submit-match">إرسال النتيجة</button>
@@ -366,7 +390,9 @@ export class ArenaController {
 
     /**
      * Logic: Handle Match Submission.
-     * Validates input, constructs payload, and calls Service.
+     * Validates input, constructs payload, executes transaction via Service.
+     * 
+     * @param {Event} e - Form Submit Event.
      */
     async handleSubmit(e) {
         e.preventDefault();
@@ -374,11 +400,11 @@ export class ArenaController {
         btn.disabled = true; 
         btn.textContent = "جاري صياغة الخبر...";
         
-        // 1. Get Selected Opponent Name (Needed for News Engine text generation)
+        // 1. Get Selected Opponent Name (Required for News Engine text generation)
         const oppSelect = document.getElementById('inp-opp');
         const oppName = oppSelect.options[oppSelect.selectedIndex].text;
 
-        // 2. Construct Payload
+        // 2. Construct Data Payload
         const payload = {
             creatorId: state.getUser().id,
             myTeamId: this.myTeamData.id,
@@ -388,11 +414,12 @@ export class ArenaController {
             venueId: parseInt(document.getElementById('inp-venue').value),
             myScore: parseInt(document.getElementById('inp-score-my').value),
             oppScore: parseInt(document.getElementById('inp-score-opp').value),
+            // Map checked boxes to user IDs
             lineup: Array.from(document.querySelectorAll('input[name="lineup"]:checked')).map(cb => cb.value),
-            scorers: [] // Future: Add scorers selection logic
+            scorers: [] // Reserved for future Scorers logic
         };
 
-        // 3. Validation: Minimum 5 players
+        // 3. Validation: Minimum 5 players warning
         if (payload.lineup.length < 5) {
             if(!confirm("لقد اخترت أقل من 5 لاعبين في التشكيلة. هل تريد المتابعة؟")) {
                 btn.disabled = false; 
@@ -405,13 +432,13 @@ export class ArenaController {
             // 4. Validate Constraints (Weekly cap, Time buffer)
             await this.matchService.validateMatchConstraints(payload.myTeamId);
             
-            // 5. Submit Transaction
+            // 5. Submit Transaction (This triggers News Generation in Service)
             await this.matchService.submitMatch(payload);
             
             SoundManager.play('success');
             alert("تم تسجيل النتيجة! الخبر الآن قيد المراجعة لدى الكابتن الخصم.");
             
-            // 6. Refresh Feed & Switch Tab
+            // 6. Refresh Feed & Switch back to Feed Tab
             this.loadLiveFeed(state.getUser().zoneId);
             this.viewContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             this.viewContainer.querySelector('[data-tab="feed"]').classList.add('active');
