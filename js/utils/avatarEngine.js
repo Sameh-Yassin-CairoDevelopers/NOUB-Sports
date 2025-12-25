@@ -1,7 +1,7 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/utils/avatarEngine.js
- * Version: 9.0.0 (GEOMETRIC PERFECTION & SCALING FIX)
+ * Version: 10.0.0 (NECK & SHOULDER CORRECTION)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
@@ -10,22 +10,20 @@
  * The Core Visual Rendering Engine.
  * Responsible for generating the player's visual identity using vector composition.
  * 
- * ENGINEERING REPORT (V9.0):
- * 1. Global Downscaling (-15%):
- *    - All elements resized to fit comfortably within the container without clipping.
- *    - Solves the "Cut-off Hat" and "Overflowing Shirt" issues.
+ * GEOMETRY CORRECTION REPORT (V10.0):
+ * 1. The "Sunken Head" Fix:
+ *    - Lifted Body Base (Head/Neck) by +25px (from 45px to 70px).
+ *    - Lowered Shirt Anchor by -10px (from -15px to -25px) to reveal the neck.
+ *    - Result: A clear separation between chin and collar.
  * 
- * 2. Anatomical Correction:
- *    - Head (Body) elevated relative to the Shirt to fix the "Sunken Head" look.
- *    - Neck base is now clearly visible above the collar.
+ * 2. Accessory Re-alignment:
+ *    - Eyes/Masks lifted to 'bottom: 118px' to match new head height.
+ *    - Hats/Hair lifted to 'bottom: 155px' to sit on top of the raised head.
+ *    - Badge lifted to 'bottom: 75px' to stay on the chest area.
  * 
- * 3. Badge Positioning:
- *    - X-Axis Offset reduced (35px -> 22px) to keep the badge centered on the pectoral muscle.
- *    - Prevents the badge from floating outside the shirt boundary.
- * 
- * 4. Data Support:
- *    - Supports Hex Color Strings for Kits.
- *    - Supports Curated Icon Sets for realistic representation.
+ * 3. Asset Persistence:
+ *    - Retained the massive library of icons (4x expansion) from previous updates.
+ *    - Kept Transparent Background logic.
  * -----------------------------------------------------------------------------
  */
 
@@ -85,7 +83,6 @@ const AVATAR_CONFIG = {
     ],
 
     // LAYER 6: HEADGEAR / HAIR (Top of Head)
-    // Only items that sit ON TOP of the head ball.
     HEAD_GEAR: [
         null,                  // 01. Shaved
         'fa-hat-cowboy',       // 02. Cowboy
@@ -105,7 +102,7 @@ const AVATAR_CONFIG = {
         'fa-headphones'        // 16. DJ
     ],
 
-    // PRESET PALETTE (For UI Grid Defaults)
+    // PRESET PALETTE (For Grid UI)
     KITS: [
         '#3b82f6', // Blue
         '#ef4444', // Red
@@ -132,16 +129,12 @@ export class AvatarEngine {
     /**
      * STATIC GENERATOR: The Anatomical Renderer.
      * 
-     * REVISED GEOMETRY (V9.0):
-     * - Shirt Width: Reduced to 150px (was 170px) -> Fits better inside container.
-     * - Body Size: Reduced to 95px (was 110px) -> Proportionate to new shirt.
-     * - Hat Size: Reduced to 65px (was 76px) -> Prevents clipping at top.
-     * 
-     * - Vertical Positioning (Y-Axis):
-     *   - Shirt Bottom: -15px (Shows torso base).
-     *   - Body Bottom: 45px (Neck connects to collar).
-     *   - Eyes (Accessory): 90px (Aligned with head).
-     *   - Hat: 125px (Sits firmly on head).
+     * ADJUSTED GEOMETRY (V10.0):
+     * - Body Base: Lifted to bottom:70px (was 45px) -> MAJOR FIX
+     * - Shirt: Lowered to bottom:-25px (was -15px) -> Creates neck space
+     * - Face: Lifted to bottom:118px
+     * - Hat: Lifted to bottom:155px
+     * - Badge: Lifted to bottom:75px
      * 
      * @param {Object} visualDna - { kit, logo, face, hair }
      * @param {string} shirtName - Player Name
@@ -159,7 +152,6 @@ export class AvatarEngine {
         const skinColor = AVATAR_CONFIG.FIXED_SKIN;
 
         // 3. HTML Composition
-        // Container uses transparent background to blend with Cards/Modals
         return `
             <div class="avatar-comp" style="
                 position: relative; 
@@ -174,46 +166,48 @@ export class AvatarEngine {
             ">
                 
                 <!-- LAYER 1: BODY (Head & Neck) -->
+                <!-- LIFTED UP SIGNIFICANTLY (+25px) -->
                 <i class="fa-solid fa-user" style="
                     font-size: 95px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 45px; 
+                    bottom: 70px; 
                     z-index: 1;
-                    filter: drop-shadow(0 3px 5px rgba(0,0,0,0.4));
+                    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
                 <!-- LAYER 2: FACE ACCESSORY (Eyes) -->
+                <!-- Aligned with new head height -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
                     font-size: 38px;
                     color: #222; 
                     position: absolute;
-                    bottom: 90px; /* Aligned with scaled-down head */
+                    bottom: 118px; 
                     z-index: 2;
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
                 <!-- LAYER 3: THE SHIRT (Kit) -->
-                <!-- Scaled down to 150px to prevent overflow -->
+                <!-- Lowered slightly to expose neck -->
                 <i class="fa-solid fa-shirt" style="
                     font-size: 150px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -15px; 
+                    bottom: -25px; 
                     z-index: 3;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
                 <!-- LAYER 4: CHEST BADGE (Logo) -->
-                <!-- Adjusted Margin-Left (22px) to keep it on the shirt -->
+                <!-- Lifted to match new shirt height -->
                 ${logoIcon ? `
                 <div style="
                     position: absolute;
-                    bottom: 50px;
+                    bottom: 75px;
                     left: 50%;
-                    margin-left: 22px; /* Precision offset for Heart Side */
+                    margin-left: 22px; 
                     z-index: 4;
                     width: 24px; height: 24px;
                     display: flex; justify-content: center; align-items: center;
@@ -229,7 +223,7 @@ export class AvatarEngine {
                 <!-- LAYER 5: BRANDING (Name) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 30px; 
+                    bottom: 25px; 
                     z-index: 5;
                     color: rgba(255,255,255,0.85); 
                     font-family: 'Orbitron', sans-serif; 
@@ -244,14 +238,14 @@ export class AvatarEngine {
                 </div>
 
                 <!-- LAYER 6: HEADGEAR (Hat) -->
-                <!-- Scaled down to 65px to avoid top-clipping -->
+                <!-- Lifted to sit on top of the head -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
                     font-size: 65px;
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 125px; /* Sits firmly on the 95px head */
+                    bottom: 155px; 
                     z-index: 6;
                 "></i>
                 ` : ''}
@@ -262,7 +256,6 @@ export class AvatarEngine {
 
     /**
      * CONFIG EXPORTER:
-     * Provides asset arrays to the UI Controllers.
      */
     static getConfig() {
         return AVATAR_CONFIG;
