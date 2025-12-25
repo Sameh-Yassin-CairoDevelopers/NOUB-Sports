@@ -1,7 +1,7 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/profileCtrl.js
- * Version: Noub Sports_beta 5.0.0 (PRO DRESSING ROOM)
+ * Version: Noub Sports_beta 5.0.0 (PRO DRESSING ROOM - FULL)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
@@ -9,7 +9,7 @@
  * -----------------------------------------------------------------------------
  * This controller manages the "Dressing Room" (Visual Editor) logic.
  * It moves away from linear "Next/Prev" controls to a modern "Palette Selection"
- * interface using Tabs and Grids.
+ * interface using Tabs and Grids, providing a premium user experience.
  * 
  * CORE RESPONSIBILITIES:
  * 1. UI Rendering: Dynamically builds the Modal DOM with a Tabbed Interface.
@@ -17,6 +17,7 @@
  * 3. Palette Generation: Fetches asset arrays from AvatarEngine and renders
  *    interactive selection grids (Color pickers, Icon grids).
  * 4. Persistence: Saves the visual DNA to Supabase and updates the local Singleton.
+ * 5. Export: Handles the logic for taking a snapshot (CV) of the player card.
  * -----------------------------------------------------------------------------
  */
 
@@ -38,6 +39,7 @@ export class ProfileController {
         
         // Internal State: Holds visual changes before "Save"
         // Structure matches AvatarEngine schema
+        // bg: Background Style, kit: Shirt Color, face: Face Accessory, hair: Headgear
         this.tempVisual = { bg: 1, kit: 1, face: 1, hair: 1 };
         
         // Active Tab State (Default: Kits)
@@ -57,8 +59,12 @@ export class ProfileController {
         if (!user) return;
 
         // 1. Hydrate Temp State
+        // Ensure we parse the JSONB if it comes as a string from DB
         if (user.visualDna) {
             this.tempVisual = typeof user.visualDna === 'string' ? JSON.parse(user.visualDna) : user.visualDna;
+        } else {
+            // Fallback default
+            this.tempVisual = { bg: 1, kit: 1, face: 1, hair: 1 };
         }
 
         const modalId = 'modal-profile-edit';
@@ -74,13 +80,15 @@ export class ProfileController {
 
         // 4. Initial Render
         this.updateEditorPreview(user.username);
-        this.renderActivePalette(); // Render the grid for the default tab
+        this.renderActivePalette(user.username); // Render the grid for the default tab
         this.bindEvents(user.username);
     }
 
     /**
      * Helper: Injects the HTML structure.
-     * Defines the "Glass Dashboard" layout with Tabs.
+     * Defines the "Glass Dashboard" layout with Tabs and large Preview Area.
+     * 
+     * @param {string} modalId - The unique ID for the modal container.
      */
     buildModalDOM(modalId) {
         document.body.insertAdjacentHTML('beforeend', `
@@ -94,21 +102,24 @@ export class ProfileController {
                     </div>
                     
                     <!-- A. Visual Preview Box (Larger & Cleaner) -->
+                    <!-- This container hosts the live-updated Avatar -->
                     <div class="avatar-studio" style="
                         margin-bottom: 20px; 
                         background: #000; 
                         border: 2px solid #333; 
                         border-radius: 16px; 
                         overflow: hidden;
-                        height: 280px; /* Increased Height */
+                        height: 280px; /* Increased Height for full scaling */
                         box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+                        display: flex; justify-content: center; align-items: center;
                     ">
                         <div id="edit-avatar-display" style="width:100%; height:100%;">
-                            <!-- Avatar HTML injected here -->
+                            <!-- Avatar HTML injected here dynamically -->
                         </div>
                     </div>
 
                     <!-- B. Control Tabs (Icons) -->
+                    <!-- Navigation for different customization categories -->
                     <div class="editor-tabs" style="display:flex; justify-content:space-around; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:8px; border-radius:12px;">
                         <button class="tab-icon active" data-target="kit" title="الزي">
                             <i class="fa-solid fa-shirt"></i>
@@ -125,6 +136,7 @@ export class ProfileController {
                     </div>
 
                     <!-- C. Palette Grid (Dynamic Content) -->
+                    <!-- This area is repopulated based on the active tab -->
                     <div id="editor-palette-container" style="
                         height: 140px; 
                         overflow-y: auto; 
@@ -133,12 +145,12 @@ export class ProfileController {
                         border-radius: 12px;
                         padding: 10px;
                     ">
-                        <!-- Grid items injected here based on Tab -->
+                        <!-- Grid items (buttons) injected here via JS -->
                     </div>
 
                     <!-- D. Actions Footer -->
                     <div style="display:flex; gap:10px;">
-                        <button id="btn-save-look" class="btn-primary" style="flex:2; font-size:1rem;">
+                        <button id="btn-save-look" class="btn-primary" style="flex:2; font-size:1rem; margin-top:0;">
                             <i class="fa-solid fa-check"></i> حفظ المظهر
                         </button>
                         <button id="btn-download-cv" class="btn-action-secondary" style="flex:1; justify-content:center; border-color:#fff; color:#fff;">
@@ -153,7 +165,7 @@ export class ProfileController {
             </div>
         `);
 
-        // Close Logic
+        // Close Logic Binding
         const close = () => document.getElementById(modalId).classList.add('hidden');
         document.getElementById('btn-close-edit').onclick = close;
         document.getElementById('btn-cancel-edit').onclick = close;
@@ -161,6 +173,9 @@ export class ProfileController {
 
     /**
      * Binds interactions for the Tab System and Action Buttons.
+     * Ensures click events are not duplicated.
+     * 
+     * @param {string} username - Used for live preview rendering.
      */
     bindEvents(username) {
         // Tab Switching Logic
@@ -168,41 +183,45 @@ export class ProfileController {
         tabs.forEach(btn => {
             btn.onclick = (e) => {
                 SoundManager.play('click');
-                // UI Toggle
+                // UI Toggle: Reset all tabs to dim state
                 tabs.forEach(t => {
                     t.style.color = '#777'; 
                     t.style.background = 'transparent';
                 });
-                // Highlight Active
-                const target = e.currentTarget; // Safer than e.target for icons
+                
+                // Highlight Active Tab
+                const target = e.currentTarget; 
                 target.style.color = 'var(--gold-main)';
                 target.style.background = 'rgba(212,175,55,0.1)';
                 
+                // Update State and Render Grid
                 this.activeTab = target.dataset.target;
                 this.renderActivePalette(username);
             };
         });
 
-        // Set Initial Active Tab Style
+        // Force click the active tab to set initial visual state
         const initialTab = document.querySelector(`.tab-icon[data-target="${this.activeTab}"]`);
         if(initialTab) initialTab.click();
 
-        // Save & Snapshot
+        // Bind Action Buttons
         document.getElementById('btn-save-look').onclick = () => this.handleSave();
         document.getElementById('btn-download-cv').onclick = () => this.handleDownloadCV();
     }
 
     /**
      * CORE LOGIC: Renders the selection grid based on the active tab.
-     * Fetches config directly from AvatarEngine static config.
+     * Fetches configuration directly from AvatarEngine static config.
+     * 
+     * @param {string} username - Passed to preview update for immediate feedback.
      */
     renderActivePalette(username) {
         const container = document.getElementById('editor-palette-container');
-        const config = AvatarEngine.getConfig(); // Fetch Arrays
+        const config = AvatarEngine.getConfig(); // Fetch Arrays from Engine
         
-        container.innerHTML = ''; // Clear previous
+        container.innerHTML = ''; // Clear previous grid
         
-        // Define Grid Style
+        // Define Grid Style dynamically
         container.style.display = 'grid';
         container.style.gridTemplateColumns = 'repeat(4, 1fr)';
         container.style.gap = '10px';
@@ -216,28 +235,29 @@ export class ProfileController {
         else if (type === 'face') items = config.FACE_GEAR;
         else if (type === 'hair') items = config.HEAD_GEAR;
 
-        // Generate Buttons
+        // Generate Buttons Loop
         items.forEach((item, index) => {
             const btn = document.createElement('button');
-            const logicalIndex = index + 1; // 1-based for storage
+            const logicalIndex = index + 1; // 1-based index for DB storage
             const isActive = this.tempVisual[type] === logicalIndex;
 
             // Common Styling
             btn.style.width = '100%';
             btn.style.aspectRatio = '1/1';
             btn.style.borderRadius = '10px';
-            btn.style.border = isActive ? '2px solid #fff' : '1px solid #444';
+            btn.style.border = isActive ? '2px solid #fff' : '1px solid #444'; // Highlight Selection
             btn.style.cursor = 'pointer';
             btn.style.display = 'flex';
             btn.style.justifyContent = 'center';
             btn.style.alignItems = 'center';
             btn.style.fontSize = '1.2rem';
+            btn.style.position = 'relative';
             
-            // Type-Specific Styling
+            // Type-Specific Styling & Content
             if (type === 'kit') {
                 btn.style.background = item;
                 // Add tiny shirt icon for contrast
-                btn.innerHTML = `<i class="fa-solid fa-shirt" style="color:rgba(0,0,0,0.3); font-size:0.8rem;"></i>`;
+                btn.innerHTML = `<i class="fa-solid fa-shirt" style="color:rgba(0,0,0,0.3); font-size:0.9rem;"></i>`;
             
             } else if (type === 'bg') {
                 btn.style.background = item;
@@ -248,16 +268,21 @@ export class ProfileController {
                 if (item) {
                     btn.innerHTML = `<i class="fa-solid ${item}"></i>`;
                 } else {
-                    btn.innerHTML = `<i class="fa-solid fa-ban" style="font-size:0.8rem;"></i>`; // "None" option
+                    // "None" option (Empty slot)
+                    btn.innerHTML = `<i class="fa-solid fa-ban" style="font-size:0.8rem; opacity:0.5;"></i>`; 
                 }
             }
 
-            // Click Handler (Immediate Preview)
+            // Click Handler (Immediate Preview Update)
             btn.onclick = () => {
                 SoundManager.play('click');
                 this.tempVisual[type] = logicalIndex;
+                
+                // Update Preview
                 this.updateEditorPreview(username);
-                this.renderActivePalette(username); // Re-render to update active border
+                
+                // Re-render Palette to update the active border highlight
+                this.renderActivePalette(username); 
             };
 
             container.appendChild(btn);
@@ -265,7 +290,9 @@ export class ProfileController {
     }
 
     /**
-     * Updates the preview box using the Engine.
+     * Updates the preview box HTML using the AvatarEngine.
+     * 
+     * @param {string} username - Name to appear on shirt.
      */
     updateEditorPreview(username) {
         const container = document.getElementById('edit-avatar-display');
@@ -275,17 +302,20 @@ export class ProfileController {
     }
 
     /**
-     * TRANSACTION: Save Changes
+     * TRANSACTION: Save Changes.
+     * Updates Supabase 'cards' table and local State Manager.
      */
     async handleSave() {
         const btn = document.getElementById('btn-save-look');
+        const originalText = btn.innerHTML;
+        
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
 
         try {
             const user = state.getUser();
             
-            // 1. Update Database
+            // 1. Update Database (Targeting GENESIS card only)
             const { error } = await supabase
                 .from('cards')
                 .update({ visual_dna: this.tempVisual })
@@ -294,46 +324,59 @@ export class ProfileController {
 
             if (error) throw error;
 
-            // 2. Update Local State
+            // 2. Update Local State (Crucial for immediate consistency)
             const updatedUser = { ...user, visualDna: this.tempVisual };
             state.setUser(updatedUser);
 
             SoundManager.play('success');
-            window.location.reload(); // Hard Refresh to apply everywhere
+            
+            // 3. Force Reload to reflect changes globally
+            window.location.reload(); 
 
         } catch (err) {
             SoundManager.play('error');
             alert("فشل الحفظ: " + err.message);
             btn.disabled = false;
-            btn.textContent = "حفظ المظهر";
+            btn.innerHTML = originalText;
         }
     }
 
     /**
-     * LOGIC: Snapshot (CV)
+     * LOGIC: Snapshot (CV Generation).
+     * Temporarily hides the modal to reveal the underlying Card, takes a snapshot,
+     * then restores the modal.
      */
     async handleDownloadCV() {
-        // ... (Logic remains same: Hide modal, snap card, show modal)
-        // Re-using previous logic but ensuring it targets the new layout if needed
         const modal = document.getElementById('modal-profile-edit');
         const cardElement = document.getElementById('my-player-card'); // Element on Home Screen
 
         if (!cardElement) {
-            alert("يرجى العودة للصفحة الرئيسية لتصوير الكارت.");
+            alert("يرجى العودة للصفحة الرئيسية (هويتي) لتتمكن من تصوير الكارت.");
             return;
         }
 
+        // 1. Hide Modal temporarily to reveal the card
         modal.classList.add('hidden');
-        SoundManager.play('success');
         
+        // 2. Play Sound (Camera Shutter)
+        SoundManager.play('success'); 
+        
+        // 3. Wait 300ms for UI transition to finish, then snap
         setTimeout(async () => {
             try {
+                // Generate filename with timestamp
                 const filename = `noub-cv-${Date.now()}.png`;
+                
+                // Call Utility to export
                 await CVGenerator.downloadCV('my-player-card', filename);
+                
+                // 4. Show Modal again after capture
                 modal.classList.remove('hidden');
+                
             } catch (e) {
-                alert("خطأ في التصوير.");
-                modal.classList.remove('hidden');
+                console.error("CV Generation Error:", e);
+                alert("حدث خطأ أثناء التصوير.");
+                modal.classList.remove('hidden'); // Restore modal even on error
             }
         }, 300);
     }
