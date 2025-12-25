@@ -1,22 +1,22 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/profileCtrl.js
- * Version: Noub Sports_beta 0.0.6 (VISUAL CONTROL)
+ * Version: Noub Sports_beta 5.0.0 (PRO DRESSING ROOM)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
  * ARCHITECTURAL OVERVIEW:
  * -----------------------------------------------------------------------------
- * This controller manages the "Dressing Room" (Visual Editor) and User Settings.
- * It operates primarily via a Modal Overlay to maintain context.
+ * This controller manages the "Dressing Room" (Visual Editor) logic.
+ * It moves away from linear "Next/Prev" controls to a modern "Palette Selection"
+ * interface using Tabs and Grids.
  * 
  * CORE RESPONSIBILITIES:
- * 1. Visual Editor Logic: Manages temporary state for Avatar DNA (Skin, Kit, Hair)
- *    before committing to the database.
- * 2. Persistence Layer: Updates the 'cards' table in Supabase and synchronizes
- *    the Singleton State.
- * 3. Export Utility: Bridges the UI with CVGenerator to create downloadable images.
- * 4. Session Management: Handles the secure Logout process.
+ * 1. UI Rendering: Dynamically builds the Modal DOM with a Tabbed Interface.
+ * 2. State Management: Hydrates temporary state from the User's current config.
+ * 3. Palette Generation: Fetches asset arrays from AvatarEngine and renders
+ *    interactive selection grids (Color pickers, Icon grids).
+ * 4. Persistence: Saves the visual DNA to Supabase and updates the local Singleton.
  * -----------------------------------------------------------------------------
  */
 
@@ -31,19 +31,23 @@ export class ProfileController {
     
     /**
      * Constructor: Initializes dependencies.
-     * Sets up a temporary visual state container.
+     * Sets up the internal state for the visual editor.
      */
     constructor() {
-        this.avatarEngine = new AvatarEngine();
         this.authService = new AuthService();
         
-        // Internal State: Holds visual changes before "Save" is clicked.
-        // Structure matches the database 'visual_dna' JSONB.
-        this.tempVisual = { skin: 1, kit: 1, hair: 1 };
+        // Internal State: Holds visual changes before "Save"
+        // Structure matches AvatarEngine schema
+        this.tempVisual = { bg: 1, kit: 1, face: 1, hair: 1 };
+        
+        // Active Tab State (Default: Kits)
+        this.activeTab = 'kit'; 
+        
+        console.log("👕 ProfileController: Dressing Room Ready.");
     }
 
     /**
-     * Entry Point: Opens the Edit/Settings Modal.
+     * Entry Point: Opens the Pro Dressing Room Modal.
      * Lazy-loads the DOM structure if it doesn't exist yet.
      */
     openEditModal() {
@@ -52,15 +56,14 @@ export class ProfileController {
         const user = state.getUser();
         if (!user) return;
 
-        // 1. Hydrate Temp State from Current User Data
-        // Handles both JSON string and Object formats for safety
+        // 1. Hydrate Temp State
         if (user.visualDna) {
             this.tempVisual = typeof user.visualDna === 'string' ? JSON.parse(user.visualDna) : user.visualDna;
         }
 
         const modalId = 'modal-profile-edit';
 
-        // 2. Build Modal DOM (Singleton Pattern for DOM Elements)
+        // 2. Build Modal DOM (Singleton Pattern)
         if (!document.getElementById(modalId)) {
             this.buildModalDOM(modalId);
         }
@@ -69,145 +72,200 @@ export class ProfileController {
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
 
-        // 4. Initial Render of the Preview Avatar inside the modal
+        // 4. Initial Render
         this.updateEditorPreview(user.username);
-
-        // 5. Bind Events (Re-bind on every open to ensure fresh state context)
-        this.bindEditorEvents(user.username);
+        this.renderActivePalette(); // Render the grid for the default tab
+        this.bindEvents(user.username);
     }
 
     /**
-     * Helper: Injects the HTML structure for the Editor Modal.
+     * Helper: Injects the HTML structure.
+     * Defines the "Glass Dashboard" layout with Tabs.
      */
     buildModalDOM(modalId) {
         document.body.insertAdjacentHTML('beforeend', `
-            <div id="${modalId}" class="modal-overlay hidden">
-                <div class="modal-box">
+            <div id="${modalId}" class="modal-overlay hidden" style="align-items: center;">
+                <div class="modal-box" style="max-width: 400px; background: #1a1c23; border: 1px solid rgba(212,175,55,0.2); border-radius: 24px; padding: 20px;">
+                    
                     <!-- Header -->
-                    <div class="modal-header">
-                        <h3>غرفة الملابس</h3>
-                        <button class="close-btn" id="btn-close-edit">&times;</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="color:var(--gold-main); font-family:var(--font-sport);">غرفة الملابس</h3>
+                        <button class="close-btn" id="btn-close-edit" style="font-size:1.5rem;">&times;</button>
                     </div>
                     
-                    <div id="editor-content">
-                        <!-- A. Visual Preview Box -->
-                        <div class="avatar-studio" style="margin-bottom:20px; background:#111; border:1px solid #333;">
-                            <div class="avatar-preview" id="edit-avatar-display" style="height:200px; border-bottom:none;">
-                                <!-- Dynamic Avatar HTML will be injected here -->
-                            </div>
+                    <!-- A. Visual Preview Box (Larger & Cleaner) -->
+                    <div class="avatar-studio" style="
+                        margin-bottom: 20px; 
+                        background: #000; 
+                        border: 2px solid #333; 
+                        border-radius: 16px; 
+                        overflow: hidden;
+                        height: 280px; /* Increased Height */
+                        box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+                    ">
+                        <div id="edit-avatar-display" style="width:100%; height:100%;">
+                            <!-- Avatar HTML injected here -->
                         </div>
+                    </div>
 
-                        <!-- B. Visual Controls -->
-                        <div class="avatar-controls">
-                            <!-- Skin Tone Control -->
-                            <div class="control-row">
-                                <label>لون الجسم</label>
-                                <div class="selector">
-                                    <button class="btn-control" id="edit-skin-prev">❮</button>
-                                    <span id="edit-lbl-skin" class="font-num">${this.tempVisual.skin || 1}</span>
-                                    <button class="btn-control" id="edit-skin-next">❯</button>
-                                    <span class="lbl-desc">درجة اللون</span>
-                                </div>
-                            </div>
-
-                            <!-- Kit Style Control -->
-                            <div class="control-row">
-                                <label>طقم الفريق</label>
-                                <div class="selector">
-                                    <button class="btn-control" id="edit-kit-prev">❮</button>
-                                    <span id="edit-lbl-kit" class="font-num">${this.tempVisual.kit || 1}</span>
-                                    <button class="btn-control" id="edit-kit-next">❯</button>
-                                    <span class="lbl-desc">لون الزي</span>
-                                </div>
-                            </div>
-
-                            <!-- Headgear/Hair Control -->
-                            <div class="control-row">
-                                <label>الرأس / الشعر</label>
-                                <div class="selector">
-                                    <button class="btn-control" id="edit-hair-prev">❮</button>
-                                    <span id="edit-lbl-hair" class="font-num">${this.tempVisual.hair || 1}</span>
-                                    <button class="btn-control" id="edit-hair-next">❯</button>
-                                    <span class="lbl-desc">تصفيفة</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- C. Actions Row -->
-                        <div style="display:flex; gap:10px; margin-top:25px;">
-                            <button id="btn-save-look" class="btn-primary" style="margin-top:0; flex:2;">
-                                <i class="fa-solid fa-floppy-disk"></i> حفظ المظهر
-                            </button>
-                            <button id="btn-download-cv" class="btn-action-secondary" style="flex:1; border-color:var(--gold-main); color:var(--gold-main); justify-content:center;">
-                                <i class="fa-solid fa-camera"></i> صورة
-                            </button>
-                        </div>
-                        
-                        <!-- Logout Action -->
-                        <button id="btn-logout" class="btn-action-secondary" style="width:100%; margin-top:15px; justify-content:center; color:var(--danger); border-color:var(--danger);">
-                            <i class="fa-solid fa-right-from-bracket"></i> تسجيل خروج
+                    <!-- B. Control Tabs (Icons) -->
+                    <div class="editor-tabs" style="display:flex; justify-content:space-around; margin-bottom:15px; background:rgba(0,0,0,0.3); padding:8px; border-radius:12px;">
+                        <button class="tab-icon active" data-target="kit" title="الزي">
+                            <i class="fa-solid fa-shirt"></i>
+                        </button>
+                        <button class="tab-icon" data-target="face" title="الوجه">
+                            <i class="fa-solid fa-glasses"></i>
+                        </button>
+                        <button class="tab-icon" data-target="hair" title="الرأس">
+                            <i class="fa-solid fa-hat-cowboy"></i>
+                        </button>
+                        <button class="tab-icon" data-target="bg" title="الخلفية">
+                            <i class="fa-solid fa-image"></i>
                         </button>
                     </div>
+
+                    <!-- C. Palette Grid (Dynamic Content) -->
+                    <div id="editor-palette-container" style="
+                        height: 140px; 
+                        overflow-y: auto; 
+                        margin-bottom: 20px;
+                        background: rgba(255,255,255,0.03);
+                        border-radius: 12px;
+                        padding: 10px;
+                    ">
+                        <!-- Grid items injected here based on Tab -->
+                    </div>
+
+                    <!-- D. Actions Footer -->
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-save-look" class="btn-primary" style="flex:2; font-size:1rem;">
+                            <i class="fa-solid fa-check"></i> حفظ المظهر
+                        </button>
+                        <button id="btn-download-cv" class="btn-action-secondary" style="flex:1; justify-content:center; border-color:#fff; color:#fff;">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+                        <button id="btn-cancel-edit" class="btn-action-secondary" style="flex:1; justify-content:center; border-color:#ef4444; color:#ef4444;">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                    </div>
+
                 </div>
             </div>
         `);
 
-        // Bind Close Button Logic
-        document.getElementById('btn-close-edit').addEventListener('click', () => {
-            document.getElementById(modalId).classList.add('hidden');
+        // Close Logic
+        const close = () => document.getElementById(modalId).classList.add('hidden');
+        document.getElementById('btn-close-edit').onclick = close;
+        document.getElementById('btn-cancel-edit').onclick = close;
+    }
+
+    /**
+     * Binds interactions for the Tab System and Action Buttons.
+     */
+    bindEvents(username) {
+        // Tab Switching Logic
+        const tabs = document.querySelectorAll('.tab-icon');
+        tabs.forEach(btn => {
+            btn.onclick = (e) => {
+                SoundManager.play('click');
+                // UI Toggle
+                tabs.forEach(t => {
+                    t.style.color = '#777'; 
+                    t.style.background = 'transparent';
+                });
+                // Highlight Active
+                const target = e.currentTarget; // Safer than e.target for icons
+                target.style.color = 'var(--gold-main)';
+                target.style.background = 'rgba(212,175,55,0.1)';
+                
+                this.activeTab = target.dataset.target;
+                this.renderActivePalette(username);
+            };
+        });
+
+        // Set Initial Active Tab Style
+        const initialTab = document.querySelector(`.tab-icon[data-target="${this.activeTab}"]`);
+        if(initialTab) initialTab.click();
+
+        // Save & Snapshot
+        document.getElementById('btn-save-look').onclick = () => this.handleSave();
+        document.getElementById('btn-download-cv').onclick = () => this.handleDownloadCV();
+    }
+
+    /**
+     * CORE LOGIC: Renders the selection grid based on the active tab.
+     * Fetches config directly from AvatarEngine static config.
+     */
+    renderActivePalette(username) {
+        const container = document.getElementById('editor-palette-container');
+        const config = AvatarEngine.getConfig(); // Fetch Arrays
+        
+        container.innerHTML = ''; // Clear previous
+        
+        // Define Grid Style
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        container.style.gap = '10px';
+
+        let items = [];
+        let type = this.activeTab;
+
+        // Map Tab to Config Array
+        if (type === 'kit') items = config.KITS;
+        else if (type === 'bg') items = config.BACKGROUNDS;
+        else if (type === 'face') items = config.FACE_GEAR;
+        else if (type === 'hair') items = config.HEAD_GEAR;
+
+        // Generate Buttons
+        items.forEach((item, index) => {
+            const btn = document.createElement('button');
+            const logicalIndex = index + 1; // 1-based for storage
+            const isActive = this.tempVisual[type] === logicalIndex;
+
+            // Common Styling
+            btn.style.width = '100%';
+            btn.style.aspectRatio = '1/1';
+            btn.style.borderRadius = '10px';
+            btn.style.border = isActive ? '2px solid #fff' : '1px solid #444';
+            btn.style.cursor = 'pointer';
+            btn.style.display = 'flex';
+            btn.style.justifyContent = 'center';
+            btn.style.alignItems = 'center';
+            btn.style.fontSize = '1.2rem';
+            
+            // Type-Specific Styling
+            if (type === 'kit') {
+                btn.style.background = item;
+                // Add tiny shirt icon for contrast
+                btn.innerHTML = `<i class="fa-solid fa-shirt" style="color:rgba(0,0,0,0.3); font-size:0.8rem;"></i>`;
+            
+            } else if (type === 'bg') {
+                btn.style.background = item;
+            
+            } else if (type === 'face' || type === 'hair') {
+                btn.style.background = '#222';
+                btn.style.color = isActive ? 'var(--gold-main)' : '#888';
+                if (item) {
+                    btn.innerHTML = `<i class="fa-solid ${item}"></i>`;
+                } else {
+                    btn.innerHTML = `<i class="fa-solid fa-ban" style="font-size:0.8rem;"></i>`; // "None" option
+                }
+            }
+
+            // Click Handler (Immediate Preview)
+            btn.onclick = () => {
+                SoundManager.play('click');
+                this.tempVisual[type] = logicalIndex;
+                this.updateEditorPreview(username);
+                this.renderActivePalette(username); // Re-render to update active border
+            };
+
+            container.appendChild(btn);
         });
     }
 
     /**
-     * Binds click events for Editor controls.
-     * Uses Arrow Functions to maintain 'this' context.
-     */
-    bindEditorEvents(username) {
-        // Helper to update state and UI Labels
-        const updateState = (type, dir) => {
-            SoundManager.play('click');
-            
-            // Hardcoded limits (Must match AvatarEngine Config Arrays)
-            const maxMap = { skin: 5, kit: 5, hair: 5 }; 
-            const max = maxMap[type] || 3;
-
-            let val = (this.tempVisual[type] || 1) + dir;
-            // Circular rotation logic
-            if (val > max) val = 1;
-            if (val < 1) val = max;
-            
-            this.tempVisual[type] = val;
-            
-            // Update Number Label
-            const lbl = document.getElementById(`edit-lbl-${type}`);
-            if(lbl) lbl.textContent = val;
-            
-            // Re-render Preview
-            this.updateEditorPreview(username);
-        };
-
-        // Helper to get element safely
-        const get = (id) => document.getElementById(id);
-
-        // Bind Arrows (Overwriting 'onclick' to prevent duplicate listeners pile-up)
-        get('edit-skin-prev').onclick = () => updateState('skin', -1);
-        get('edit-skin-next').onclick = () => updateState('skin', 1);
-        
-        get('edit-kit-prev').onclick = () => updateState('kit', -1);
-        get('edit-kit-next').onclick = () => updateState('kit', 1);
-        
-        get('edit-hair-prev').onclick = () => updateState('hair', -1);
-        get('edit-hair-next').onclick = () => updateState('hair', 1);
-
-        // Bind Main Action Buttons
-        get('btn-save-look').onclick = () => this.handleSave();
-        get('btn-logout').onclick = () => this.handleLogout();
-        get('btn-download-cv').onclick = () => this.handleDownloadCV();
-    }
-
-    /**
-     * Renders the avatar HTML inside the modal preview box.
-     * Uses the AvatarEngine static generator.
+     * Updates the preview box using the Engine.
      */
     updateEditorPreview(username) {
         const container = document.getElementById('edit-avatar-display');
@@ -218,19 +276,16 @@ export class ProfileController {
 
     /**
      * TRANSACTION: Save Changes
-     * 1. Updates 'cards' table in Supabase.
-     * 2. Updates Global State.
-     * 3. Reloads Page to reflect changes everywhere.
      */
     async handleSave() {
         const btn = document.getElementById('btn-save-look');
         btn.disabled = true;
-        btn.textContent = "جاري الحفظ...";
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
         try {
             const user = state.getUser();
             
-            // 1. Update Database (Targeting GENESIS card only)
+            // 1. Update Database
             const { error } = await supabase
                 .from('cards')
                 .update({ visual_dna: this.tempVisual })
@@ -239,19 +294,14 @@ export class ProfileController {
 
             if (error) throw error;
 
-            // 2. Update Local State (Crucial for immediate consistency)
-            // We clone the user object to trigger state change detection if needed later
+            // 2. Update Local State
             const updatedUser = { ...user, visualDna: this.tempVisual };
             state.setUser(updatedUser);
 
             SoundManager.play('success');
-            
-            // 3. Force Reload
-            // This ensures all cached views (like Scout lists or Home Card) get the new visual immediately.
-            window.location.reload();
+            window.location.reload(); // Hard Refresh to apply everywhere
 
         } catch (err) {
-            console.error(err);
             SoundManager.play('error');
             alert("فشل الحفظ: " + err.message);
             btn.disabled = false;
@@ -260,53 +310,31 @@ export class ProfileController {
     }
 
     /**
-     * LOGIC: Generate Scout CV Image
-     * Temporarily hides the modal to snap the underlying Home Card.
+     * LOGIC: Snapshot (CV)
      */
     async handleDownloadCV() {
+        // ... (Logic remains same: Hide modal, snap card, show modal)
+        // Re-using previous logic but ensuring it targets the new layout if needed
         const modal = document.getElementById('modal-profile-edit');
         const cardElement = document.getElementById('my-player-card'); // Element on Home Screen
 
         if (!cardElement) {
-            alert("يرجى العودة للصفحة الرئيسية (هويتي) لتصوير الكارت.");
+            alert("يرجى العودة للصفحة الرئيسية لتصوير الكارت.");
             return;
         }
 
-        // 1. Hide Modal temporarily to reveal the card
         modal.classList.add('hidden');
+        SoundManager.play('success');
         
-        // 2. Play Sound (Camera Shutter)
-        SoundManager.play('success'); 
-        
-        // 3. Wait 300ms for UI transition, then snap
         setTimeout(async () => {
             try {
-                // Generate filename with timestamp
                 const filename = `noub-cv-${Date.now()}.png`;
                 await CVGenerator.downloadCV('my-player-card', filename);
-                
-                // 4. Show Modal again
                 modal.classList.remove('hidden');
             } catch (e) {
-                console.error("CV Gen Error:", e);
-                alert("فشل التصوير. تأكد من إعدادات المتصفح.");
+                alert("خطأ في التصوير.");
                 modal.classList.remove('hidden');
             }
         }, 300);
-    }
-
-    /**
-     * ACTION: Secure Logout
-     */
-    async handleLogout() {
-        if(!confirm("هل أنت متأكد من تسجيل الخروج؟")) return;
-        
-        try {
-            await this.authService.logout();
-        } catch(e) {
-            // Fallback: Force clear local storage if service fails
-            localStorage.clear();
-            window.location.reload();
-        }
     }
 }
