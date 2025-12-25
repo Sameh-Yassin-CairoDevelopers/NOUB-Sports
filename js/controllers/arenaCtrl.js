@@ -165,6 +165,9 @@ export class ArenaController {
             SoundManager.play('notify');
             // Navigate to the full Operations Page
             window.router('view-operations');
+            // Dispatch event to wake up Operations Controller
+            window.dispatchEvent(new CustomEvent('init-ops-view'));
+
         };
     }
 
@@ -451,3 +454,4 @@ export class ArenaController {
         }
     }
 }
+
