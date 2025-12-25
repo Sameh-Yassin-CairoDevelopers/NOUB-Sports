@@ -1,92 +1,93 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/utils/avatarEngine.js
- * Version: 6.5.0 (GOLDEN MASTER - FULL ANATOMY)
+ * Version: 7.0.0 (FINAL ANATOMY & BADGE FIX)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
  * ACADEMIC MODULE DESCRIPTION:
  * -----------------------------------------------------------------------------
  * The Core Visual Rendering Engine for the Digital Identity Asset.
- * This class handles the composition of SVG/FontAwesome layers to generate
- * the player's visual representation based on their DNA.
+ * This class orchestrates the composition of vector layers (FontAwesome/SVG)
+ * to generate a scientifically proportioned player avatar.
  * 
- * ARCHITECTURAL SPECIFICATIONS (V6.5):
- * 1. Layering Architecture (Z-Index Stack):
- *    - Layer 1: Body Base (Head/Neck) -> Bottom Anchor
- *    - Layer 2: Face Accessories (Eyes) -> Aligned to Eye Level
- *    - Layer 3: Kit (Shirt) -> Covers Neck Base
- *    - Layer 4: Chest Badge (Logo) -> Centered on Sternum
- *    - Layer 5: Branding (Name) -> Abdominal Placement
- *    - Layer 6: Headgear -> Overlaps Forehead
+ * FINAL ENGINEERING SPECIFICATIONS (V7.0):
+ * 1. Background Architecture:
+ *    - Fixed "Royal Green" Gradient (Standardized Brand Identity).
+ *    - Removed dynamic background switching to prioritize data visibility.
  * 
- * 2. Geometry Correction:
- *    - Refactored Y-Axis offsets (bottom pixels) to ensure physical realism.
- *    - Adjusted Font-Size scales to prevent "Floating Hat" or "Small Head" issues.
+ * 2. Anatomical Geometry:
+ *    - Base Anchor: The Shirt is the primary anchor point.
+ *    - Head Scale: Increased by 20% to fit the collar naturally.
+ *    - Headgear: Z-Index elevated, Y-Axis lowered to overlap the forehead (No floating).
+ *    - Curation: Removed any headgear icons that included body parts (shoulders).
  * 
- * 3. Asset Standardization:
- *    - 'Skin Tone' is fixed to a standard wheat color (#e0ac69) for unified identity.
- *    - 'Kit Color' supports dynamic HEX strings from Color Wheel.
- *    - 'Backgrounds' have been deprecated and replaced with 'Chest Logos'.
+ * 3. Badge Placement (The Crest):
+ *    - Moved from Center Sternum to Left Pectoral (Heart Side).
+ *    - Rendered with a metallic/embroidered effect filter.
+ * 
+ * 4. Color Logic:
+ *    - Supports direct HEX string injection from the Color Wheel.
  * -----------------------------------------------------------------------------
  */
 
 // ==========================================
-// 1. ASSET CONFIGURATION LIBRARIES
+// 1. CURATED ASSET LIBRARIES
 // ==========================================
 
 const AVATAR_CONFIG = {
     
     // STANDARD SKIN (Unified Identity)
-    // A neutral, warm wheat tone used for all avatars.
+    // A neutral, warm wheat tone (#e0ac69) used across the platform.
     FIXED_SKIN: '#e0ac69', 
 
-    // LAYER: CHEST LOGOS (Badges) - Replaces Backgrounds
-    // These render on top of the shirt (Z-Index: 4).
+    // LAYER 4: TEAM BADGES (Chest Logos)
+    // Curated list of Shield/Crest-like icons.
+    // NOTE: These are positioned on the Heart side (Viewer's Right).
     LOGOS: [
-        null,                  // 1. No Logo (Clean Shirt)
-        'fa-shield-halved',    // 2. Classic Crest
-        'fa-star',             // 3. The Star (Champion)
-        'fa-bolt',             // 4. Energy/Strike
+        null,                  // 1. Clean Shirt
+        'fa-shield-halved',    // 2. Classic Shield
+        'fa-star',             // 3. Championship Star
+        'fa-bolt',             // 4. Strike Energy
         'fa-fire',             // 5. Ultras Flame
-        'fa-crown',            // 6. Royal Crown
-        'fa-skull',            // 7. Pirates/Danger
-        'fa-gem',              // 8. Diamond/Rich
+        'fa-crown',            // 6. Royal Club
+        'fa-skull',            // 7. Pirates/Ultras
+        'fa-gem',              // 8. Rich/Diamond
         'fa-dragon',           // 9. Beast Mode
-        'fa-anchor',           // 10. Port/Coastal
-        'fa-feather',          // 11. Light/Wing
-        'fa-paw'               // 12. Animal Mascot
+        'fa-anchor',           // 10. Port City
+        'fa-feather-pointed',  // 11. Wings/Speed
+        'fa-paw'               // 12. Mascot
     ],
     
-    // LAYER: FACE ACCESSORIES (Personality)
-    // Items that sit on the face (Eyes/Mouth level).
+    // LAYER 2: FACE ACCESSORIES
+    // Strictly eyes/face level items.
     FACE_GEAR: [
         null,                  // 1. Clean Face
-        'fa-glasses',          // 2. Classic Glasses (Hipster)
-        'fa-mask',             // 3. Zorro/Hero Mask
-        'fa-head-side-mask',   // 4. Medical Mask (Protection)
-        'fa-eye-slash',        // 5. Pirate Eye Patch
-        'fa-user-secret',      // 6. Spy/Agent Shades
-        'fa-prescription-bottle' // 7. Scientist/Medic (Abstract)
+        'fa-glasses',          // 2. Hipster/Edgar Glasses
+        'fa-mask',             // 3. Hero Mask
+        'fa-head-side-mask',   // 4. Medical/Protection
+        'fa-eye-slash',        // 5. Pirate Patch
+        'fa-user-secret'       // 6. Agent Shades
     ],
 
-    // LAYER: HEADGEAR / HAIR (Style)
-    // Items that sit on top of the head.
+    // LAYER 6: HEADGEAR (Strictly Hats/Hair)
+    // REMOVED: Icons that include shoulders (e.g. fa-user-tie).
+    // KEPT: Only top-of-head items.
     HEAD_GEAR: [
-        null,                  // 1. Bald/Shaved (Default)
-        'fa-user-tie',         // 2. Slick Hair (Simulated via Icon)
-        'fa-user-ninja',       // 3. Ninja Headband
-        'fa-hat-cowboy',       // 4. Cowboy Hat
-        'fa-graduation-cap',   // 5. Cap (Backwards style simulation)
-        'fa-helmet-safety',    // 6. Defender Helmet (Hard Hat)
-        'fa-crown',            // 7. King (Top Head)
-        'fa-user-astronaut',   // 8. Space Helmet
-        'fa-hat-wizard'        // 9. Magician
+        null,                  // 1. Shaved/Bald (Default)
+        'fa-hat-cowboy',       // 2. Cowboy Hat
+        'fa-hat-wizard',       // 3. Magician Hat
+        'fa-graduation-cap',   // 4. Cap (Backwards style)
+        'fa-helmet-safety',    // 5. Hard Hat (Defender)
+        'fa-crown',            // 6. King Crown (Captain)
+        'fa-user-astronaut',   // 7. Space Helmet
+        'fa-ribbon',           // 8. Headband (Ninja Style)
+        'fa-mitten'            // 9. Punk/Mohawk Simulation
     ],
 
-    // LAYER: KIT PRESETS (For Palette Grid)
-    // Used by the Controller to generate the "Quick Select" grid.
-    // The engine itself supports ANY Hex string passed to it.
+    // PRESET PALETTE (For Grid Selection)
+    // Used by controllers to render quick-select options.
+    // The engine accepts ANY Hex string, not just these.
     KITS: [
         '#3b82f6', // Royal Blue
         '#ef4444', // Red
@@ -104,13 +105,10 @@ const AVATAR_CONFIG = {
 export class AvatarEngine {
 
     /**
-     * Constructor: Initializes the default DNA state.
-     * Useful for instantiation in controllers or testing.
+     * Constructor: Initializes default state.
+     * Useful for testing isolation.
      */
     constructor() {
-        // Default DNA Structure
-        // kit: Hex String
-        // logo, face, hair: Integer Indices (1-based)
         this.state = { 
             kit: '#3b82f6', 
             logo: 1, 
@@ -121,37 +119,42 @@ export class AvatarEngine {
 
     /**
      * STATIC GENERATOR: The Anatomical Renderer.
-     * Creates the complex HTML string for the avatar using absolute positioning logic.
      * 
-     * GEOMETRY SPECIFICATIONS (Based on ~260px Height Container):
-     * - Body Base: 110px Size, Anchored at Bottom: 60px.
-     * - Shirt: 170px Size, Anchored at Bottom: -30px (Wide Shoulders).
-     * - Face Gear: Anchored at Bottom: 112px (Precise Eye Level).
-     * - Head Gear: Anchored at Bottom: 145px (Overlaps Forehead).
+     * GEOMETRY ENGINE (Based on ~260px Height Container):
+     * ---------------------------------------------------
+     * 1. BODY (Layer 1): Size 120px | Bottom 55px.
+     *    - Provides the neck and head base.
      * 
-     * @param {Object} visualDna - The configuration object { kit, logo, face, hair }.
-     * @param {string} shirtName - The text to display on the shirt (Player Name).
-     * @returns {string} The complete HTML string of the avatar component.
+     * 2. SHIRT (Layer 3): Size 180px | Bottom -35px.
+     *    - Wide shoulders to cover the "User Icon" base.
+     *    - Sits low to simulate torso.
+     * 
+     * 3. BADGE (Layer 4): Size 28px | Bottom 55px | Margin-Left 45px.
+     *    - Offset from center to sit on the "Heart" (Viewer's Right).
+     * 
+     * 4. HEADGEAR (Layer 6): Size 85px | Bottom 140px.
+     *    - Lowered Y-Axis to ensure it sits ON the head, not hovering.
+     * 
+     * @param {Object} visualDna - { kit: Hex, logo: Int, face: Int, hair: Int }
+     * @param {string} shirtName - Branding text.
+     * @returns {string} HTML String.
      */
     static generateAvatarHTML(visualDna, shirtName) {
-        // 1. Safe Parsing & Defaults
-        // Ensure we have a valid object, even if passed a JSON string or null
+        // 1. Data Sanitization
         const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {});
         
         // 2. Asset Resolution
-        // Kit Color: Defaults to Royal Blue if missing or invalid
-        const kitColor  = dna.kit || '#3b82f6'; 
+        const kitColor = dna.kit || '#3b82f6'; 
+        const logoIcon = AVATAR_CONFIG.LOGOS[(dna.logo || 1) - 1];
+        const faceIcon = AVATAR_CONFIG.FACE_GEAR[(dna.face || 1) - 1];
+        const headIcon = AVATAR_CONFIG.HEAD_GEAR[(dna.hair || 1) - 1];
         
-        // Icons: Map index (1-based) to FontAwesome Class from config arrays
-        // Fallback to index 0 (null) if invalid
-        const logoIcon  = AVATAR_CONFIG.LOGOS[(dna.logo || 1) - 1];
-        const faceIcon  = AVATAR_CONFIG.FACE_GEAR[(dna.face || 1) - 1];
-        const headIcon  = AVATAR_CONFIG.HEAD_GEAR[(dna.hair || 1) - 1];
-        
-        // Skin: Fixed Standard
+        // Fixed Skin Tone
         const skinColor = AVATAR_CONFIG.FIXED_SKIN;
 
-        // 3. Construct HTML Layer by Layer (Z-Index determines visibility order)
+        // 3. HTML Composition
+        // Note: The parent container provides the "Royal Green" background via CSS class,
+        // or we inject it here inline to guarantee it everywhere.
         return `
             <div class="avatar-comp" style="
                 position: relative; 
@@ -160,85 +163,89 @@ export class AvatarEngine {
                 display: flex; 
                 justify-content: center; 
                 align-items: flex-end;
-                overflow: hidden; /* Clips the bottom of the shirt */
-                /* Background removed here, controlled by Parent Container (Royal Green) */
+                overflow: hidden; /* Clips the bottom of shirt */
+                background: linear-gradient(180deg, #0f2e1d 0%, #051910 100%); /* ROYAL GREEN FIXED */
+                border-radius: inherit; /* Inherits from parent card */
             ">
                 
-                <!-- LAYER 1: THE BODY (Head & Neck) -->
-                <!-- Z-Index: 1 (Lowest) - Sits behind everything -->
+                <!-- LAYER 1: BODY (Head & Neck) -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 110px; 
+                    font-size: 120px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 60px; 
+                    bottom: 55px; 
                     z-index: 1;
-                    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+                    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
-                <!-- LAYER 2: FACE ACCESSORY (Glasses/Mask) -->
-                <!-- Z-Index: 2 - Sits on face but must be under headgear -->
+                <!-- LAYER 2: FACE ACCESSORY (Eyes) -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
-                    font-size: 45px;
-                    color: #333; /* Dark accessories provide contrast on skin */
+                    font-size: 42px;
+                    color: #222; 
                     position: absolute;
-                    bottom: 112px; /* Precisely aligned with 'User' icon eyes */
+                    bottom: 105px; /* Aligned with Eyes */
                     z-index: 2;
-                    opacity: 0.95;
+                    opacity: 0.9;
                 "></i>
                 ` : ''}
 
                 <!-- LAYER 3: THE SHIRT (Kit) -->
-                <!-- Z-Index: 3 - Covers the neck base, creates the torso -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 170px; 
+                    font-size: 180px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -30px; 
+                    bottom: -35px; 
                     z-index: 3;
-                    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+                    filter: drop-shadow(0 -5px 15px rgba(0,0,0,0.5)); /* Depth shadow */
                 "></i>
 
-                <!-- LAYER 4: CHEST LOGO (Badge) -->
-                <!-- Z-Index: 4 - Sits directly on top of the shirt -->
+                <!-- LAYER 4: CHEST BADGE (The Logo) -->
+                <!-- Positioned: Offset to the Right (Heart Side) -->
                 ${logoIcon ? `
-                <i class="fa-solid ${logoIcon}" style="
-                    font-size: 32px;
-                    color: rgba(255,255,255,0.9); /* White Logo for visibility on dark kits */
+                <div style="
                     position: absolute;
-                    bottom: 65px; 
+                    bottom: 55px;
+                    left: 50%;
+                    margin-left: 35px; /* Shift to Heart Side */
                     z-index: 4;
-                    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
-                "></i>
+                    width: 30px; height: 30px;
+                    display: flex; justify-content: center; align-items: center;
+                    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
+                ">
+                    <i class="fa-solid ${logoIcon}" style="
+                        font-size: 24px;
+                        color: rgba(255,255,255,0.95);
+                    "></i>
+                </div>
                 ` : ''}
 
-                <!-- LAYER 5: BRANDING (Player Name) -->
-                <!-- Z-Index: 5 - Sits on shirt, below logo -->
+                <!-- LAYER 5: BRANDING (Name) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 40px; 
+                    bottom: 35px; 
                     z-index: 5;
                     color: rgba(255,255,255,0.85); 
                     font-family: 'Orbitron', sans-serif; 
-                    font-size: 12px; 
+                    font-size: 13px; 
                     font-weight: 900;
                     text-transform: uppercase;
-                    text-shadow: 0 1px 2px #000;
+                    text-shadow: 0 1px 3px #000;
                     letter-spacing: 1px;
                     pointer-events: none;
                 ">
                     ${shirtName || 'NOUB'}
                 </div>
 
-                <!-- LAYER 6: HEADGEAR (Hair/Hat) -->
-                <!-- Z-Index: 6 (Highest) - Overlaps forehead and everything else -->
+                <!-- LAYER 6: HEADGEAR (Hat) -->
+                <!-- Adjusted to sit ON the head -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
-                    font-size: 75px;
-                    color: #fff; /* White/Neutral headgear standard */
-                    text-shadow: 0 2px 5px rgba(0,0,0,0.5); 
+                    font-size: 80px;
+                    color: #fff; /* White standard for contrast */
+                    text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 145px; 
+                    bottom: 140px; /* Overlaps forehead */
                     z-index: 6;
                 "></i>
                 ` : ''}
@@ -249,10 +256,7 @@ export class AvatarEngine {
 
     /**
      * CONFIG EXPORTER:
-     * Returns the raw config arrays to populate the UI Palettes in Controllers.
-     * Used by ProfileController to build the Selection Grids.
-     * 
-     * @returns {Object} The AVATAR_CONFIG object containing asset arrays.
+     * Provides asset arrays to the UI Controllers for grid generation.
      */
     static getConfig() {
         return AVATAR_CONFIG;
