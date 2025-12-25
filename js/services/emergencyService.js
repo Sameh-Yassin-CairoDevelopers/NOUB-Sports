@@ -188,7 +188,30 @@ export class EmergencyService {
         
         return true;
     }
+    /**
+     * [ACTION 5] GET MY ACTIVE MISSIONS
+     * Fetches requests where I am involved (either as Requester or Responder)
+     * AND the status is LOCKED (Work in progress).
+     */
+    async getMyActiveMissions(userId) {
+        const { data, error } = await supabase
+            .from('match_requests')
+            .select(`
+                *,
+                requester:users!requester_id(username, reputation_score),
+                responder:users!responder_id(username, reputation_score)
+            `)
+            .eq('status', 'LOCKED') // Only active/locked deals
+            .or(`requester_id.eq.${userId},responder_id.eq.${userId}`)
+            .order('created_at', { ascending: false });
 
+        if (error) {
+            console.error("My Missions Error:", error);
+            return [];
+        }
+        return data;
+    }
+    
     /**
      * Internal Helper: Sends a system notification to the requester.
      * Fire-and-forget (we don't await this to keep UI responsive).
