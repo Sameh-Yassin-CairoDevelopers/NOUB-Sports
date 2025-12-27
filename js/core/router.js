@@ -53,11 +53,16 @@ export class Router {
         if (activeViewId === 'view-arena') btnId = 'nav-arena';
         if (activeViewId === 'view-scout') btnId = 'nav-scout';
         if (activeViewId === 'view-team') btnId = 'nav-team';
-
+                // إذا كنا في صفحة الدورات أو السبورة، نجعل الزر العائم هو النشط
+        if (activeViewId === 'view-tournaments' || activeViewId === 'view-tactics') {
+            btnId = 'nav-action';
+        }
+        
         if (btnId) {
             const activeBtn = document.getElementById(btnId);
             if(activeBtn) activeBtn.classList.add('active');
         }
     }
 }
+
 
