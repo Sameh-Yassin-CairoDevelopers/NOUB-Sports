@@ -1,0 +1,270 @@
+/*
+ * Project: NOUB SPORTS ECOSYSTEM
+ * Filename: css/views/tournament.css
+ * Version: Noub Sports_beta 3.0.0 (RAMADAN THEME)
+ * Status: Production Ready
+ * 
+ * DESIGN PHILOSOPHY:
+ * 1. The Floating Menu (FAB): Uses a "Fan-Out" or "Stack" animation with blur effects.
+ * 2. Tournament Hub: Uses a "Royal Night" theme (Gold on Deep Black).
+ * 3. Ramadan Vibes: Subtle geometric patterns and glow effects.
+ */
+
+/* =========================================
+   1. THE FLOATING ACTION MENU (FAB OVERLAY)
+   ========================================= */
+
+/* The Dark Glass Backdrop */
+.fab-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 16, 20, 0.92); /* Deep dark */
+    backdrop-filter: blur(10px);         /* Frost effect */
+    z-index: 9000; /* Highest priority */
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 100px; /* Space above original Nav */
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* The Actions Container */
+.fab-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-end; /* Align to right (RTL) or center */
+    width: 100%;
+    max-width: 400px;
+    padding-right: 30px; /* Indent from right */
+}
+
+/* Individual Action Item */
+.fab-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy pop */
+}
+
+/* Staggered Animation Delay for Items */
+.fab-overlay.active .fab-item:nth-child(1) { transition-delay: 0.1s; transform: translateY(0); opacity: 1; }
+.fab-overlay.active .fab-item:nth-child(2) { transition-delay: 0.15s; transform: translateY(0); opacity: 1; }
+.fab-overlay.active .fab-item:nth-child(3) { transition-delay: 0.2s; transform: translateY(0); opacity: 1; }
+.fab-overlay.active .fab-item:nth-child(4) { transition-delay: 0.25s; transform: translateY(0); opacity: 1; }
+
+/* The Icon Circle */
+.fab-item .icon-circle {
+    width: 55px; height: 55px;
+    border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 1.4rem;
+    color: #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+/* Color Coding */
+.icon-circle.gold { background: linear-gradient(135deg, #ffd700, #b8860b); box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+.icon-circle.red { background: linear-gradient(135deg, #ef4444, #991b1b); }
+.icon-circle.yellow { background: linear-gradient(135deg, #fbbf24, #b45309); }
+.icon-circle.green { background: linear-gradient(135deg, #10b981, #065f46); }
+
+/* The Label Text */
+.fab-item .label {
+    background: #fff;
+    color: #000;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-family: var(--font-primary);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Close Button (X) */
+.fab-close {
+    margin-top: 30px;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.fab-close:hover { background: rgba(239, 68, 68, 0.8); rotate: 90deg; }
+
+
+/* =========================================
+   2. TOURNAMENT HUB (The View)
+   ========================================= */
+
+.tournament-hub {
+    padding: 15px;
+    padding-bottom: 100px;
+    min-height: 100%;
+    background: radial-gradient(circle at 50% 0%, #1a1200 0%, #0f1014 60%); /* Dark Gold tint */
+}
+
+/* Hero Banner */
+.t-hero-banner {
+    position: relative;
+    background: linear-gradient(135deg, #000 0%, #332200 100%);
+    border: 1px solid var(--gold-dim);
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    overflow: hidden;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Decorative Pattern (Islamic Star Hint) */
+.t-hero-banner::before {
+    content: '';
+    position: absolute; top: -50px; right: -50px;
+    width: 150px; height: 150px;
+    background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(212, 175, 55, 0.05) 10px, rgba(212, 175, 55, 0.05) 20px);
+    border-radius: 50%;
+}
+
+.ramadan-deco {
+    font-size: 3rem;
+    color: var(--gold-main);
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.6));
+    animation: floatMoon 3s ease-in-out infinite;
+}
+
+@keyframes floatMoon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+.t-hero-banner h2 {
+    color: #fff;
+    font-family: var(--font-sport);
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+
+.t-hero-banner p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+/* Gold CTA Button */
+.btn-primary-gold {
+    background: linear-gradient(to bottom, #ffd700, #b8860b);
+    color: #332200;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-weight: 900;
+    font-family: var(--font-sport);
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+    transition: transform 0.2s;
+}
+.btn-primary-gold:active { transform: scale(0.95); }
+
+/* --- Tabs --- */
+.t-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.03);
+    padding: 5px;
+    border-radius: 12px;
+}
+
+.t-tab {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.t-tab.active {
+    background: var(--gold-dim);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* --- Tournament Card --- */
+.tourn-card {
+    background: #1a1c23;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-right: 4px solid var(--gold-main);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    position: relative;
+    transition: transform 0.2s;
+}
+
+.tourn-card:hover { transform: translateY(-3px); border-color: var(--gold-dim); }
+
+.tourn-card .status-badge {
+    position: absolute;
+    top: 15px; left: 15px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tourn-card .status-badge.active { animation: pulseGreen 2s infinite; }
+
+@keyframes pulseGreen { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+.tourn-card h3 {
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    font-family: var(--font-primary);
+}
+
+.t-meta {
+    display: flex; gap: 15px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+}
+
+.t-meta i { color: var(--gold-main); }
+
+.btn-view-tourn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+}
+.btn-view-tourn:hover { background: var(--gold-main); color: #000; border-color: var(--gold-main); }
