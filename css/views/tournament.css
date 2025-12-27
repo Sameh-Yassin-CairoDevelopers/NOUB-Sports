@@ -269,3 +269,158 @@
     transition: 0.2s;
 }
 .btn-view-tourn:hover { background: var(--gold-main); color: #000; border-color: var(--gold-main); }
+
+/* [NEW SECTION] TOURNAMENT DETAIL VIEW (LOBBY) */
+
+.t-detail-view {
+    padding: 15px;
+    padding-bottom: 100px;
+}
+
+.t-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 15px;
+}
+
+.back-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.t-status-pill {
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--gold-main);
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+/* Action Area (Join Button) */
+.t-action-area {
+    margin-bottom: 25px;
+}
+
+.organizer-controls {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px dashed var(--gold-dim);
+}
+
+.counter-box {
+    margin-bottom: 10px;
+    font-family: var(--font-orbitron);
+}
+.counter-box .num { font-size: 1.5rem; color: #fff; font-weight: bold; }
+.counter-box .lbl { font-size: 0.8rem; color: #aaa; margin-right: 5px; }
+
+.hint-text {
+    font-size: 0.7rem;
+    color: var(--danger);
+    margin-top: 5px;
+}
+
+/* Teams Grid (Participants) */
+.teams-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.team-mini-card {
+    background: #222;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #333;
+}
+
+.team-icon {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+/* Standings Tables (The Groups) */
+.group-container {
+    margin-bottom: 20px;
+    background: #1a1c23;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.group-title {
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    margin: 0;
+    color: var(--gold-main);
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.standings-table th {
+    text-align: right;
+    padding: 10px;
+    color: var(--text-muted);
+    font-weight: normal;
+    font-size: 0.7rem;
+}
+
+.standings-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.team-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+}
+
+.rank {
+    width: 20px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #777;
+    font-family: var(--font-orbitron);
+}
+
+/* Highlight Qualified Teams (Top 2) */
+.qualified .rank {
+    color: var(--success);
+    font-weight: bold;
+}
+.qualified .team-cell {
+    color: #fff;
+    font-weight: bold;
+}
+
+.pts {
+    font-family: var(--font-orbitron);
+    font-weight: bold;
+    color: var(--gold-main);
+}
+
