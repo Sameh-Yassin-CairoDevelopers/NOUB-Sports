@@ -1,7 +1,7 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/core/appClass.js
- * Version: Noub Sports_beta 4.2.0 (MASTER ORCHESTRATOR)
+ * Version: Noub Sports_beta 5.0.0 (MASTER ORCHESTRATOR & TOURNAMENT INTEGRATION)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
@@ -14,13 +14,12 @@
  * 1. Bootstrapping: Initializes critical infrastructure (Telegram SDK, State, Auth).
  * 2. Auth Guard (Security): Validates user sessions before rendering restricted views.
  * 3. Routing Logic: Directs users to Onboarding (Guest) or Dashboard (Auth).
- * 4. Module Orchestration: Instantiates and binds all Feature Controllers, 
- *    ensuring they are ready to handle events from the global UI.
+ * 4. Module Orchestration: Instantiates and binds all Feature Controllers.
  * 
- * MODULES INTEGRATED:
- * - Core: Router, State, Telegram, Auth.
- * - Features: Onboarding, Home, Team, Arena, Scout, Tactics.
- * - New System: MenuController (Navigation) & OperationsController (SOS Market).
+ * UPDATES IN V5.0.0:
+ * - Integrated `TournamentController` to manage the new Ramadan Leagues module.
+ * - Delegated the "Central Action Button" (FAB) logic to the Tournament Controller
+ *   to render the multi-option menu instead of directly opening the Tactics Board.
  * -----------------------------------------------------------------------------
  */
 
@@ -38,10 +37,10 @@ import { ArenaController } from '../controllers/arenaCtrl.js';
 import { ScoutController } from '../controllers/scoutCtrl.js';
 import { TacticsController } from '../controllers/tacticsCtrl.js';
 
-// --- 3. New System Imports (V4 Expansion) ---
-import { MenuController } from '../controllers/menuCtrl.js';        // Manages Side Drawer
-import { OperationsController } from '../controllers/operationsCtrl.js'; // Manages SOS Room
-import { TournamentController } from '../controllers/tournamentCtrl.js'; // [NEW] استيراد مراقب الدورات
+// --- 3. System Imports (Menu, Ops, Tournaments) ---
+import { MenuController } from '../controllers/menuCtrl.js';        // Side Drawer
+import { OperationsController } from '../controllers/operationsCtrl.js'; // SOS Room
+import { TournamentController } from '../controllers/tournamentCtrl.js'; // [NEW] Tournament Hub
 
 /**
  * The Main Application Class.
@@ -52,7 +51,7 @@ export class App {
     /**
      * Constructor: Initializes Dependencies.
      * We instantiate controllers immediately to ensure their event listeners 
-     * (like those for Deep Linking) are bound before any user interaction occurs.
+     * are bound before any user interaction occurs.
      */
     constructor() {
         // A. Core Utilities
@@ -69,9 +68,14 @@ export class App {
         this.scoutCtrl = new ScoutController();
         this.tacticsCtrl = new TacticsController();
         
-        // D. System Controllers (New Modules)
+        // D. System Controllers
         this.menuCtrl = new MenuController(); 
         this.opsCtrl = new OperationsController();
+        
+        // [ARCHITECTURAL UPDATE]: Initialize Tournament Controller
+        // This controller's constructor automatically hijacks the DOM element '#nav-action'
+        // to inject the new multi-option "Floating Action Menu" (FAB).
+        this.tournCtrl = new TournamentController();
         
         console.log("🚀 App Core: All Controllers & Subsystems Loaded.");
     }
@@ -83,20 +87,19 @@ export class App {
     async init() {
         console.log("🚀 System Boot Sequence Initiated...");
         
-        // 1. Initialize Environment (Telegram Colors, Haptics, Theme)
+        // 1. Initialize Environment
         this.telegram.init();
 
         try {
             // 2. Authentication Check (Critical Path)
-            // Checks both Telegram ID Context and Persistent LocalStorage/Email Sessions.
             const user = await this.auth.checkUser();
             
-            // 3. Routing Decision based on Auth Result
+            // 3. Routing Decision
             this.handleRouting(user);
             
         } catch (error) {
             console.error("⛔ Critical Boot Error:", error);
-            // Fail-safe: Force routing to guest mode on error to prevent white screen
+            // Fail-safe: Force routing to guest mode
             this.handleRouting(null);
         }
     }
@@ -113,7 +116,7 @@ export class App {
         const header = document.getElementById('global-header');
         const navbar = document.getElementById('global-navbar');
         
-        // 1. Dismiss Splash Screen (Smooth Fade Out Animation)
+        // 1. Dismiss Splash Screen
         if(splash) {
             splash.style.opacity = '0';
             setTimeout(() => {
@@ -126,31 +129,31 @@ export class App {
             // --- PATH A: AUTHENTICATED USER ---
             console.log(`✅ Session Validated: ${user.username}`);
             
-            // 1. Persist User in Singleton State
+            // 1. Persist User State
             state.setUser(user);
             
-            // 2. Initial Render (Dashboard/Identity)
+            // 2. Initial Render
             this.homeCtrl.render(user);
             this.router.navigate('view-home');
             
-            // 3. Unlock Global UI Shell (Header & Navbar)
+            // 3. Unlock Global UI Shell
             if(header) header.classList.remove('hidden');
             if(navbar) navbar.classList.remove('hidden');
 
-            // 4. Bind Bottom Navigation Events
+            // 4. Bind Navigation Events
             this.bindModuleTriggers();
 
         } else {
             // --- PATH B: GUEST / NEW USER ---
             console.log("🆕 No Session Found -> Redirecting to Onboarding");
             
-            // 1. Navigate to Auth Screen
+            // 1. Navigate to Auth
             this.router.navigate('view-onboarding');
             
-            // 2. Initialize Auth Logic (Fresh Instance)
+            // 2. Initialize Auth Logic
             new OnboardingController(); 
             
-            // 3. Lock UI Shell (Focus Mode)
+            // 3. Lock UI Shell
             if(header) header.classList.add('hidden');
             if(navbar) navbar.classList.add('hidden');
         }
@@ -161,36 +164,40 @@ export class App {
      * Ensures data is "Pulled" (Refreshed) every time a tab is visited.
      */
     bindModuleTriggers() {
-        // 1. Home Tab -> Refreshes Header & Identity Card
+        // 1. Home Tab -> Refresh Identity
         document.getElementById('nav-home')?.addEventListener('click', () => {
             const currentUser = state.getUser();
             if (currentUser) this.homeCtrl.render(currentUser);
         });
 
-        // 2. Arena Tab -> Loads Match Feed & SOS Status
+        // 2. Arena Tab -> Refresh Feed
         document.getElementById('nav-arena')?.addEventListener('click', () => {
             console.log("🏟️ Module Load: Arena");
-            this.arenaCtrl.init(); // Triggers data fetch
+            this.arenaCtrl.init(); 
         });
 
-        // 3. Scout Tab -> Loads Marketplace & Trending
+        // 3. Scout Tab -> Refresh Market
         document.getElementById('nav-scout')?.addEventListener('click', () => {
             console.log("🔍 Module Load: Scout");
-            this.scoutCtrl.init(); // Triggers data fetch
+            this.scoutCtrl.init(); 
         });
 
-        // 4. Team Tab -> Loads Dashboard or Create Form
+        // 4. Team Tab -> Refresh Management
         document.getElementById('nav-team')?.addEventListener('click', () => {
             console.log("🛡️ Module Load: Team");
-            this.teamCtrl.init(); // Triggers data fetch
+            this.teamCtrl.init(); 
         });
         
-        // 5. Action Button (The Central Floating Orb)
-        // Currently mapped to open the Tactics Board Overlay directly.
-        // Can be remapped to Operations or a Quick Menu later.
+        // 5. Action Button (Center)
+        // [DEPRECATED BINDING]:
+        // The previous direct binding to `tacticsCtrl.init()` has been REMOVED.
+        // Reason: The `TournamentController` now owns this button and attaches
+        // the "Floating Action Menu" logic during its instantiation.
+        
+        /* 
         document.getElementById('nav-action')?.addEventListener('click', () => {
-             console.log("♟️ Opening Tactics Board...");
-             this.tacticsCtrl.init(); // Show the Board Overlay
-        });
+             this.tacticsCtrl.init(); 
+        }); 
+        */
     }
 }
