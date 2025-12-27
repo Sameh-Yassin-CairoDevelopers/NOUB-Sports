@@ -424,3 +424,32 @@
     color: var(--gold-main);
 }
 
+/* Fixtures Styles */
+.round-title {
+    color: var(--gold-main);
+    text-align: center;
+    margin: 20px 0 10px 0;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
+.fixture-card {
+    background: #222;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    border-left: 3px solid rgba(255,255,255,0.1);
+    position: relative;
+}
+
+.fix-team { width: 40%; font-size: 0.85rem; color: #fff; text-align: center; }
+.fix-score { width: 20%; text-align: center; font-family: var(--font-orbitron); color: var(--gold-main); font-weight: bold; font-size: 1.1rem; }
+.group-pill {
+    position: absolute; right: 5px; top: 5px;
+    font-size: 0.6rem; color: #777;
+    background: #111; padding: 2px 5px; border-radius: 4px;
+}
