@@ -136,17 +136,21 @@ class TournamentService {
 
     /* --- ENGINE: DRAW & SCHEDULING --- */
 
+/* --- FIXED ENGINE: DRAW & SCHEDULING --- */
     async startTournament(tournamentId) {
+        // 1. Fetch Teams
         const { data: teams } = await supabase
             .from('tournament_teams').select('id, team_id').eq('tournament_id', tournamentId);
 
-        if (teams.length < 4) throw new Error("العدد غير كافٍ لبدء القرعة (مطلوب 4 على الأقل).");
+        if (teams.length < 4) throw new Error("العدد غير كافٍ (4 على الأقل).");
 
+        // 2. Shuffle
         for (let i = teams.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [teams[i], teams[j]] = [teams[j], teams[i]];
         }
 
+        // 3. Assign Groups
         const groups = { A: [], B: [], C: [], D: [] };
         const groupKeys = ['A', 'B', 'C', 'D'];
         
@@ -156,24 +160,36 @@ class TournamentService {
             await supabase.from('tournament_teams').update({ group_name: gName }).eq('id', teams[i].id);
         }
 
+        // 4. GENERATE FIXTURES (Explicit Logic - No Undefined)
         const matchesToInsert = [];
+        
         Object.keys(groups).forEach(gName => {
             const gt = groups[gName];
-            if(gt.length < 2) return;
-
-            // Round Robin Logic (Single Round)
-            // Generates N * (N-1) / 2 matches per group, where N is teams in group
-            for (let i = 0; i < gt.length; i++) {
-                for (let j = i + 1; j < gt.length; j++) {
-                    const teamA = gt[i];
-                    const teamB = gt[j];
-                    // Simple round assignment for display, not actual scheduling
-                    const roundNum = matchesToInsert.filter(m => m.match_data.group === gName).length / (gt.length/2) + 1; 
-                    matchesToInsert.push(this._createMatchObj(tournamentId, teamA, teamB, Math.ceil(roundNum), gName));
-                }
+            // If group has 2 teams (Minimal)
+            if (gt.length === 2) {
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName));
+            }
+            // If group has 3 teams
+            else if (gt.length === 3) {
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName)); // 1 vs 2
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[2], 2, gName)); // 2 vs 3
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[2], gt[0], 3, gName)); // 3 vs 1
+            }
+            // If group has 4 teams (Standard)
+            else if (gt.length === 4) {
+                // Round 1
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName));
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[2], gt[3], 1, gName));
+                // Round 2
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[2], 2, gName));
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[3], 2, gName));
+                // Round 3
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[3], 3, gName));
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[2], 3, gName));
             }
         });
 
+        // 5. Insert & Activate
         const validMatches = matchesToInsert.filter(m => m.team_a_id && m.team_b_id);
         if (validMatches.length > 0) await supabase.from('matches').insert(validMatches);
 
