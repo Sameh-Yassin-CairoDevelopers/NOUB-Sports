@@ -10,6 +10,7 @@
  * 3. UX Layer: Manages the new "Floating Action Menu" logic.
  */
 
+
 import { supabase } from '../core/supabaseClient.js';
 import { state } from '../core/state.js';
 import { SoundManager } from '../utils/soundManager.js';
