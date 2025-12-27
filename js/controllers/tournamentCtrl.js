@@ -1,28 +1,25 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/tournamentCtrl.js
- * Version: Noub Sports_beta 5.6.0 (SCHEDULING ENGINE COMPLETE)
+ * Version: Noub Sports_beta 5.6.0 (FULL SUITE: DRAW + REFEREE ENGINE)
  * Status: Production Ready
  * 
- * -----------------------------------------------------------------------------
- * ACADEMIC MODULE DESCRIPTION:
- * -----------------------------------------------------------------------------
- * This module manages the full lifecycle of a Tournament.
- * 
- * CORE ALGORITHMS:
- * 1. Fisher-Yates Shuffle: For randomizing the draw (Groups A, B, C, D).
- * 2. Round Robin Scheduling: For generating "All-play-All" fixtures within groups.
- * 
- * DATA FLOW:
- * Create -> Join -> Draw & Schedule -> Active Mode (Standings/Fixtures).
- * -----------------------------------------------------------------------------
+ * ARCHITECTURE OVERVIEW:
+ * 1. Service Layer:
+ *    - Manages Registration (Join).
+ *    - Executes "Random Draw" & "Round Robin Scheduling".
+ *    - [NEW] Processes Match Results & Updates Standings (Points Engine).
+ * 2. Controller Layer:
+ *    - Renders the Lobby & Fab Menu.
+ *    - [NEW] Renders Referee Console for Organizers.
+ *    - Handles UI logic for Tabs (Standings vs Fixtures).
  */
 
 import { supabase } from '../core/supabaseClient.js';
 import { state } from '../core/state.js';
 import { SoundManager } from '../utils/soundManager.js';
 import { Helpers } from '../utils/helpers.js';
-import { TeamService } from '../services/teamService.js';
+import { TeamService } from '../services/teamService.js'; 
 
 // =============================================================================
 // 1. SERVICE LAYER (DATABASE & LOGIC)
@@ -33,7 +30,7 @@ class TournamentService {
         this.teamService = new TeamService();
     }
 
-    /* --- BASIC CRUD OPERATIONS --- */
+    /* --- CREATION & FETCHING --- */
 
     async createTournament(organizerId, formData) {
         const config = {
@@ -75,28 +72,23 @@ class TournamentService {
         return data || [];
     }
 
-    /**
-     * FETCH FULL DETAILS (The Data Aggregator)
-     * Gets: Tournament Meta, Teams (Standings), and Matches (Fixtures).
-     */
     async getTournamentData(tournamentId) {
         // Parallel Fetch: Info + Teams + Matches
         const [tRes, teamsRes, matchesRes] = await Promise.all([
-            // 1. Info
             supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
             
-            // 2. Teams (Sorted for Standings)
             supabase.from('tournament_teams')
                 .select('*, teams(name, logo_dna)')
                 .eq('tournament_id', tournamentId)
                 .order('points', { ascending: false })
-                .order('goal_diff', { ascending: false }),
+                .order('goal_diff', { ascending: false })
+                .order('goals_for', { ascending: false }),
 
-            // 3. Matches (Fixtures)
+            // [NEW] Fetch Matches for Fixtures Tab
             supabase.from('matches')
                 .select('*, team_a:teams!team_a_id(name), team_b:teams!team_b_id(name)')
                 .eq('tournament_id', tournamentId)
-                .order('match_data->>round', { ascending: true }) // Sort by Round
+                .order('match_data->>round', { ascending: true }) 
         ]);
 
         if (tRes.error) throw tRes.error;
@@ -110,40 +102,35 @@ class TournamentService {
 
     async joinTournament(tournamentId, userId) {
         const myTeam = await this.teamService.getMyTeam(userId);
-        if (!myTeam || myTeam.my_role !== 'CAPTAIN') throw new Error("يجب أن تكون كابتن فريق.");
+        if (!myTeam || myTeam.my_role !== 'CAPTAIN') throw new Error("يجب أن تكون كابتن فريق لتتمكن من الانضمام.");
 
         const { data: existing } = await supabase.from('tournament_teams')
             .select('id').eq('tournament_id', tournamentId).eq('team_id', myTeam.id).maybeSingle();
-        if (existing) throw new Error("مسجل بالفعل.");
+        if (existing) throw new Error("فريقك مسجل بالفعل في هذه البطولة.");
 
         const { count } = await supabase.from('tournament_teams')
             .select('*', { count: 'exact', head: true }).eq('tournament_id', tournamentId);
-        const { data: tourn } = await supabase.from('tournaments').select('config').eq('id', tournamentId).single();
         
-        if (count >= (tourn.config.max_teams || 16)) throw new Error("البطولة مكتملة.");
+        const { data: tourn } = await supabase.from('tournaments').select('config').eq('id', tournamentId).single();
+        if (count >= (tourn.config.max_teams || 16)) throw new Error("البطولة مكتملة العدد.");
 
         const { error } = await supabase.from('tournament_teams')
             .insert([{ tournament_id: tournamentId, team_id: myTeam.id, points: 0 }]);
+
         if (error) throw error;
         return true;
     }
 
-    /* --- THE ENGINE: DRAW & SCHEDULING --- */
+    /* --- ENGINE: DRAW & SCHEDULING --- */
 
-    /**
-     * Executes the Draw and Generates Fixtures.
-     * This is an Atomic Transaction Logic.
-     */
     async startTournament(tournamentId) {
-        // 1. Fetch Teams
+        // 1. Fetch all teams
         const { data: teams } = await supabase
-            .from('tournament_teams')
-            .select('id, team_id')
-            .eq('tournament_id', tournamentId);
+            .from('tournament_teams').select('id, team_id').eq('tournament_id', tournamentId);
 
-        if (teams.length < 4) throw new Error("العدد غير كافٍ (4 على الأقل).");
+        if (teams.length < 4) throw new Error("العدد غير كافٍ لبدء القرعة (مطلوب 4 على الأقل).");
 
-        // 2. Shuffle (Randomize)
+        // 2. Shuffle
         for (let i = teams.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [teams[i], teams[j]] = [teams[j], teams[i]];
@@ -156,71 +143,109 @@ class TournamentService {
         for (let i = 0; i < teams.length; i++) {
             const gName = groupKeys[i % 4];
             groups[gName].push(teams[i].team_id);
-            
-            // Update DB Group
-            await supabase.from('tournament_teams')
-                .update({ group_name: gName })
-                .eq('id', teams[i].id);
+            await supabase.from('tournament_teams').update({ group_name: gName }).eq('id', teams[i].id);
         }
 
-        // 4. GENERATE FIXTURES (Round Robin)
-        // Loop through each group and create matches
+        // 4. Generate Fixtures (Round Robin Logic)
         const matchesToInsert = [];
-        
         Object.keys(groups).forEach(gName => {
-            const groupTeams = groups[gName];
-            if(groupTeams.length < 2) return;
+            const gt = groups[gName];
+            if(gt.length < 2) return;
 
-            // Simple Round Robin Logic for small groups (up to 4 teams)
-            // Round 1
-            matchesToInsert.push(this._createMatchObj(tournamentId, groupTeams[0], groupTeams[1], 1, gName));
-            if(groupTeams.length > 2) matchesToInsert.push(this._createMatchObj(tournamentId, groupTeams[2], groupTeams[3] || null, 1, gName));
+            // Simple Round Robin for up to 4 teams
+            matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName));
+            if(gt.length > 2) matchesToInsert.push(this._createMatchObj(tournamentId, gt[2], gt[3]||null, 1, gName));
             
-            // Round 2
-            matchesToInsert.push(this._createMatchObj(tournamentId, groupTeams[0], groupTeams[2] || groupTeams[1], 2, gName));
-            if(groupTeams.length > 3) matchesToInsert.push(this._createMatchObj(tournamentId, groupTeams[1], groupTeams[3], 2, gName));
+            matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[2]||gt[1], 2, gName));
+            if(gt.length > 3) matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[3], 2, gName));
 
-            // Round 3
-            if(groupTeams.length > 3) {
-                matchesToInsert.push(this._createMatchObj(tournamentId, groupTeams[0], groupTeams[3], 3, gName));
-                matchesToInsert.push(this._createMatchObj(tournamentId, groupTeams[1], groupTeams[2], 3, gName));
+            if(gt.length > 3) {
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[3], 3, gName));
+                matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[2], 3, gName));
             }
         });
 
-        // Clean up invalid matches (if odd numbers caused nulls)
+        // Insert valid matches only
         const validMatches = matchesToInsert.filter(m => m.team_a_id && m.team_b_id);
+        if (validMatches.length > 0) await supabase.from('matches').insert(validMatches);
 
-        // 5. Bulk Insert Matches
-        if (validMatches.length > 0) {
-            const { error } = await supabase.from('matches').insert(validMatches);
-            if(error) console.error("Scheduling Error:", error);
-        }
-
-        // 6. Set Status to ACTIVE
+        // Update Status
         await supabase.from('tournaments').update({ status: 'ACTIVE' }).eq('id', tournamentId);
-
         return true;
     }
 
-    /**
-     * Helper: Objects Factory for Matches
-     */
     _createMatchObj(tournId, tA, tB, round, group) {
         return {
             tournament_id: tournId,
             team_a_id: tA,
             team_b_id: tB,
-            status: 'SCHEDULED', // Not played yet
+            status: 'SCHEDULED',
             score_a: 0,
             score_b: 0,
-            match_data: { 
-                round: round,
-                group: group,
-                headline: `مباراة المجموعة ${group} - الجولة ${round}`
-            },
-            // Default future date (Admin will update time later)
+            match_data: { round: round, group: group, headline: `مباراة المجموعة ${group}` },
             played_at: new Date(Date.now() + 86400000).toISOString() 
         };
+    }
+
+    /* --- [NEW] ENGINE: RESULTS & POINTS --- */
+
+    /**
+     * Updates Match Result and Recalculates Standings.
+     */
+    async submitMatchResult(matchId, scoreA, scoreB) {
+        // A. Fetch Match Meta
+        const { data: match } = await supabase
+            .from('matches').select('tournament_id, team_a_id, team_b_id').eq('id', matchId).single();
+
+        if (!match) throw new Error("المباراة غير موجودة.");
+
+        // B. Update Match Record
+        const { error: matchErr } = await supabase
+            .from('matches')
+            .update({
+                score_a: scoreA,
+                score_b: scoreB,
+                status: 'FINISHED',
+                played_at: new Date().toISOString()
+            })
+            .eq('id', matchId);
+
+        if (matchErr) throw matchErr;
+
+        // C. Update Standings (Trigger logic in JS)
+        await this._updateTeamStats(match.tournament_id, match.team_a_id, scoreA, scoreB);
+        await this._updateTeamStats(match.tournament_id, match.team_b_id, scoreB, scoreA);
+
+        return true;
+    }
+
+    /**
+     * Calculates Points (3/1/0) and Goal Difference.
+     */
+    async _updateTeamStats(tournId, teamId, goalsFor, goalsAgainst) {
+        let points = 0, won = 0, drawn = 0, lost = 0;
+
+        if (goalsFor > goalsAgainst) { points = 3; won = 1; }
+        else if (goalsFor === goalsAgainst) { points = 1; drawn = 1; }
+        else { lost = 1; }
+
+        const { data: current } = await supabase
+            .from('tournament_teams')
+            .select('*')
+            .eq('tournament_id', tournId).eq('team_id', teamId).single();
+
+        const updateData = {
+            played: (current.played || 0) + 1,
+            won: (current.won || 0) + won,
+            drawn: (current.drawn || 0) + drawn,
+            lost: (current.lost || 0) + lost,
+            points: (current.points || 0) + points,
+            goals_for: (current.goals_for || 0) + goalsFor,
+            goals_against: (current.goals_against || 0) + goalsAgainst,
+            goal_diff: ((current.goals_for || 0) + goalsFor) - ((current.goals_against || 0) + goalsAgainst)
+        };
+
+        await supabase.from('tournament_teams').update(updateData).eq('id', current.id);
     }
 }
 
@@ -234,12 +259,10 @@ export class TournamentController {
         this.containerId = 'tourn-content'; 
         this.currentFilter = 'MY'; 
         this.injectFloatingMenu();
-        
-        // Internal State for Detail View
-        this.activeDetailTab = 'STANDINGS'; // or 'FIXTURES'
+        this.activeDetailTab = 'STANDINGS'; 
     }
 
-    /* --- FAB LOGIC (UNCHANGED) --- */
+    /* --- FAB MENU --- */
     injectFloatingMenu() {
         const fab = document.getElementById('nav-action');
         if(!fab) return;
@@ -362,7 +385,6 @@ export class TournamentController {
         
         try {
             const user = state.getUser();
-            // Fetch everything: Info, Teams, Matches
             const data = await this.service.getTournamentData(tournamentId);
             const { info, participants, fixtures } = data;
             const isOrganizer = info.organizer_id === user.id;
@@ -379,10 +401,10 @@ export class TournamentController {
                         </div>
                     </div>
 
-                    <!-- Action Area (Registration Phase Only) -->
+                    <!-- Action Area -->
                     ${isOpen ? `<div class="t-action-area">${this.renderActionArea(info, isOrganizer, participants.length)}</div>` : ''}
 
-                    <!-- Tabs (Active Phase Only) -->
+                    <!-- Tabs -->
                     ${!isOpen ? `
                         <div class="t-tabs" style="margin-bottom:15px;">
                             <button class="t-tab ${this.activeDetailTab==='STANDINGS'?'active':''}" id="tab-standings">المجموعات</button>
@@ -390,11 +412,13 @@ export class TournamentController {
                         </div>
                     ` : ''}
 
-                    <!-- Main Content Body -->
+                    <!-- Content -->
                     <div class="t-content-body">
                         ${isOpen 
                             ? this.renderParticipantsList(participants) 
-                            : (this.activeDetailTab === 'STANDINGS' ? this.renderStandings(participants) : this.renderFixtures(fixtures))
+                            : (this.activeDetailTab === 'STANDINGS' 
+                                ? this.renderStandings(participants) 
+                                : this.renderFixtures(fixtures, isOrganizer)) // [NEW] Pass Organizer flag
                         }
                     </div>
                 </div>
@@ -412,9 +436,15 @@ export class TournamentController {
                     };
                 }
             } else {
-                // Tab Switching
                 document.getElementById('tab-standings').onclick = () => { this.activeDetailTab = 'STANDINGS'; this.openTournamentDetails(tournamentId); };
                 document.getElementById('tab-fixtures').onclick = () => { this.activeDetailTab = 'FIXTURES'; this.openTournamentDetails(tournamentId); };
+            }
+
+            // [NEW] Bind Referee Buttons (If active tab is Fixtures & User is Organizer)
+            if (!isOpen && this.activeDetailTab === 'FIXTURES' && isOrganizer) {
+                container.querySelectorAll('.btn-referee').forEach(btn => {
+                    btn.onclick = () => this.openRefereeModal(btn.dataset.id, btn.dataset.ta, btn.dataset.tb);
+                });
             }
 
         } catch (e) {
@@ -423,7 +453,6 @@ export class TournamentController {
         }
     }
 
-    /* --- RENDER HELPERS --- */
     renderActionArea(info, isOrganizer, count) {
         const ready = count >= 4; 
         if (isOrganizer) {
@@ -478,13 +507,11 @@ export class TournamentController {
     }
 
     /**
-     * RENDER FIXTURES (THE NEW FEATURE)
-     * Displays matches grouped by Rounds.
+     * [NEW] RENDER FIXTURES WITH REFEREE BUTTONS
      */
-    renderFixtures(matches) {
+    renderFixtures(matches, isOrganizer) {
         if (!matches || matches.length === 0) return '<div class="empty-state"><p>جاري جدولة المباريات...</p></div>';
         
-        // Group by Rounds
         const rounds = {};
         matches.forEach(m => {
             const r = m.match_data.round;
@@ -496,17 +523,83 @@ export class TournamentController {
         Object.keys(rounds).forEach(r => {
             html += `<h4 class="round-title">الجولة ${r}</h4>`;
             rounds[r].forEach(m => {
+                const isFinished = m.status === 'FINISHED';
                 html += `
                     <div class="fixture-card">
                         <div class="fix-team"><span>${m.team_a.name}</span></div>
-                        <div class="fix-score">${m.status === 'FINISHED' ? `${m.score_a} - ${m.score_b}` : 'VS'}</div>
+                        <div class="fix-score ${isFinished ? 'final' : ''}">
+                            ${isFinished ? `${m.score_a} - ${m.score_b}` : 'VS'}
+                        </div>
                         <div class="fix-team"><span>${m.team_b.name}</span></div>
+                        
+                        ${(isOrganizer && !isFinished) ? `
+                            <button class="btn-referee" data-id="${m.id}" data-ta="${m.team_a.name}" data-tb="${m.team_b.name}">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                        ` : ''}
+                        
                         <div class="fix-meta group-pill">${m.match_data.group}</div>
                     </div>`;
             });
         });
         html += '</div>';
         return html;
+    }
+
+    /* --- [NEW] REFEREE MODAL --- */
+    openRefereeModal(matchId, teamA, teamB) {
+        const modalId = 'modal-referee';
+        if (!document.getElementById(modalId)) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="${modalId}" class="modal-overlay hidden">
+                    <div class="modal-box match-console">
+                        <div class="modal-header"><h3><i class="fa-solid fa-whistle"></i> تحكيم</h3><button class="close-btn" id="btn-close-ref">&times;</button></div>
+                        <div style="text-align:center; margin-bottom:20px;">
+                            <p class="text-muted">أدخل النتيجة النهائية</p>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                                <div style="flex:1;"><strong id="ref-team-a"></strong></div>
+                                <div style="width:20px;">-</div>
+                                <div style="flex:1;"><strong id="ref-team-b"></strong></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:10px;">
+                                <input type="number" id="ref-score-a" class="score-inp" value="0">
+                                <input type="number" id="ref-score-b" class="score-inp" value="0">
+                            </div>
+                        </div>
+                        <button id="btn-confirm-score" class="btn-primary">اعتماد وتحديث الجدول</button>
+                    </div>
+                </div>`);
+            document.getElementById('btn-close-ref').onclick = () => document.getElementById(modalId).classList.add('hidden');
+        }
+
+        document.getElementById('ref-team-a').textContent = teamA;
+        document.getElementById('ref-team-b').textContent = teamB;
+        document.getElementById('ref-score-a').value = 0;
+        document.getElementById('ref-score-b').value = 0;
+
+        const modal = document.getElementById(modalId);
+        modal.classList.remove('hidden');
+
+        document.getElementById('btn-confirm-score').onclick = async () => {
+            const btn = document.getElementById('btn-confirm-score');
+            const sa = parseInt(document.getElementById('ref-score-a').value);
+            const sb = parseInt(document.getElementById('ref-score-b').value);
+            
+            if(!confirm(`تأكيد النتيجة: ${teamA} (${sa}) - (${sb}) ${teamB} ؟`)) return;
+
+            btn.disabled = true; btn.textContent = "جاري الحساب...";
+            try {
+                await this.service.submitMatchResult(matchId, sa, sb);
+                SoundManager.play('whistle');
+                alert("تم التحديث! النقاط أضيفت للجدول.");
+                modal.classList.add('hidden');
+                // Auto Refresh to show changes
+                this.openTournamentDetails(document.querySelector('.btn-view-tourn').dataset.id); 
+            } catch(e) {
+                alert("خطأ: " + e.message);
+                btn.disabled = false; btn.textContent = "اعتماد";
+            }
+        };
     }
 
     /* --- HANDLERS --- */
