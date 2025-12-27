@@ -41,6 +41,7 @@ import { TacticsController } from '../controllers/tacticsCtrl.js';
 // --- 3. New System Imports (V4 Expansion) ---
 import { MenuController } from '../controllers/menuCtrl.js';        // Manages Side Drawer
 import { OperationsController } from '../controllers/operationsCtrl.js'; // Manages SOS Room
+import { TournamentController } from '../controllers/tournamentCtrl.js'; // [NEW] استيراد مراقب الدورات
 
 /**
  * The Main Application Class.
