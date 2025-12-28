@@ -484,3 +484,43 @@
     font-family: var(--font-orbitron);
     border-radius: 8px;
 }
+
+/* Bracket Styles */
+.bracket-container {
+    padding: 10px;
+    background: #1a1c23;
+    border-radius: 12px;
+    margin-top: 15px;
+}
+
+.bracket-match {
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 10px;
+    position: relative;
+}
+
+/* Connector Line Hint */
+.bracket-match::after {
+    content: '';
+    position: absolute;
+    right: -10px; top: 50%;
+    width: 10px; height: 1px;
+    background: #444;
+}
+
+.b-team {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #fff;
+    padding: 4px 0;
+}
+
+.b-score {
+    font-family: var(--font-orbitron);
+    color: var(--gold-main);
+    font-weight: bold;
+}
