@@ -125,7 +125,6 @@ export class AvatarEngine {
 static generateAvatarHTML(visualDna, shirtName) {
         const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {});
         
-        // Asset Resolution
         const kitColor = dna.kit || '#3b82f6'; 
         const logoIcon = AVATAR_CONFIG.LOGOS[(dna.logo || 1) - 1];
         const faceIcon = AVATAR_CONFIG.FACE_GEAR[(dna.face || 1) - 1];
@@ -140,48 +139,50 @@ static generateAvatarHTML(visualDna, shirtName) {
                 display: flex; 
                 justify-content: center; 
                 align-items: flex-end; 
-                overflow: hidden;
+                overflow: hidden; /* يبقي العناصر داخل الإطار */
             ">
                 
-                <!-- LAYER 1: BASE BODY (Anatomical Anchor) -->
+                <!-- 1. BODY (الرأس والرقبة) -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 100px; 
+                    font-size: 95px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 85px; 
+                    bottom: 80px; /* خفضناه قليلاً لترك مساحة للكاب */
                     z-index: 1;
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
-                <!-- LAYER 2: FACIAL FEATURES -->
+                <!-- 2. FACE ACCESSORY (النظارة) -->
+                <!-- تم التكبير والرفع -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
-                    font-size: 38px;
+                    font-size: 44px; /* تكبير الحجم */
                     color: #222; 
                     position: absolute;
-                    bottom: 132px; 
+                    bottom: 128px; /* رفع الموضع */
                     z-index: 2;
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
-                <!-- LAYER 3: KIT (Torso Layer) -->
+                <!-- 3. SHIRT (القميص) -->
+                <!-- تم تطويله وتعديل مكانه -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 160px; 
+                    font-size: 170px; /* زيادة الحجم ليبدو أطول */
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -30px; 
+                    bottom: -35px; /* خفضناه ليبدو الجذع أطول */
                     z-index: 3;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
-                <!-- LAYER 4: EMBLEM (Kit Logo) -->
+                <!-- 4. LOGO (الشعار) -->
                 ${logoIcon ? `
                 <div style="
                     position: absolute; 
-                    bottom: 65px; 
+                    bottom: 60px; /* تعديل مع القميص الجديد */
                     left: 50%; 
-                    margin-left: 24px; 
+                    margin-left: 26px; 
                     z-index: 4; 
                     width: 24px; 
                     height: 24px; 
@@ -191,19 +192,19 @@ static generateAvatarHTML(visualDna, shirtName) {
                     filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
                 ">
                     <i class="fa-solid ${logoIcon}" style="
-                        font-size: 22px; 
+                        font-size: 24px; 
                         color: rgba(255,255,255,0.95);
                     "></i>
                 </div>` : ''}
 
-                <!-- LAYER 5: TYPOGRAPHY (Player Name) -->
+                <!-- 5. NAME (الاسم) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 22px; 
+                    bottom: 15px; 
                     z-index: 5;
                     color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron', sans-serif; 
-                    font-size: 12px; 
+                    font-size: 13px; /* تكبير الخط */
                     font-weight: 900;
                     text-transform: uppercase;
                     text-shadow: 0 1px 3px #000;
@@ -213,14 +214,15 @@ static generateAvatarHTML(visualDna, shirtName) {
                     ${shirtName || 'NOUB'}
                 </div>
 
-                <!-- LAYER 6: HEADGEAR (Top Layer) -->
+                <!-- 6. HEADGEAR (الكاب) -->
+                <!-- تم ضبطه ليظهر كاملاً داخل الإطار -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
-                    font-size: 70px;
+                    font-size: 65px;
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 172px; 
+                    bottom: 165px; /* ارتفاع مثالي فوق الرأس */
                     z-index: 6;
                 "></i>
                 ` : ''}
@@ -235,6 +237,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
