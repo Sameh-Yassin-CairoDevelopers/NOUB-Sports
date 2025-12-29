@@ -1,77 +1,123 @@
 /*
+ * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/base/reset.css
- * Version: 2.5.0 (ROYAL THEME & SCROLL FIX)
- * Description: Global Reset, Body Styling, and Scrollbar Customization.
+ * Version: Noub Sports_beta 2.6.0 (ROYAL THEME & SCROLL LOCK MASTER)
+ * Status: Production Ready
+ * 
+ * DESCRIPTION:
+ * The foundation stylesheet. It handles:
+ * 1. Global Box Sizing & Reset.
+ * 2. Body Atmosphere (The Royal Green Background).
+ * 3. Scroll Behavior (Locking the app frame, allowing internal scroll).
+ * 4. Scrollbar Customization.
  */
 
-/* 1. Global Reset */
-* { 
-    margin: 0; 
-    padding: 0; 
-    box-sizing: border-box; 
-    -webkit-tap-highlight-color: transparent; 
-    outline: none; 
+/* =========================================
+   1. GLOBAL RESET
+   ========================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    
+    /* Remove tap highlight on mobile links */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Remove default focus outlines for cleaner UI */
+    outline: none;
 }
 
-/* 2. Body Styling (The Royal Green Theme) */
-body { 
-    /* الخلفية: تدرج دائري (أخضر ملكي في المنتصف -> أسود في الأطراف) */
+/* =========================================
+   2. BODY STYLING (THE ATMOSPHERE)
+   ========================================= */
+body {
+    /* 
+     * THE ROYAL GREEN GRADIENT
+     * Starts with Emerald Green in center (#0f2e1d) 
+     * Fades to Deep Forest Green (#09160e)
+     * Ends in Pure Black at edges (#000000)
+     */
     background: radial-gradient(
         circle at center, 
-        #0f2e1d 0%,    /* Emerald Green (Center) */
-        #09160e 50%,   /* Dark Forest (Mid) */
-        #000000 100%   /* Pure Black (Edges) */
+        #0f2e1d 0%, 
+        #09160e 60%, 
+        #000000 100%
     );
     
-    /* تثبيت الخلفية لمنعها من التحرك مع السكرول */
+    /* Lock Background: Prevents it from moving/repeating when scrolling */
     background-attachment: fixed;
     background-size: cover;
     background-repeat: no-repeat;
 
-    /* الخطوط والألوان الأساسية */
-    color: var(--text-main); 
-    font-family: var(--font-primary); 
+    /* Base Typography & Color */
+    color: var(--text-main);
+    font-family: var(--font-primary);
     
-    /* أبعاد الشاشة ومنع السكرول الخارجي */
-    /* هذا يمنع صفحة "هويتي" من التحرك لأعلى وأسفل */
-    height: 100vh; 
-    width: 100vw; 
-    overflow: hidden; 
+    /* 
+     * SCROLL LOCKING MECHANISM
+     * 1. Force Body to be exactly screen height (100vh).
+     * 2. Hide overflow to prevent the whole app from "bouncing" or scrolling.
+     * 3. Internal containers (views) will handle their own scroll.
+     */
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
     
-    /* اتجاه النص */
-    direction: rtl; 
+    /* Orientation */
+    direction: rtl;
 }
 
-/* 3. Helper Classes for Visibility */
-.hidden { display: none !important; }
-.active { display: flex !important; }
+/* =========================================
+   3. VISIBILITY UTILITIES
+   ========================================= */
+.hidden {
+    display: none !important;
+}
 
-/* --- 4. Custom Scrollbar (تجميل شريط التمرير للقوائم الداخلية) --- */
+.active {
+    display: flex !important;
+}
 
-/* لمستعرضات Webkit (Chrome, Edge, Safari) */
+/* =========================================
+   4. GLOBAL VIEW FIXES (TRANSPARENCY)
+   ========================================= */
+/* 
+ * This ensures all sections (Home, Arena, etc.) are transparent
+ * so the Body's Royal Green background shines through.
+ */
+section, .view-section {
+    background: transparent !important;
+}
+
+/* =========================================
+   5. CUSTOM SCROLLBARS (WEBKIT)
+   ========================================= */
+
+/* The Scrollbar Track (Invisible/Subtle) */
 ::-webkit-scrollbar {
-    width: 5px; /* تم تصغير العرض ليكون أنيقاً */
+    width: 4px; /* Very thin for elegance */
 }
 
-/* مسار السكرول (الخلفية) */
 ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2); /* شفاف داكن */
-    margin: 5px; /* مسافة من الحواف */
-    border-radius: 10px;
+    background: transparent; 
 }
 
-/* مقبض السكرول (الجزء المتحرك) */
+/* The Scrollbar Thumb (The moving part) */
 ::-webkit-scrollbar-thumb {
     background: #333; 
     border-radius: 10px;
 }
 
-/* عند لمس السكرول */
+/* Hover Effect */
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--gold-main); /* يلمع بالذهبي */
+    background: var(--gold-main); /* Gold hint on interaction */
 }
 
-/* إخفاء السكرول في الموبايل تماماً لجمالية أكثر (مع استمرار قابلية التمرير) */
+/* 
+ * MOBILE OPTIMIZATION
+ * Hide scrollbars completely on small screens for a "Native App" feel,
+ * while still allowing scroll functionality.
+ */
 @media (max-width: 768px) {
     ::-webkit-scrollbar {
         width: 0px;
