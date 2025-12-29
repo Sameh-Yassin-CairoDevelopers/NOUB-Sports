@@ -178,7 +178,7 @@
     top: 55px; /* Pushed down slightly */
     left: 50%;
     transform: translateX(-50%);
-    width: 200px; height: 200px; /* Matched to AvatarEngine Size */
+    width: 200px; height: 260px; /* Matched to AvatarEngine Size */
     z-index: 5;
 }
 
@@ -326,3 +326,4 @@
     0%, 100% { opacity: 0.6; } 
     50% { opacity: 1; } 
 }
+
