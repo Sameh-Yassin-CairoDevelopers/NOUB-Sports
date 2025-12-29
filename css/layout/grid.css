@@ -1,10 +1,29 @@
+/*
+ * Filename: css/layout/grid.css
+ * Version: 2.1.0 (TRANSPARENT FIX)
+ * Description: Main App Container Layout.
+ * FIX: Removed background color to allow Body Gradient to show through.
+ */
+
 #app-container {
-    width: 100%; height: 100%;
-    max-width: 500px; /* عرض الموبايل */
-    margin: 0 auto;   /* توسيط في الديسك توب */
-    background: var(--bg-primary);
+    width: 100%; 
+    height: 100%;
+    
+    /* Center on Desktop */
+    max-width: 500px; 
+    margin: 0 auto; 
+    
+    /* 
+     * [CRITICAL FIX]
+     * Was: background: var(--bg-primary); -> Caused Black Screen
+     * Now: transparent -> Reveals the Royal Green Body Background
+     */
+    background: transparent; 
+    
     position: relative;
-    box-shadow: 0 0 50px rgba(0,0,0,0.5); /* ظل في الديسك توب */
+    
+    /* Shadow only appears on Desktop to separate app from browser background */
+    box-shadow: 0 0 50px rgba(0,0,0,0.5); 
 }
 
 #main-content {
@@ -14,4 +33,7 @@
     width: 100%;
     overflow-y: auto;
     padding: 0;
+    
+    /* Ensure content doesn't block background either */
+    background: transparent;
 }
