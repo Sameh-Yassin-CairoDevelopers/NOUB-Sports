@@ -139,29 +139,32 @@ static generateAvatarHTML(visualDna, shirtName) {
                 display: flex; 
                 justify-content: center; 
                 align-items: flex-end; 
-                overflow: hidden; 
+                overflow: hidden;
+                /* الحل الهندسي: تصغير المنظور 10% ليحتوي القبعة والجسم الضخم */
+                transform: scale(0.9);
+                transform-origin: bottom center;
             ">
                 
-                <!-- 1. BODY (LAYER 1 - BACKGROUND) -->
-                <!-- تم التكبير بنسبة 10% (105px) ووضعه في الخلفية -->
+                <!-- 1. BODY (LAYER 1 - BACK) -->
+                <!-- الجسم ضخم (105px) وفي الخلفية -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 100px; 
+                    font-size: 105px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 78px; 
+                    bottom: 80px; 
                     z-index: 1; 
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
                 <!-- 2. SHIRT (LAYER 2 - FRONT) -->
-                <!-- التيشيرت أمام الجسم ليغطي الأكتاف -->
+                <!-- القميص أمام الجسم، مرتفع قليلاً ليغطي الأكتاف -->
                 <i class="fa-solid fa-shirt" style="
                     font-size: 160px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -35px; 
+                    bottom: -40px; 
                     z-index: 2; 
-                    transform: scaleY(1.15); /* تطويل طفيف */
+                    transform: scaleY(1.15);
                     transform-origin: bottom center;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
@@ -172,7 +175,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                     font-size: 38px; 
                     color: #222; 
                     position: absolute;
-                    bottom: 130px; 
+                    bottom: 125px; 
                     z-index: 3; 
                     opacity: 0.95;
                 "></i>
@@ -182,7 +185,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                 ${logoIcon ? `
                 <div style="
                     position: absolute; 
-                    bottom: 55px; 
+                    bottom: 50px; 
                     left: 50%; 
                     margin-left: 24px; 
                     z-index: 4; 
@@ -216,14 +219,14 @@ static generateAvatarHTML(visualDna, shirtName) {
                 </div>
 
                 <!-- 6. HEADGEAR (LAYER 6 - TOP) -->
-                <!-- تعديل الارتفاع ليتناسب مع الرأس الكبير -->
+                <!-- بما أننا صغرنا المنظور، القبعة ستظهر كاملة الآن -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
                     font-size: 65px; 
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 165px; 
+                    bottom: 160px; 
                     z-index: 6; 
                 "></i>
                 ` : ''}
@@ -239,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
