@@ -42,7 +42,6 @@ class TournamentService {
     
     constructor() {
         this.teamService = new TeamService();
-        // We instantiate NotificationService but use direct DB inserts for specific custom payloads
     }
 
     /* --- INITIALIZATION --- */
@@ -87,7 +86,6 @@ class TournamentService {
     }
 
     async getTournamentData(tournamentId) {
-        // Parallel Fetch for maximum performance
         const [tRes, teamsRes, matchesRes] = await Promise.all([
             supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
             
@@ -101,7 +99,7 @@ class TournamentService {
             supabase.from('matches')
                 .select('*, team_a:teams!team_a_id(name), team_b:teams!team_b_id(name)')
                 .eq('tournament_id', tournamentId)
-                .order('played_at', { ascending: true }) // Chronological order
+                .order('played_at', { ascending: true }) 
         ]);
 
         if (tRes.error) throw tRes.error;
@@ -157,7 +155,7 @@ class TournamentService {
             await supabase.from('tournament_teams').update({ group_name: gName }).eq('id', teams[i].id);
         }
 
-        // Generate Fixtures (Hardcoded Round Robin to prevent Logic Errors)
+        // Generate Fixtures (Hardcoded Round Robin)
         const matchesToInsert = [];
         Object.keys(groups).forEach(gName => {
             const gt = groups[gName];
@@ -251,11 +249,10 @@ class TournamentService {
 
         // 4. Branching Logic
         if (match.stage === 'GROUP' || !match.stage) {
-            // Group Stage: Update Points
             await this._updateTeamStats(match.tournament_id, match.team_a_id, scoreA, scoreB);
             await this._updateTeamStats(match.tournament_id, match.team_b_id, scoreB, scoreA);
         } else {
-            // Knockout Stage: Check for Progression
+            // Critical: Call the Auto-Pilot for Knockout
             await this._checkAndAdvanceKnockout(match.tournament_id, match.stage);
         }
 
@@ -284,12 +281,9 @@ class TournamentService {
         await supabase.from('tournament_teams').update(updateData).eq('id', current.id);
     }
 
-    /**
-     * [AUTO-PILOT] Checks if all matches in a round are done, then creates next round.
-     */
+    /* --- AUTO-PILOT LOGIC --- */
+
     async _checkAndAdvanceKnockout(tournamentId, currentStage) {
-        console.log(`Checking progression for stage: ${currentStage}`);
-        
         // Fetch all matches for this stage
         const { data: matches } = await supabase
             .from('matches')
@@ -297,40 +291,34 @@ class TournamentService {
             .eq('tournament_id', tournamentId)
             .eq('stage', currentStage);
 
-        // Check if ALL finished
+        // Check if ALL matches in this round are FINISHED
         const allFinished = matches.every(m => m.status === 'FINISHED');
-        if (!allFinished) return; // Wait for other matches
+        if (!allFinished) return; 
 
-        // Determine Next Stage
+        // Advance
         if (currentStage === 'QUARTER') {
             await this._createNextRoundMatches(tournamentId, matches, 'SEMI');
         } else if (currentStage === 'SEMI') {
             await this._createNextRoundMatches(tournamentId, matches, 'FINAL');
         } else if (currentStage === 'FINAL') {
-            // End Tournament
             await supabase.from('tournaments').update({ status: 'COMPLETED' }).eq('id', tournamentId);
         }
     }
 
-    /**
-     * Generates Semi-Finals or Final matches from previous winners.
-     */
     async _createNextRoundMatches(tournamentId, prevMatches, nextStage) {
         const winners = [];
-        // Identify Winners
         prevMatches.forEach(m => {
             const winnerId = m.score_a > m.score_b ? m.team_a_id : m.team_b_id;
-            // Store winner associated with the match "slot" (e.g., QF1) to map correctly
+            // Match data round (QF1, QF2...) is the slot key
             winners.push({ slot: m.match_data.round, teamId: winnerId });
         });
 
-        // Mapping Logic
         const newMatches = [];
         if (nextStage === 'SEMI') {
-            // SF1: Winner QF1 vs Winner QF2
+            // SF1 = Winner QF1 vs Winner QF2
             const w1 = winners.find(w => w.slot === 'QF1')?.teamId;
             const w2 = winners.find(w => w.slot === 'QF2')?.teamId;
-            // SF2: Winner QF3 vs Winner QF4
+            // SF2 = Winner QF3 vs Winner QF4
             const w3 = winners.find(w => w.slot === 'QF3')?.teamId;
             const w4 = winners.find(w => w.slot === 'QF4')?.teamId;
 
@@ -338,7 +326,6 @@ class TournamentService {
             if (w3 && w4) newMatches.push(this._createMatchObj(tournamentId, w3, w4, 'SF2', 'Knockout', 'SEMI'));
         } 
         else if (nextStage === 'FINAL') {
-            // Final: Winner SF1 vs Winner SF2
             const w1 = winners.find(w => w.slot === 'SF1')?.teamId;
             const w2 = winners.find(w => w.slot === 'SF2')?.teamId;
             if (w1 && w2) newMatches.push(this._createMatchObj(tournamentId, w1, w2, 'FINAL', 'Knockout', 'FINAL'));
@@ -351,9 +338,7 @@ class TournamentService {
 
     async _sendTournamentResultNotification(matchData, scoreA, scoreB, headline) {
         try {
-            // 1. Get Organizer
             const { data: tourn } = await supabase.from('tournaments').select('organizer_id').eq('id', matchData.tournament_id).single();
-            // 2. Get Captains
             const { data: captains } = await supabase.from('team_members').select('user_id').in('team_id', [matchData.team_a_id, matchData.team_b_id]).eq('role', 'CAPTAIN');
             
             const notifiedUsers = new Set();
@@ -387,7 +372,7 @@ export class TournamentController {
         this.activeDetailTab = 'STANDINGS'; 
     }
 
-    /* --- FAB MENU (Standard) --- */
+    /* --- FAB MENU --- */
     injectFloatingMenu() {
         const fab = document.getElementById('nav-action');
         if(!fab) return;
@@ -435,7 +420,7 @@ export class TournamentController {
         }
     }
 
-    /* --- VIEW: TOURNAMENT LIST --- */
+    /* --- TOURNAMENT LIST --- */
     async initTournamentView() {
         window.router('view-tournaments'); 
         const container = document.getElementById(this.containerId);
@@ -501,7 +486,7 @@ export class TournamentController {
             </div>`;
     }
 
-    /* --- VIEW: TOURNAMENT LOBBY --- */
+    /* --- TOURNAMENT LOBBY --- */
     async openTournamentDetails(tournamentId) {
         const container = document.getElementById(this.containerId);
         container.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
@@ -529,7 +514,7 @@ export class TournamentController {
                     <div class="t-action-area">
                         ${isOpen ? this.renderRegAction(info, isOrganizer, participants.length) : ''}
                         ${(isActive && isOrganizer) ? `<button id="btn-start-knockout" class="btn-primary-gold"><i class="fa-solid fa-gavel"></i> إنهاء المجموعات وبدء التصفيات</button>` : ''}
-                        ${(info.status === 'COMPLETED') ? `<div class="champion-banner"><i class="fa-solid fa-crown"></i> البطولة مكتملة</div>` : ''}
+                        ${(info.status === 'COMPLETED') ? `<div class="champion-banner" style="text-align:center; padding:15px; background:linear-gradient(to right, #ffd700, #b8860b); border-radius:12px; color:#332200; font-weight:bold; font-family:var(--font-sport); font-size:1.2rem;"><i class="fa-solid fa-crown"></i> البطولة مكتملة</div>` : ''}
                     </div>
 
                     ${!isOpen ? `
@@ -541,12 +526,14 @@ export class TournamentController {
                     ` : ''}
 
                     <div class="t-content-body">
-                        ${isOpen ? this.renderParticipantsList(participants) : this.renderPhaseContent(participants, fixtures, isKnockout, isOrganizer)}
+                        ${isOpen 
+                            ? this.renderParticipantsList(participants) 
+                            : this.renderPhaseContent(participants, fixtures, isKnockout, isOrganizer)
+                        }
                     </div>
                 </div>
             `;
 
-            // Bind Events
             document.getElementById('btn-back-tourn').onclick = () => this.initTournamentView();
 
             if (isOpen) {
@@ -562,16 +549,23 @@ export class TournamentController {
             }
 
             // Referee Binders (Organizer Only)
-            // Works for both Group Fixtures and Bracket Matches
             if (!isOpen && isOrganizer) {
-                container.querySelectorAll('.btn-referee, .btn-referee-mini').forEach(btn => {
-                    btn.onclick = () => this.openRefereeModal(
-                        btn.dataset.id, 
-                        btn.dataset.ta, 
-                        btn.dataset.tb, 
-                        tournamentId
-                    );
-                });
+                // Group Stage Referee Buttons
+                if (this.activeDetailTab === 'FIXTURES') {
+                    container.querySelectorAll('.btn-referee').forEach(btn => {
+                        btn.onclick = () => this.openRefereeModal(
+                            btn.dataset.id, btn.dataset.ta, btn.dataset.tb, tournamentId
+                        );
+                    });
+                }
+                // Knockout Referee Buttons
+                if (this.activeDetailTab === 'BRACKET') {
+                    container.querySelectorAll('.btn-referee-mini').forEach(btn => {
+                        btn.onclick = () => this.openRefereeModal(
+                            btn.dataset.id, btn.dataset.ta, btn.dataset.tb, tournamentId
+                        );
+                    });
+                }
             }
 
         } catch (e) {
@@ -580,6 +574,7 @@ export class TournamentController {
         }
     }
 
+    /* --- RENDER HELPERS --- */
     renderRegAction(info, isOrganizer, count) {
         const ready = count >= 4; 
         if (isOrganizer) {
@@ -636,7 +631,6 @@ export class TournamentController {
         if (!matches || matches.length === 0) return '<div class="empty-state"><p>لا توجد مباريات.</p></div>';
         const rounds = {};
         matches.forEach(m => {
-            // Robust check for missing round
             const r = m.match_data.round || m.stage || 'UNCLASSIFIED'; 
             if(!rounds[r]) rounds[r] = [];
             rounds[r].push(m);
@@ -644,8 +638,7 @@ export class TournamentController {
 
         let html = '<div class="fixtures-container">';
         Object.keys(rounds).forEach(r => {
-            // Pretty Titles
-            let title = r;
+            let title = '';
             if (r === 'QUARTER') title = 'ربع النهائي';
             else if (r === 'SEMI') title = 'نصف النهائي';
             else if (r === 'FINAL') title = 'النهائي';
@@ -692,10 +685,11 @@ export class TournamentController {
                     ${matches.map(m => {
                         const isFinished = m.status === 'FINISHED';
                         return `
-                        <div class="bracket-match" style="${isFinished ? 'opacity:0.8;' : ''}">
-                            <div class="b-team"><span>${m.team_a?.name || '???'}</span><span class="b-score">${isFinished ? m.score_a : '-'}</span></div>
-                            <div class="b-team"><span>${m.team_b?.name || '???'}</span><span class="b-score">${isFinished ? m.score_b : '-'}</span></div>
-                            ${(isOrganizer && !isFinished) ? `<button class="btn-referee-mini" data-id="${m.id}" data-ta="${m.team_a?.name}" data-tb="${m.team_b?.name}"><i class="fa-solid fa-pen"></i></button>` : ''}
+                        <div class="bracket-match" style="${isFinished ? 'opacity:0.8;' : ''}; position:relative; background:#222; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #333;">
+                            <div class="b-team" style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${m.team_a?.name || '???'}</span><span class="b-score" style="color:var(--gold-main); font-weight:bold;">${isFinished ? m.score_a : '-'}</span></div>
+                            <div class="b-team" style="display:flex; justify-content:space-between;"><span>${m.team_b?.name || '???'}</span><span class="b-score" style="color:var(--gold-main); font-weight:bold;">${isFinished ? m.score_b : '-'}</span></div>
+                            
+                            ${(isOrganizer && !isFinished) ? `<button class="btn-referee-mini" data-id="${m.id}" data-ta="${m.team_a?.name}" data-tb="${m.team_b?.name}" style="position:absolute; right:-10px; top:35%; width:25px; height:25px; border-radius:50%; background:var(--gold-main); border:none; cursor:pointer;"><i class="fa-solid fa-pen" style="font-size:0.7rem;"></i></button>` : ''}
                         </div>`;
                     }).join('')}
                 </div>
@@ -726,7 +720,7 @@ export class TournamentController {
         } catch (e) { alert("خطأ: " + e.message); }
     }
 
-    /* --- BUG-FREE REFEREE MODAL --- */
+    /* --- REFEREE MODAL (FIXED) --- */
     openRefereeModal(matchId, teamA, teamB, tournamentId) {
         const modalId = 'modal-referee';
         if (!document.getElementById(modalId)) {
@@ -759,7 +753,6 @@ export class TournamentController {
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
 
-        // Clean replacement of the button to prevent event stacking
         const oldBtn = document.getElementById('btn-confirm-score');
         const newBtn = oldBtn.cloneNode(true);
         oldBtn.parentNode.replaceChild(newBtn, oldBtn);
@@ -775,7 +768,7 @@ export class TournamentController {
                 await this.service.submitMatchResult(matchId, sa, sb);
                 SoundManager.play('whistle');
                 modal.classList.add('hidden');
-                // The Fix: Pass ID directly to ensure correct refresh context
+                // The Fix: Pass ID directly
                 this.openTournamentDetails(tournamentId);
             } catch(e) { 
                 alert(e.message); 
@@ -786,8 +779,7 @@ export class TournamentController {
         };
     }
 
-    /* --- CREATE MODAL --- */
-    openCreateModal() {
+    openCreateModal() { /* Standard Create Logic */
         const modalId = 'modal-create-tourn';
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
