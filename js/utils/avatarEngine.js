@@ -145,10 +145,10 @@ static generateAvatarHTML(visualDna, shirtName) {
                 <!-- 1. BODY (LAYER 1 - BACKGROUND) -->
                 <!-- تم التكبير بنسبة 10% (105px) ووضعه في الخلفية -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 95px; 
+                    font-size: 100px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 85px; 
+                    bottom: 78px; 
                     z-index: 1; 
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
@@ -239,6 +239,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
