@@ -123,17 +123,15 @@ export class AvatarEngine {
      * @returns {string} HTML String
      */
 static generateAvatarHTML(visualDna, shirtName) {
-        // 1. Data Sanitization
         const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {});
         
-        // 2. Asset Resolution
+        // Asset Resolution
         const kitColor = dna.kit || '#3b82f6'; 
         const logoIcon = AVATAR_CONFIG.LOGOS[(dna.logo || 1) - 1];
         const faceIcon = AVATAR_CONFIG.FACE_GEAR[(dna.face || 1) - 1];
         const headIcon = AVATAR_CONFIG.HEAD_GEAR[(dna.hair || 1) - 1];
         const skinColor = AVATAR_CONFIG.FIXED_SKIN;
 
-        // 3. HTML Composition
         return `
             <div class="avatar-comp" style="
                 position: relative; 
@@ -141,74 +139,71 @@ static generateAvatarHTML(visualDna, shirtName) {
                 height: 100%; 
                 display: flex; 
                 justify-content: center; 
-                align-items: flex-end;
-                overflow: hidden; 
-                background: transparent; 
-                border-radius: inherit;
+                align-items: flex-end; 
+                overflow: hidden;
             ">
                 
-                <!-- LAYER 1: BODY (Head & Neck) -->
-                <!-- Raised to 75px to create neck space -->
+                <!-- LAYER 1: BASE BODY (Anatomical Anchor) -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 95px; 
+                    font-size: 100px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 75px; 
+                    bottom: 85px; 
                     z-index: 1;
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
-                <!-- LAYER 2: FACE ACCESSORY (Eyes) -->
-                <!-- Aligned with new head height -->
+                <!-- LAYER 2: FACIAL FEATURES -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
                     font-size: 38px;
                     color: #222; 
                     position: absolute;
-                    bottom: 122px; 
+                    bottom: 132px; 
                     z-index: 2;
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
-                <!-- LAYER 3: THE SHIRT (Kit) -->
-                <!-- Lowered to -25px to reveal the neck -->
+                <!-- LAYER 3: KIT (Torso Layer) -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 150px; 
+                    font-size: 160px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -25px; 
+                    bottom: -30px; 
                     z-index: 3;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
-                <!-- LAYER 4: CHEST BADGE (Logo) -->
+                <!-- LAYER 4: EMBLEM (Kit Logo) -->
                 ${logoIcon ? `
                 <div style="
-                    position: absolute;
-                    bottom: 75px;
-                    left: 50%;
-                    margin-left: 22px; 
-                    z-index: 4;
-                    width: 24px; height: 24px;
-                    display: flex; justify-content: center; align-items: center;
+                    position: absolute; 
+                    bottom: 65px; 
+                    left: 50%; 
+                    margin-left: 24px; 
+                    z-index: 4; 
+                    width: 24px; 
+                    height: 24px; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
                     filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
                 ">
                     <i class="fa-solid ${logoIcon}" style="
-                        font-size: 20px;
+                        font-size: 22px; 
                         color: rgba(255,255,255,0.95);
                     "></i>
-                </div>
-                ` : ''}
+                </div>` : ''}
 
-                <!-- LAYER 5: BRANDING (Name) -->
+                <!-- LAYER 5: TYPOGRAPHY (Player Name) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 25px; 
+                    bottom: 22px; 
                     z-index: 5;
-                    color: rgba(255,255,255,0.85); 
+                    color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron', sans-serif; 
-                    font-size: 11px; 
+                    font-size: 12px; 
                     font-weight: 900;
                     text-transform: uppercase;
                     text-shadow: 0 1px 3px #000;
@@ -218,15 +213,14 @@ static generateAvatarHTML(visualDna, shirtName) {
                     ${shirtName || 'NOUB'}
                 </div>
 
-                <!-- LAYER 6: HEADGEAR (Hat) -->
-                <!-- Raised to 160px to sit on top of the head -->
+                <!-- LAYER 6: HEADGEAR (Top Layer) -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
-                    font-size: 65px;
+                    font-size: 70px;
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 160px; 
+                    bottom: 172px; 
                     z-index: 6;
                 "></i>
                 ` : ''}
@@ -241,5 +235,6 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
