@@ -143,46 +143,48 @@ static generateAvatarHTML(visualDna, shirtName) {
             ">
                 
                 <!-- 1. BODY (الرأس) -->
-                <!-- ارتفاع 75 يضمن ظهور الرقبة فوق ياقة القميص -->
+                <!-- تم الخفض قليلاً إلى 70px لإبعاده عن الحافة العلوية -->
                 <i class="fa-solid fa-user" style="
                     font-size: 90px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 75px; 
+                    bottom: 70px; 
                     z-index: 1;
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
                 <!-- 2. FACE ACCESSORY (النظارة) -->
-                <!-- متناسقة مع الرأس -->
+                <!-- تعديل الموضع مع الرأس الجديد -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
                     font-size: 36px; 
                     color: #222; 
                     position: absolute;
-                    bottom: 120px; 
+                    bottom: 115px; 
                     z-index: 2;
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
-                <!-- 3. SHIRT (القميص) -->
-                <!-- تم إنزاله إلى -50px ليبدو طويلاً ويكشف الرقبة دون تشويه العرض -->
+                <!-- 3. SHIRT (القميص) - التعديل الجذري -->
+                <!-- scaleY(1.3): يمط القميص طولياً بنسبة 30% ليصبح طويلاً دون زيادة العرض -->
+                <!-- transform-origin: bottom; يجعل المط يحدث للأعلى، فيبدو القميص أطول -->
                 <i class="fa-solid fa-shirt" style="
                     font-size: 155px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -50px; 
+                    bottom: -45px; 
                     z-index: 3;
+                    transform: scaleY(1.3); 
+                    transform-origin: bottom center;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
                 <!-- 4. LOGO (الشعار) -->
-                <!-- تم خفضه ليتناسب مع القميص -->
                 ${logoIcon ? `
                 <div style="
                     position: absolute; 
-                    bottom: 45px; 
+                    bottom: 50px; 
                     left: 50%; 
                     margin-left: 24px; 
                     z-index: 4; 
@@ -217,14 +219,14 @@ static generateAvatarHTML(visualDna, shirtName) {
                 </div>
 
                 <!-- 6. HEADGEAR (القبعة) -->
-                <!-- ارتفاع 155 آمن جداً ولن يتم قصه -->
+                <!-- خفضناها لتتناسب مع الرأس، ولتبتعد عن حافة الكارت -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
                     font-size: 60px; 
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 155px; 
+                    bottom: 150px; 
                     z-index: 6;
                 "></i>
                 ` : ''}
@@ -240,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
