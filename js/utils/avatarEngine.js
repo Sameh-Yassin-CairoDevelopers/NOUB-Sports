@@ -175,7 +175,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                     font-size: 38px; 
                     color: #222; 
                     position: absolute;
-                    bottom: 105px; 
+                    bottom: 145px; 
                     z-index: 3; 
                     opacity: 0.95;
                 "></i>
@@ -242,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
