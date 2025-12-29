@@ -35,9 +35,9 @@
     /* ROYAL GREEN BACKGROUND THEME */
     background: radial-gradient(
         circle at center, 
-        #0f2e1d 0%,    /* Center: Deep Emerald Green */
-        #09160e 50%,   /* Mid: Darker Forest Green */
-        #000000 100%   /* Edges: Pure Black */
+        #0f2e1d 0%,    /* <--- هذا هو كود الأخضر الملكي (Emerald Green) */
+        #09160e 50%,   /* أخضر غامق جداً */
+        #000000 100%   /* أسود في الأطراف */
     );
 }
 
