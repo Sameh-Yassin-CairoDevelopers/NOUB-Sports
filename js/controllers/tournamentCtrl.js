@@ -1,28 +1,29 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/tournamentCtrl.js
- * Version: Noub Sports_beta 7.0.0 (ULTIMATE EDITION: FULL SUITE)
+ * Version: Noub Sports_beta 8.0.0 (GOLDEN MASTER: FULL AUTO-PILOT)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
- * ACADEMIC MODULE DESCRIPTION (الوصف المعماري):
+ * ACADEMIC MODULE DESCRIPTION:
  * -----------------------------------------------------------------------------
- * This module acts as the "Central Nervous System" for the Tournament Feature.
- * It orchestrates the entire lifecycle of a tournament from creation to the final cup.
+ * The Master Controller for the Tournament System.
  * 
- * CORE SUBSYSTEMS:
- * 1. Registration System: Manages team entries, capacity checks, and role validation.
- * 2. Scheduling Engine: 
- *    - Uses 'Fisher-Yates Shuffle' for random group generation.
- *    - Uses 'Round Robin' algorithm to generate "All-play-All" fixtures.
- * 3. Scoring & Stats Engine:
- *    - Processes match results.
- *    - Updates Group Standings (Points, Goal Diff, Goals For).
- *    - Integrates with 'NewsEngine' for automated journalism.
- * 4. Knockout Engine (The Transition):
- *    - Automatically promotes Top 2 teams from each group.
- *    - Generates Quarter-Final pairings (Cross-Group logic: A1 vs B2).
- * 
+ * CORE CAPABILITIES:
+ * 1. Registration Logic: Manages team entries and capacity.
+ * 2. Group Stage Engine: 
+ *    - Fisher-Yates Shuffle for Draws.
+ *    - Round Robin Scheduling.
+ *    - Live Standings Calculation.
+ * 3. Knockout Automation (The Auto-Pilot):
+ *    - Automatically detects when a round (QF/SF) ends.
+ *    - Promotes winners to the next stage immediately.
+ *    - Declares the Champion upon Final match completion.
+ * 4. Referee Console (Bug-Free):
+ *    - Transactional score submission.
+ *    - Auto-refresh mechanism without page reload.
+ * 5. Notification System:
+ *    - Alerts Captains and Organizers on every critical event.
  * -----------------------------------------------------------------------------
  */
 
@@ -31,28 +32,24 @@ import { state } from '../core/state.js';
 import { SoundManager } from '../utils/soundManager.js';
 import { Helpers } from '../utils/helpers.js';
 import { TeamService } from '../services/teamService.js'; 
-import { NewsEngine } from '../utils/newsEngine.js';             
-import { NotificationService } from '../services/notificationService.js'; 
+import { NewsEngine } from '../utils/newsEngine.js';
+import { NotificationService } from '../services/notificationService.js';
 
 // =============================================================================
-// PART 1: SERVICE LAYER (BUSINESS LOGIC & DATABASE TRANSACTIONS)
+// PART 1: SERVICE LAYER (DATA & BUSINESS LOGIC)
 // =============================================================================
 class TournamentService {
     
     constructor() {
         this.teamService = new TeamService();
-        this.notificationService = new NotificationService();
+        // We instantiate NotificationService but use direct DB inserts for specific custom payloads
     }
 
-    /**
-     * [CRUD] Create a new Tournament.
-     * Initializes the record with 'OPEN' status.
-     * @param {string} organizerId - User ID of the creator.
-     * @param {Object} formData - Configuration data.
-     */
+    /* --- INITIALIZATION --- */
+
     async createTournament(organizerId, formData) {
         const config = {
-            type: formData.type, // 'GROUPS', 'LEAGUE'
+            type: formData.type, 
             max_teams: formData.teamsCount,
             entry_fee: formData.entryFee || 0
         };
@@ -66,17 +63,12 @@ class TournamentService {
                 config: config,
                 created_at: new Date().toISOString()
             }])
-            .select()
-            .single();
+            .select().single();
             
         if (error) throw error;
         return data;
     }
 
-    /**
-     * [FETCH] Get List of Tournaments.
-     * Filters by Context (My Tournaments vs All Active Tournaments).
-     */
     async getTournaments(filter, userId) {
         let query = supabase
             .from('tournaments')
@@ -86,7 +78,6 @@ class TournamentService {
         if (filter === 'MY') {
             query = query.eq('organizer_id', userId);
         } else {
-            // Public feed: Show everything except Archived/Deleted
             query = query.neq('status', 'ARCHIVED'); 
         }
 
@@ -95,16 +86,11 @@ class TournamentService {
         return data || [];
     }
 
-    /**
-     * [FETCH] Get Complete Tournament Data (The "Lobby" Payload).
-     * Retrieves Metadata, Participants (Standings), and Fixtures in one go.
-     */
     async getTournamentData(tournamentId) {
+        // Parallel Fetch for maximum performance
         const [tRes, teamsRes, matchesRes] = await Promise.all([
-            // 1. Info
             supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
             
-            // 2. Teams (Sorted for Standings Table)
             supabase.from('tournament_teams')
                 .select('*, teams(name, logo_dna)')
                 .eq('tournament_id', tournamentId)
@@ -112,12 +98,10 @@ class TournamentService {
                 .order('goal_diff', { ascending: false })
                 .order('goals_for', { ascending: false }),
 
-            // 3. Matches (Sorted by Round)
             supabase.from('matches')
                 .select('*, team_a:teams!team_a_id(name), team_b:teams!team_b_id(name)')
                 .eq('tournament_id', tournamentId)
-                .order('match_data->>round', { ascending: true }) 
-                .order('played_at', { ascending: true })
+                .order('played_at', { ascending: true }) // Chronological order
         ]);
 
         if (tRes.error) throw tRes.error;
@@ -129,30 +113,20 @@ class TournamentService {
         };
     }
 
-    /**
-     * [ACTION] Join Tournament.
-     * Validates: Role (Captain), Duplication, and Capacity.
-     */
     async joinTournament(tournamentId, userId) {
-        // 1. Role Check
         const myTeam = await this.teamService.getMyTeam(userId);
-        if (!myTeam || myTeam.my_role !== 'CAPTAIN') {
-            throw new Error("يجب أن تكون كابتن فريق لتتمكن من الانضمام.");
-        }
+        if (!myTeam || myTeam.my_role !== 'CAPTAIN') throw new Error("يجب أن تكون كابتن فريق.");
 
-        // 2. Duplication Check
         const { data: existing } = await supabase.from('tournament_teams')
             .select('id').eq('tournament_id', tournamentId).eq('team_id', myTeam.id).maybeSingle();
-        if (existing) throw new Error("فريقك مسجل بالفعل في هذه البطولة.");
+        if (existing) throw new Error("فريقك مسجل بالفعل.");
 
-        // 3. Capacity Check
         const { count } = await supabase.from('tournament_teams')
             .select('*', { count: 'exact', head: true }).eq('tournament_id', tournamentId);
         
         const { data: tourn } = await supabase.from('tournaments').select('config').eq('id', tournamentId).single();
         if (count >= (tourn.config.max_teams || 16)) throw new Error("البطولة مكتملة العدد.");
 
-        // 4. Execute Join
         const { error } = await supabase.from('tournament_teams')
             .insert([{ tournament_id: tournamentId, team_id: myTeam.id, points: 0 }]);
 
@@ -160,79 +134,53 @@ class TournamentService {
         return true;
     }
 
-    /* --- THE ENGINE: DRAW & SCHEDULING (ALGORITHM) --- */
+    /* --- GROUP STAGE ENGINE --- */
 
-    /**
-     * Executes the Random Draw and Generates Group Stage Fixtures.
-     */
     async startTournament(tournamentId) {
-        // 1. Fetch Registered Teams
         const { data: teams } = await supabase
             .from('tournament_teams').select('id, team_id').eq('tournament_id', tournamentId);
 
-        if (teams.length < 4) throw new Error("العدد غير كافٍ لبدء القرعة (مطلوب 4 على الأقل).");
+        if (teams.length < 4) throw new Error("العدد غير كافٍ (4 على الأقل).");
 
-        // 2. Fisher-Yates Shuffle (True Randomization)
+        // Fisher-Yates Shuffle
         for (let i = teams.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [teams[i], teams[j]] = [teams[j], teams[i]];
         }
 
-        // 3. Assign Groups (A, B, C, D)
         const groups = { A: [], B: [], C: [], D: [] };
         const groupKeys = ['A', 'B', 'C', 'D'];
         
         for (let i = 0; i < teams.length; i++) {
             const gName = groupKeys[i % 4];
             groups[gName].push(teams[i].team_id);
-            // Persist Group Assignment
             await supabase.from('tournament_teams').update({ group_name: gName }).eq('id', teams[i].id);
         }
 
-        // 4. Generate Fixtures (Explicit Round Robin Logic)
-        // Ensures no 'undefined' rounds by hardcoding pairings for standard group sizes.
+        // Generate Fixtures (Hardcoded Round Robin to prevent Logic Errors)
         const matchesToInsert = [];
-        
         Object.keys(groups).forEach(gName => {
             const gt = groups[gName];
-            
-            // Case: 2 Teams (1 Match)
-            if (gt.length === 2) {
+            if(gt.length === 2) {
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName, 'GROUP'));
-            } 
-            // Case: 3 Teams (3 Matches)
-            else if (gt.length === 3) {
-                matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName, 'GROUP'));
-                matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[2], 2, gName, 'GROUP'));
-                matchesToInsert.push(this._createMatchObj(tournamentId, gt[2], gt[0], 3, gName, 'GROUP'));
-            }
-            // Case: 4 Teams (Standard - 6 Matches)
-            else if (gt.length === 4) {
-                // Round 1
+            } else if (gt.length === 4) {
+                // R1
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName, 'GROUP'));
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[2], gt[3], 1, gName, 'GROUP'));
-                // Round 2
+                // R2
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[2], 2, gName, 'GROUP'));
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[3], 2, gName, 'GROUP'));
-                // Round 3
+                // R3
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[3], 3, gName, 'GROUP'));
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[2], 3, gName, 'GROUP'));
             }
         });
 
-        // 5. Bulk Insert Matches
-        if (matchesToInsert.length > 0) {
-            await supabase.from('matches').insert(matchesToInsert);
-        }
-
-        // 6. Update Status to ACTIVE (Group Stage Started)
+        if (matchesToInsert.length > 0) await supabase.from('matches').insert(matchesToInsert);
         await supabase.from('tournaments').update({ status: 'ACTIVE' }).eq('id', tournamentId);
         return true;
     }
 
-    /**
-     * Helper: Factory for Match Objects
-     */
     _createMatchObj(tournId, tA, tB, round, group, stage) {
         return {
             tournament_id: tournId,
@@ -241,21 +189,15 @@ class TournamentService {
             status: 'SCHEDULED',
             score_a: 0,
             score_b: 0,
-            stage: stage, // 'GROUP' or 'QUARTER'
-            // Metadata for display
+            stage: stage, 
             match_data: { round: round, group: group, headline: stage === 'GROUP' ? `مباراة المجموعة ${group}` : 'مباراة حاسمة' },
-            played_at: new Date(Date.now() + 86400000).toISOString() // Future date placeholder
+            played_at: new Date(Date.now() + 86400000).toISOString()
         };
     }
 
-    /* --- [NEW] KNOCKOUT ENGINE (TRANSITION LOGIC) --- */
+    /* --- KNOCKOUT TRANSITION ENGINE --- */
 
-    /**
-     * Generates Quarter Finals based on Final Group Standings.
-     * Rules: 1st of A vs 2nd of B, etc.
-     */
     async generateKnockoutStage(tournamentId) {
-        // 1. Fetch Final Standings sorted by Group, then Points/GD
         const { data: standings } = await supabase
             .from('tournament_teams')
             .select('team_id, group_name')
@@ -264,18 +206,12 @@ class TournamentService {
             .order('points', { ascending: false })
             .order('goal_diff', { ascending: false });
 
-        // 2. Organize Qualifiers
         const groups = { A: [], B: [], C: [], D: [] };
         standings.forEach(t => { if(groups[t.group_name]) groups[t.group_name].push(t.team_id); });
 
-        // Validation: Must have at least 2 teams in A and B to cross
-        if (!groups.A[1] || !groups.B[1]) throw new Error("لا يمكن بدء التصفيات: المجموعات غير مكتملة.");
+        if (!groups.A[1] || !groups.B[1]) throw new Error("المجموعات غير مكتملة.");
 
-        // 3. Create Quarter-Final Matches (Cross Over Logic)
-        // QF1: A1 vs B2
-        // QF2: C1 vs D2
-        // QF3: B1 vs A2
-        // QF4: D1 vs C2
+        // QF Pairings
         const matches = [
             this._createMatchObj(tournamentId, groups.A[0], groups.B[1], 'QF1', 'Knockout', 'QUARTER'),
             this._createMatchObj(tournamentId, groups.C[0], groups.D[1], 'QF2', 'Knockout', 'QUARTER'),
@@ -283,22 +219,15 @@ class TournamentService {
             this._createMatchObj(tournamentId, groups.D[0], groups.C[1], 'QF4', 'Knockout', 'QUARTER')
         ];
 
-        // 4. Insert Matches
         await supabase.from('matches').insert(matches);
-        
-        // 5. Update Status to KNOCKOUT
         await supabase.from('tournaments').update({ status: 'KNOCKOUT' }).eq('id', tournamentId);
-        
         return true;
     }
 
-    /* --- RESULTS & SCORING ENGINE --- */
+    /* --- RESULTS & AUTO-PROGRESSION ENGINE --- */
 
-    /**
-     * Submits Match Result, Triggers News, Updates Stats, Sends Notifications.
-     */
     async submitMatchResult(matchId, scoreA, scoreB) {
-        // A. Fetch Match Meta
+        // 1. Get Match Info
         const { data: match } = await supabase
             .from('matches')
             .select(`*, team_a:teams!team_a_id(name), team_b:teams!team_b_id(name)`)
@@ -306,51 +235,42 @@ class TournamentService {
 
         if (!match) throw new Error("المباراة غير موجودة.");
 
-        // B. News Generation
+        // 2. Generate News
         const news = NewsEngine.generateReport(match.team_a.name, match.team_b.name, scoreA, scoreB);
         
-        // C. Update Match Record
-        const { error: matchErr } = await supabase
-            .from('matches')
-            .update({
-                score_a: scoreA,
-                score_b: scoreB,
-                status: 'FINISHED',
-                match_data: { ...match.match_data, headline: news.headline, body: news.body },
-                played_at: new Date().toISOString()
-            })
-            .eq('id', matchId);
+        // 3. Update Match
+        const { error: matchErr } = await supabase.from('matches').update({
+            score_a: scoreA,
+            score_b: scoreB,
+            status: 'FINISHED',
+            match_data: { ...match.match_data, headline: news.headline, body: news.body },
+            played_at: new Date().toISOString()
+        }).eq('id', matchId);
 
         if (matchErr) throw matchErr;
 
-        // D. Conditional Logic: Only Update Points if Group Stage
+        // 4. Branching Logic
         if (match.stage === 'GROUP' || !match.stage) {
+            // Group Stage: Update Points
             await this._updateTeamStats(match.tournament_id, match.team_a_id, scoreA, scoreB);
             await this._updateTeamStats(match.tournament_id, match.team_b_id, scoreB, scoreA);
+        } else {
+            // Knockout Stage: Check for Progression
+            await this._checkAndAdvanceKnockout(match.tournament_id, match.stage);
         }
 
-        // E. Notifications
+        // 5. Notify
         await this._sendTournamentResultNotification(match, scoreA, scoreB, news.headline);
-
         return true;
     }
 
-    /**
-     * Updates Points, Won/Lost/Drawn, Goals, Goal Diff.
-     */
     async _updateTeamStats(tournId, teamId, goalsFor, goalsAgainst) {
         let points = 0, won = 0, drawn = 0, lost = 0;
-
         if (goalsFor > goalsAgainst) { points = 3; won = 1; }
         else if (goalsFor === goalsAgainst) { points = 1; drawn = 1; }
         else { lost = 1; }
 
-        // Fetch current to increment
-        const { data: current } = await supabase
-            .from('tournament_teams')
-            .select('*')
-            .eq('tournament_id', tournId).eq('team_id', teamId).single();
-
+        const { data: current } = await supabase.from('tournament_teams').select('*').eq('tournament_id', tournId).eq('team_id', teamId).single();
         const updateData = {
             played: (current.played || 0) + 1,
             won: (current.won || 0) + won,
@@ -361,38 +281,101 @@ class TournamentService {
             goals_against: (current.goals_against || 0) + goalsAgainst,
             goal_diff: ((current.goals_for || 0) + goalsFor) - ((current.goals_against || 0) + goalsAgainst)
         };
-
         await supabase.from('tournament_teams').update(updateData).eq('id', current.id);
     }
 
     /**
-     * Sends Notifications to Captains & Organizer.
+     * [AUTO-PILOT] Checks if all matches in a round are done, then creates next round.
      */
+    async _checkAndAdvanceKnockout(tournamentId, currentStage) {
+        console.log(`Checking progression for stage: ${currentStage}`);
+        
+        // Fetch all matches for this stage
+        const { data: matches } = await supabase
+            .from('matches')
+            .select('*')
+            .eq('tournament_id', tournamentId)
+            .eq('stage', currentStage);
+
+        // Check if ALL finished
+        const allFinished = matches.every(m => m.status === 'FINISHED');
+        if (!allFinished) return; // Wait for other matches
+
+        // Determine Next Stage
+        if (currentStage === 'QUARTER') {
+            await this._createNextRoundMatches(tournamentId, matches, 'SEMI');
+        } else if (currentStage === 'SEMI') {
+            await this._createNextRoundMatches(tournamentId, matches, 'FINAL');
+        } else if (currentStage === 'FINAL') {
+            // End Tournament
+            await supabase.from('tournaments').update({ status: 'COMPLETED' }).eq('id', tournamentId);
+        }
+    }
+
+    /**
+     * Generates Semi-Finals or Final matches from previous winners.
+     */
+    async _createNextRoundMatches(tournamentId, prevMatches, nextStage) {
+        const winners = [];
+        // Identify Winners
+        prevMatches.forEach(m => {
+            const winnerId = m.score_a > m.score_b ? m.team_a_id : m.team_b_id;
+            // Store winner associated with the match "slot" (e.g., QF1) to map correctly
+            winners.push({ slot: m.match_data.round, teamId: winnerId });
+        });
+
+        // Mapping Logic
+        const newMatches = [];
+        if (nextStage === 'SEMI') {
+            // SF1: Winner QF1 vs Winner QF2
+            const w1 = winners.find(w => w.slot === 'QF1')?.teamId;
+            const w2 = winners.find(w => w.slot === 'QF2')?.teamId;
+            // SF2: Winner QF3 vs Winner QF4
+            const w3 = winners.find(w => w.slot === 'QF3')?.teamId;
+            const w4 = winners.find(w => w.slot === 'QF4')?.teamId;
+
+            if (w1 && w2) newMatches.push(this._createMatchObj(tournamentId, w1, w2, 'SF1', 'Knockout', 'SEMI'));
+            if (w3 && w4) newMatches.push(this._createMatchObj(tournamentId, w3, w4, 'SF2', 'Knockout', 'SEMI'));
+        } 
+        else if (nextStage === 'FINAL') {
+            // Final: Winner SF1 vs Winner SF2
+            const w1 = winners.find(w => w.slot === 'SF1')?.teamId;
+            const w2 = winners.find(w => w.slot === 'SF2')?.teamId;
+            if (w1 && w2) newMatches.push(this._createMatchObj(tournamentId, w1, w2, 'FINAL', 'Knockout', 'FINAL'));
+        }
+
+        if (newMatches.length > 0) {
+            await supabase.from('matches').insert(newMatches);
+        }
+    }
+
     async _sendTournamentResultNotification(matchData, scoreA, scoreB, headline) {
         try {
+            // 1. Get Organizer
             const { data: tourn } = await supabase.from('tournaments').select('organizer_id').eq('id', matchData.tournament_id).single();
+            // 2. Get Captains
             const { data: captains } = await supabase.from('team_members').select('user_id').in('team_id', [matchData.team_a_id, matchData.team_b_id]).eq('role', 'CAPTAIN');
             
             const notifiedUsers = new Set();
             if (tourn?.organizer_id) notifiedUsers.add(tourn.organizer_id);
             if (captains) captains.forEach(c => notifiedUsers.add(c.user_id));
 
-            const notificationsToInsert = Array.from(notifiedUsers).map(userId => ({
+            const notifs = Array.from(notifiedUsers).map(userId => ({
                 user_id: userId,
                 type: 'TOURNAMENT_RESULT',
-                title: '🏆 نتيجة دورة رمضانية',
+                title: '🏆 تحديث البطولة',
                 message: `${headline} ( ${matchData.team_a.name} ${scoreA} - ${scoreB} ${matchData.team_b.name} )`,
                 is_read: false,
                 created_at: new Date().toISOString()
             }));
 
-            if (notificationsToInsert.length > 0) await supabase.from('notifications').insert(notificationsToInsert);
-        } catch (e) { console.warn("Notification Failed", e); }
+            if (notifs.length > 0) await supabase.from('notifications').insert(notifs);
+        } catch (e) { console.warn("Notif Error", e); }
     }
 }
 
 // =============================================================================
-// 2. CONTROLLER LAYER (UI ORCHESTRATION)
+// PART 2: CONTROLLER LAYER (UI & INTERACTIONS)
 // =============================================================================
 export class TournamentController {
     
@@ -400,24 +383,17 @@ export class TournamentController {
         this.service = new TournamentService();
         this.containerId = 'tourn-content'; 
         this.currentFilter = 'MY'; 
-        // Inject the FAB menu on instantiation
         this.injectFloatingMenu();
-        // Default Tab State
         this.activeDetailTab = 'STANDINGS'; 
     }
 
-    /* ----------------------------------------------------
-       A. FLOATING ACTION MENU (FAB)
-       ---------------------------------------------------- */
+    /* --- FAB MENU (Standard) --- */
     injectFloatingMenu() {
         const fab = document.getElementById('nav-action');
         if(!fab) return;
-        
-        // Clone to clear old listeners
         const newFab = fab.cloneNode(true);
         fab.parentNode.replaceChild(newFab, fab);
 
-        // Inject HTML if missing
         if (!document.getElementById('fab-menu-overlay')) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="fab-menu-overlay" class="fab-overlay hidden">
@@ -431,7 +407,6 @@ export class TournamentController {
                 </div>`);
             this.bindFabEvents();
         }
-        
         newFab.addEventListener('click', () => {
             SoundManager.play('click');
             const overlay = document.getElementById('fab-menu-overlay');
@@ -460,9 +435,7 @@ export class TournamentController {
         }
     }
 
-    /* ----------------------------------------------------
-       B. TOURNAMENT LIST VIEW
-       ---------------------------------------------------- */
+    /* --- VIEW: TOURNAMENT LIST --- */
     async initTournamentView() {
         window.router('view-tournaments'); 
         const container = document.getElementById(this.containerId);
@@ -480,7 +453,6 @@ export class TournamentController {
                 </div>
                 <div id="tourn-list" class="t-list"><div class="loader-bar"></div></div>
             </div>`;
-        
         this.bindHubEvents();
         this.loadTournamentsList();
     }
@@ -516,7 +488,6 @@ export class TournamentController {
     }
 
     renderTournamentCard(t) {
-        // Dynamic Status Badge
         let statusText = t.status === 'OPEN' ? 'مفتوحة للتسجيل' : (t.status === 'ACTIVE' ? 'جارية الآن' : (t.status === 'KNOCKOUT' ? 'الأدوار الإقصائية' : 'منتهية'));
         return `
             <div class="tourn-card">
@@ -530,9 +501,7 @@ export class TournamentController {
             </div>`;
     }
 
-    /* ----------------------------------------------------
-       C. TOURNAMENT LOBBY (DETAIL VIEW)
-       ---------------------------------------------------- */
+    /* --- VIEW: TOURNAMENT LOBBY --- */
     async openTournamentDetails(tournamentId) {
         const container = document.getElementById(this.containerId);
         container.innerHTML = '<div class="loader-center"><div class="loader-bar"></div></div>';
@@ -543,29 +512,26 @@ export class TournamentController {
             const { info, participants, fixtures } = data;
             const isOrganizer = info.organizer_id === user.id;
             
-            // Phase Flags
             const isOpen = info.status === 'OPEN';
             const isActive = info.status === 'ACTIVE'; 
-            const isKnockout = info.status === 'KNOCKOUT';
+            const isKnockout = info.status === 'KNOCKOUT' || info.status === 'COMPLETED';
             
-            // Build UI
             container.innerHTML = `
                 <div class="t-detail-view fade-in">
                     <div class="t-detail-header">
                         <button id="btn-back-tourn" class="back-btn"><i class="fa-solid fa-arrow-right"></i></button>
                         <div>
                             <h2>${info.name}</h2>
-                            <span class="t-status-pill">${isOpen ? 'فترة التسجيل' : (isKnockout ? 'الأدوار الإقصائية' : 'المنافسة جارية')}</span>
+                            <span class="t-status-pill">${isOpen ? 'فترة التسجيل' : (isKnockout ? 'الأدوار النهائية' : 'المنافسة جارية')}</span>
                         </div>
                     </div>
 
-                    <!-- Action Area -->
                     <div class="t-action-area">
                         ${isOpen ? this.renderRegAction(info, isOrganizer, participants.length) : ''}
                         ${(isActive && isOrganizer) ? `<button id="btn-start-knockout" class="btn-primary-gold"><i class="fa-solid fa-gavel"></i> إنهاء المجموعات وبدء التصفيات</button>` : ''}
+                        ${(info.status === 'COMPLETED') ? `<div class="champion-banner"><i class="fa-solid fa-crown"></i> البطولة مكتملة</div>` : ''}
                     </div>
 
-                    <!-- Tabs -->
                     ${!isOpen ? `
                         <div class="t-tabs" style="margin-bottom:15px;">
                             <button class="t-tab ${this.activeDetailTab==='STANDINGS'?'active':''}" id="tab-standings">المجموعات</button>
@@ -574,44 +540,36 @@ export class TournamentController {
                         </div>
                     ` : ''}
 
-                    <!-- Content Body -->
                     <div class="t-content-body">
-                        ${isOpen 
-                            ? this.renderParticipantsList(participants) 
-                            : this.renderPhaseContent(participants, fixtures, isKnockout, isOrganizer)
-                        }
+                        ${isOpen ? this.renderParticipantsList(participants) : this.renderPhaseContent(participants, fixtures, isKnockout, isOrganizer)}
                     </div>
                 </div>
             `;
 
-            // Binders
+            // Bind Events
             document.getElementById('btn-back-tourn').onclick = () => this.initTournamentView();
 
             if (isOpen) {
                 const btn = document.getElementById('btn-action-main');
                 if (btn) btn.onclick = () => { isOrganizer ? this.handleStartDraw(tournamentId) : this.handleJoin(tournamentId); };
             } else {
-                // Tab Logic
                 document.getElementById('tab-standings').onclick = () => { this.activeDetailTab = 'STANDINGS'; this.openTournamentDetails(tournamentId); };
                 document.getElementById('tab-fixtures').onclick = () => { this.activeDetailTab = 'FIXTURES'; this.openTournamentDetails(tournamentId); };
+                if(isKnockout) document.getElementById('tab-bracket').onclick = () => { this.activeDetailTab = 'BRACKET'; this.openTournamentDetails(tournamentId); };
                 
-                if(isKnockout) {
-                    document.getElementById('tab-bracket').onclick = () => { this.activeDetailTab = 'BRACKET'; this.openTournamentDetails(tournamentId); };
-                }
-                
-                // Knockout Button
-                const koBtn = document.getElementById('btn-start-knockout');
-                if(koBtn) koBtn.onclick = () => this.handleStartKnockout(tournamentId);
+                const startKoBtn = document.getElementById('btn-start-knockout');
+                if (startKoBtn) startKoBtn.onclick = () => this.handleStartKnockout(tournamentId);
             }
 
-            // Referee Binders (Only for Organizer on Fixtures Tab)
-            if (!isOpen && this.activeDetailTab === 'FIXTURES' && isOrganizer) {
-                container.querySelectorAll('.btn-referee').forEach(btn => {
+            // Referee Binders (Organizer Only)
+            // Works for both Group Fixtures and Bracket Matches
+            if (!isOpen && isOrganizer) {
+                container.querySelectorAll('.btn-referee, .btn-referee-mini').forEach(btn => {
                     btn.onclick = () => this.openRefereeModal(
                         btn.dataset.id, 
                         btn.dataset.ta, 
                         btn.dataset.tb, 
-                        tournamentId // Passing ID for Auto-Refresh Fix
+                        tournamentId
                     );
                 });
             }
@@ -622,7 +580,6 @@ export class TournamentController {
         }
     }
 
-    /* --- RENDER HELPERS --- */
     renderRegAction(info, isOrganizer, count) {
         const ready = count >= 4; 
         if (isOrganizer) {
@@ -645,7 +602,7 @@ export class TournamentController {
     renderPhaseContent(participants, fixtures, isKnockout, isOrganizer) {
         if (this.activeDetailTab === 'STANDINGS') return this.renderStandings(participants);
         if (this.activeDetailTab === 'FIXTURES') return this.renderFixtures(fixtures, isOrganizer);
-        if (this.activeDetailTab === 'BRACKET' && isKnockout) return this.renderBracket(fixtures);
+        if (this.activeDetailTab === 'BRACKET' && isKnockout) return this.renderBracket(fixtures, isOrganizer);
         return '';
     }
 
@@ -677,17 +634,24 @@ export class TournamentController {
 
     renderFixtures(matches, isOrganizer) {
         if (!matches || matches.length === 0) return '<div class="empty-state"><p>لا توجد مباريات.</p></div>';
-        
         const rounds = {};
         matches.forEach(m => {
-            const r = m.match_data.round || m.stage; 
+            // Robust check for missing round
+            const r = m.match_data.round || m.stage || 'UNCLASSIFIED'; 
             if(!rounds[r]) rounds[r] = [];
             rounds[r].push(m);
         });
 
         let html = '<div class="fixtures-container">';
         Object.keys(rounds).forEach(r => {
-            let title = isNaN(r) ? (r === 'QUARTER' ? 'ربع النهائي' : r) : `الجولة ${r}`;
+            // Pretty Titles
+            let title = r;
+            if (r === 'QUARTER') title = 'ربع النهائي';
+            else if (r === 'SEMI') title = 'نصف النهائي';
+            else if (r === 'FINAL') title = 'النهائي';
+            else if (r === 'UNCLASSIFIED') title = 'مباريات أخرى';
+            else title = `الجولة ${r}`;
+
             html += `<h4 class="round-title">${title}</h4>`;
             rounds[r].forEach(m => {
                 const isFinished = m.status === 'FINISHED';
@@ -697,7 +661,7 @@ export class TournamentController {
                         <div class="fix-score ${isFinished ? 'final' : ''}">${isFinished ? `${m.score_a} - ${m.score_b}` : 'VS'}</div>
                         <div class="fix-team"><span>${m.team_b.name}</span></div>
                         ${(isOrganizer && !isFinished) ? `<button class="btn-referee" data-id="${m.id}" data-ta="${m.team_a.name}" data-tb="${m.team_b.name}"><i class="fa-solid fa-pen"></i></button>` : ''}
-                        <div class="fix-meta group-pill">${m.match_data.group || m.stage}</div>
+                        <div class="fix-meta group-pill">${m.match_data.group || m.stage || '-'}</div>
                     </div>`;
             });
         });
@@ -705,25 +669,40 @@ export class TournamentController {
         return html;
     }
 
-    renderBracket(matches) {
+    renderBracket(matches, isOrganizer) {
         const qf = matches.filter(m => m.stage === 'QUARTER');
+        const sf = matches.filter(m => m.stage === 'SEMI');
+        const final = matches.filter(m => m.stage === 'FINAL');
+        
         if (qf.length === 0) return '<div class="empty-state"><p>لم تبدأ التصفيات.</p></div>';
 
+        let html = '<div class="bracket-container">';
+        html += this._renderRoundBlock('ربع النهائي (دور الـ 8)', qf, isOrganizer);
+        if (sf.length > 0) html += this._renderRoundBlock('نصف النهائي', sf, isOrganizer);
+        if (final.length > 0) html += this._renderRoundBlock('النهائي', final, isOrganizer, true);
+        html += '</div>';
+        return html;
+    }
+
+    _renderRoundBlock(title, matches, isOrganizer, isFinal = false) {
         return `
-            <div class="bracket-container">
-                <h4 class="round-title">ربع النهائي (دور الـ 8)</h4>
+            <div class="round-block" style="margin-bottom:20px;">
+                <h4 class="round-title" style="${isFinal ? 'color:var(--gold-main);' : ''}">${isFinal ? '🏆 ' : ''}${title}</h4>
                 <div class="bracket-round">
-                    ${qf.map(m => `
-                        <div class="bracket-match">
-                            <div class="b-team">${m.team_a.name} <span class="b-score">${m.status==='FINISHED'?m.score_a:'-'}</span></div>
-                            <div class="b-team">${m.team_b.name} <span class="b-score">${m.status==='FINISHED'?m.score_b:'-'}</span></div>
-                        </div>`).join('')}
+                    ${matches.map(m => {
+                        const isFinished = m.status === 'FINISHED';
+                        return `
+                        <div class="bracket-match" style="${isFinished ? 'opacity:0.8;' : ''}">
+                            <div class="b-team"><span>${m.team_a?.name || '???'}</span><span class="b-score">${isFinished ? m.score_a : '-'}</span></div>
+                            <div class="b-team"><span>${m.team_b?.name || '???'}</span><span class="b-score">${isFinished ? m.score_b : '-'}</span></div>
+                            ${(isOrganizer && !isFinished) ? `<button class="btn-referee-mini" data-id="${m.id}" data-ta="${m.team_a?.name}" data-tb="${m.team_b?.name}"><i class="fa-solid fa-pen"></i></button>` : ''}
+                        </div>`;
+                    }).join('')}
                 </div>
-                <div style="text-align:center; padding:15px; color:#666; font-size:0.8rem;">يتم التصعيد تلقائياً عند انتهاء المباريات.</div>
             </div>`;
     }
 
-    /* --- HANDLERS (JOIN, START, KNOCKOUT) --- */
+    /* --- HANDLERS --- */
     
     async handleJoin(tournamentId) {
         if(!confirm("تسجيل الفريق؟")) return;
@@ -738,20 +717,18 @@ export class TournamentController {
     }
 
     async handleStartKnockout(tournamentId) {
-        if(!confirm("هل أنت متأكد من إنهاء المجموعات وبدء التصفيات؟\nسيتم اختيار الأول والثاني من كل مجموعة.")) return;
+        if(!confirm("هل أنت متأكد من إنهاء المجموعات وبدء التصفيات؟")) return;
         try {
             await this.service.generateKnockoutStage(tournamentId);
             SoundManager.play('whistle');
             alert("تم إنشاء مباريات ربع النهائي!");
-            this.openTournamentDetails(tournamentId); // Auto Refresh
+            this.openTournamentDetails(tournamentId); 
         } catch (e) { alert("خطأ: " + e.message); }
     }
 
-    /* --- MODALS (REFEREE & CREATE) --- */
-    
+    /* --- BUG-FREE REFEREE MODAL --- */
     openRefereeModal(matchId, teamA, teamB, tournamentId) {
         const modalId = 'modal-referee';
-        // Ensure DOM exists
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="${modalId}" class="modal-overlay hidden">
@@ -774,16 +751,15 @@ export class TournamentController {
             document.getElementById('btn-close-ref').onclick = () => document.getElementById(modalId).classList.add('hidden');
         }
 
-        // Populate
         document.getElementById('ref-team-a').textContent = teamA;
         document.getElementById('ref-team-b').textContent = teamB;
         document.getElementById('ref-score-a').value = 0;
         document.getElementById('ref-score-b').value = 0;
-        
+
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
 
-        // Refresh Button Listener
+        // Clean replacement of the button to prevent event stacking
         const oldBtn = document.getElementById('btn-confirm-score');
         const newBtn = oldBtn.cloneNode(true);
         oldBtn.parentNode.replaceChild(newBtn, oldBtn);
@@ -793,18 +769,25 @@ export class TournamentController {
             const sb = parseInt(document.getElementById('ref-score-b').value);
             
             if(!confirm("تأكيد النتيجة؟")) return;
-            newBtn.disabled = true; newBtn.textContent = "...";
+
+            newBtn.disabled = true; newBtn.textContent = "جاري الحساب...";
             try {
                 await this.service.submitMatchResult(matchId, sa, sb);
                 SoundManager.play('whistle');
                 modal.classList.add('hidden');
-                // Use passed ID to refresh correctly
-                this.openTournamentDetails(tournamentId); 
-            } catch(e) { alert(e.message); newBtn.disabled = false; }
+                // The Fix: Pass ID directly to ensure correct refresh context
+                this.openTournamentDetails(tournamentId);
+            } catch(e) { 
+                alert(e.message); 
+            } finally {
+                // Ensure button is re-enabled for next use
+                newBtn.disabled = false; newBtn.textContent = "اعتماد";
+            }
         };
     }
 
-    openCreateModal() { /* Standard Create Modal Logic ... */
+    /* --- CREATE MODAL --- */
+    openCreateModal() {
         const modalId = 'modal-create-tourn';
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
