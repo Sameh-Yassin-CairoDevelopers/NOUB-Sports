@@ -159,7 +159,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                 <!-- 2. SHIRT (LAYER 2 - FRONT) -->
                 <!-- القميص أمام الجسم، مرتفع قليلاً ليغطي الأكتاف -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 170px; 
+                    font-size: 155px; 
                     color: ${kitColor}; 
                     position: absolute; 
                     bottom: -60px; 
@@ -177,7 +177,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                     position: absolute;
                     bottom: 135px; 
                     z-index: 3; 
-                    opacity: 0.95;
+                    opacity: 0.90;
                 "></i>
                 ` : ''}
 
@@ -242,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
