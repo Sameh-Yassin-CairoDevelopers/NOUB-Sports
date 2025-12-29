@@ -143,60 +143,61 @@ static generateAvatarHTML(visualDna, shirtName) {
             ">
                 
                 <!-- 1. BODY (الرأس) -->
-                <!-- تم الخفض قليلاً إلى 70px لإبعاده عن الحافة العلوية -->
+                <!-- ارتفاع 72px: موزون ليكون فوق القميص الجديد مباشرة -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 90px; 
+                    font-size: 85px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 70px; 
+                    bottom: 72px; 
                     z-index: 1;
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
 
-                <!-- 2. FACE ACCESSORY (النظارة) -->
-                <!-- تعديل الموضع مع الرأس الجديد -->
+                <!-- 2. FACE ACCESSORY (النظارة/القناع) -->
+                <!-- تم ضبط الحجم والمكان ليتناسب مع الرأس -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
-                    font-size: 36px; 
+                    font-size: 34px; 
                     color: #222; 
                     position: absolute;
-                    bottom: 115px; 
+                    bottom: 114px; 
                     z-index: 2;
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
-                <!-- 3. SHIRT (القميص) - التعديل الجذري -->
-                <!-- scaleY(1.3): يمط القميص طولياً بنسبة 30% ليصبح طويلاً دون زيادة العرض -->
-                <!-- transform-origin: bottom; يجعل المط يحدث للأعلى، فيبدو القميص أطول -->
+                <!-- 3. SHIRT (القميص) - التعديل الرياضي -->
+                <!-- scale(0.9, 1.25): يقلل العرض 10% ويزيد الطول 25% -->
+                <!-- النتيجة: قميص طويل وممشوق (ليس عريضاً) -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 155px; 
+                    font-size: 150px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -45px; 
+                    bottom: -40px; 
                     z-index: 3;
-                    transform: scaleY(1.3); 
+                    transform: scale(0.9, 1.25); 
                     transform-origin: bottom center;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
                 <!-- 4. LOGO (الشعار) -->
+                <!-- تم ضبطه ليكون في منتصف الصدر تماماً -->
                 ${logoIcon ? `
                 <div style="
                     position: absolute; 
-                    bottom: 50px; 
+                    bottom: 55px; 
                     left: 50%; 
-                    margin-left: 24px; 
+                    margin-left: 22px; 
                     z-index: 4; 
-                    width: 22px; 
-                    height: 22px; 
+                    width: 20px; 
+                    height: 20px; 
                     display: flex; 
                     justify-content: center; 
                     align-items: center; 
                     filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
                 ">
                     <i class="fa-solid ${logoIcon}" style="
-                        font-size: 20px; 
+                        font-size: 18px; 
                         color: rgba(255,255,255,0.95);
                     "></i>
                 </div>` : ''}
@@ -204,11 +205,11 @@ static generateAvatarHTML(visualDna, shirtName) {
                 <!-- 5. NAME (الاسم) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 10px; 
+                    bottom: 12px; 
                     z-index: 5;
                     color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron', sans-serif; 
-                    font-size: 11px; 
+                    font-size: 10px; 
                     font-weight: 900;
                     text-transform: uppercase;
                     text-shadow: 0 1px 3px #000;
@@ -219,10 +220,10 @@ static generateAvatarHTML(visualDna, shirtName) {
                 </div>
 
                 <!-- 6. HEADGEAR (القبعة) -->
-                <!-- خفضناها لتتناسب مع الرأس، ولتبتعد عن حافة الكارت -->
+                <!-- ارتفاع 150px: يضمن عدم اختفاء القبعة من أعلى الكارت -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
-                    font-size: 60px; 
+                    font-size: 55px; 
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
@@ -242,6 +243,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
