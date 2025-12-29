@@ -142,48 +142,64 @@ static generateAvatarHTML(visualDna, shirtName) {
                 overflow: hidden; 
             ">
                 
-                <!-- 1. SHIRT (BASE LAYER) -->
-                <!-- القميص في الخلفية، كبير وعريض ليشكل الأكتاف والجسم -->
+                <!-- 1. BODY (LAYER 1 - BACKGROUND) -->
+                <!-- تم التكبير بنسبة 10% (105px) ووضعه في الخلفية -->
+                <i class="fa-solid fa-user" style="
+                    font-size: 105px; 
+                    color: ${skinColor}; 
+                    position: absolute; 
+                    bottom: 85px; 
+                    z-index: 1; 
+                    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+                "></i>
+
+                <!-- 2. SHIRT (LAYER 2 - FRONT) -->
+                <!-- التيشيرت أمام الجسم ليغطي الأكتاف -->
                 <i class="fa-solid fa-shirt" style="
                     font-size: 160px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -45px; 
-                    z-index: 1; 
-                    transform: scaleY(1.1); /* تطويل بسيط */
+                    bottom: -35px; 
+                    z-index: 2; 
+                    transform: scaleY(1.15); /* تطويل طفيف */
+                    transform-origin: bottom center;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
-                <!-- 2. BODY (HEAD & NECK) -->
-                <!-- الرأس فوق القميص، ولكن بحجم أصغر (80px) لكي لا يغطي الأكتاف، بل يظهر كأنه خارج من الياقة -->
-                <i class="fa-solid fa-user" style="
-                    font-size: 80px; 
-                    color: ${skinColor}; 
-                    position: absolute; 
-                    bottom: 78px; /* ارتفاع دقيق لإظهار الرقبة */
-                    z-index: 2; 
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-                "></i>
-
-                <!-- 3. LOGO -->
-                ${logoIcon ? `
-                <div style="position:absolute; bottom:50px; left:50%; margin-left:25px; z-index:3; width:20px; height:20px; display:flex; justify-content:center; align-items:center; filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.6));">
-                    <i class="fa-solid ${logoIcon}" style="font-size:18px; color:rgba(255,255,255,0.95);"></i>
-                </div>` : ''}
-
-                <!-- 4. FACE ACCESSORY -->
+                <!-- 3. FACE ACCESSORY (LAYER 3) -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
-                    font-size: 32px; 
+                    font-size: 38px; 
                     color: #222; 
                     position: absolute;
-                    bottom: 118px; 
-                    z-index: 4; 
+                    bottom: 130px; 
+                    z-index: 3; 
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
-                <!-- 5. NAME -->
+                <!-- 4. LOGO (LAYER 4) -->
+                ${logoIcon ? `
+                <div style="
+                    position: absolute; 
+                    bottom: 55px; 
+                    left: 50%; 
+                    margin-left: 24px; 
+                    z-index: 4; 
+                    width: 22px; 
+                    height: 22px; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
+                ">
+                    <i class="fa-solid ${logoIcon}" style="
+                        font-size: 20px; 
+                        color: rgba(255,255,255,0.95);
+                    "></i>
+                </div>` : ''}
+
+                <!-- 5. NAME (LAYER 5) -->
                 <div class="shirt-text" style="
                     position: absolute; 
                     bottom: 15px; 
@@ -199,15 +215,16 @@ static generateAvatarHTML(visualDna, shirtName) {
                     ${shirtName || 'NOUB'}
                 </div>
 
-                <!-- 6. HEADGEAR -->
+                <!-- 6. HEADGEAR (LAYER 6 - TOP) -->
+                <!-- تعديل الارتفاع ليتناسب مع الرأس الكبير -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
-                    font-size: 55px; 
+                    font-size: 65px; 
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 152px; 
-                    z-index: 6;
+                    bottom: 165px; 
+                    z-index: 6; 
                 "></i>
                 ` : ''}
 
@@ -222,6 +239,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
