@@ -159,7 +159,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                 <!-- 2. SHIRT (LAYER 2 - FRONT) -->
                 <!-- القميص أمام الجسم، مرتفع قليلاً ليغطي الأكتاف -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 150px; 
+                    font-size: 155px; 
                     color: ${kitColor}; 
                     position: absolute; 
                     bottom: -80px; 
@@ -177,7 +177,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                     position: absolute;
                     bottom: 130px; 
                     z-index: 3; 
-                    opacity: 0.90;
+                    opacity: 0.98;
                 "></i>
                 ` : ''}
 
@@ -209,7 +209,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                     z-index: 5; 
                     color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron', sans-serif; 
-                    font-size: 8px; 
+                    font-size: 11px; 
                     font-weight: 900;
                     text-transform: uppercase;
                     text-shadow: 0 1px 3px #000;
@@ -242,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
