@@ -122,96 +122,116 @@ export class AvatarEngine {
      * @param {string} shirtName - Player Name
      * @returns {string} HTML String
      */
-    static generateAvatarHTML(visualDna, shirtName) {
-
-        const dna = (typeof visualDna === 'string')
-            ? JSON.parse(visualDna)
-            : (visualDna || {});
-
-        const kitColor  = dna.kit  || '#3b82f6';
-        const logoIcon  = AVATAR_CONFIG.LOGOS[(dna.logo || 1) - 1];
-        const faceIcon  = AVATAR_CONFIG.FACE_GEAR[(dna.face || 1) - 1];
-        const headIcon  = AVATAR_CONFIG.HEAD_GEAR[(dna.hair || 1) - 1];
+static generateAvatarHTML(visualDna, shirtName) {
+        const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {});
+        
+        const kitColor = dna.kit || '#3b82f6'; 
+        const logoIcon = AVATAR_CONFIG.LOGOS[(dna.logo || 1) - 1];
+        const faceIcon = AVATAR_CONFIG.FACE_GEAR[(dna.face || 1) - 1];
+        const headIcon = AVATAR_CONFIG.HEAD_GEAR[(dna.hair || 1) - 1];
         const skinColor = AVATAR_CONFIG.FIXED_SKIN;
 
         return `
-        <div style="
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            overflow: hidden;
-        ">
-
-            <!-- HEAD -->
-            <i class="fa-solid fa-user" style="
-                position: absolute;
-                bottom: 38%;
-                font-size: 90px;
-                color: ${skinColor};
-                z-index: 2;
-            "></i>
-
-            <!-- FACE -->
-            ${faceIcon ? `
-            <i class="fa-solid ${faceIcon}" style="
-                position: absolute;
-                bottom: 44%;
-                font-size: 36px;
-                color: #222;
-                z-index: 3;
-            "></i>` : ''}
-
-            <!-- HAT -->
-            ${headIcon ? `
-            <i class="fa-solid ${headIcon}" style="
-                position: absolute;
-                bottom: 52%;
-                font-size: 60px;
-                color: #fff;
-                z-index: 4;
-            "></i>` : ''}
-
-            <!-- SHIRT -->
-            <i class="fa-solid fa-shirt" style="
-                position: absolute;
-                bottom: -6%;
-                font-size: 165px;
-                color: ${kitColor};
-                z-index: 1;
-            "></i>
-
-            <!-- LOGO -->
-            ${logoIcon ? `
-            <i class="fa-solid ${logoIcon}" style="
-                position: absolute;
-                bottom: 22%;
-                left: 52%;
-                font-size: 22px;
-                color: #fff;
-                z-index: 5;
-            "></i>` : ''}
-
-            <!-- NAME -->
-            <div style="
-                position: absolute;
-                bottom: 8%;
-                font-size: 13px;
-                font-weight: 900;
-                color: #fff;
-                text-shadow: 0 1px 3px #000;
-                letter-spacing: 1px;
-                z-index: 6;
+            <div class="avatar-comp" style="
+                position: relative; 
+                width: 100%; 
+                height: 100%; 
+                display: flex; 
+                justify-content: center; 
+                align-items: flex-end; 
+                overflow: hidden; 
             ">
-                ${(shirtName || 'NOUB').toUpperCase()}
-            </div>
+                
+                <!-- 1. BODY (الرأس) -->
+                <!-- ارتفاع 75 يضمن ظهور الرقبة فوق ياقة القميص -->
+                <i class="fa-solid fa-user" style="
+                    font-size: 90px; 
+                    color: ${skinColor}; 
+                    position: absolute; 
+                    bottom: 75px; 
+                    z-index: 1;
+                    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+                "></i>
 
-        </div>
+                <!-- 2. FACE ACCESSORY (النظارة) -->
+                <!-- متناسقة مع الرأس -->
+                ${faceIcon ? `
+                <i class="fa-solid ${faceIcon}" style="
+                    font-size: 36px; 
+                    color: #222; 
+                    position: absolute;
+                    bottom: 120px; 
+                    z-index: 2;
+                    opacity: 0.95;
+                "></i>
+                ` : ''}
+
+                <!-- 3. SHIRT (القميص) -->
+                <!-- تم إنزاله إلى -50px ليبدو طويلاً ويكشف الرقبة دون تشويه العرض -->
+                <i class="fa-solid fa-shirt" style="
+                    font-size: 155px; 
+                    color: ${kitColor}; 
+                    position: absolute; 
+                    bottom: -50px; 
+                    z-index: 3;
+                    filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
+                "></i>
+
+                <!-- 4. LOGO (الشعار) -->
+                <!-- تم خفضه ليتناسب مع القميص -->
+                ${logoIcon ? `
+                <div style="
+                    position: absolute; 
+                    bottom: 45px; 
+                    left: 50%; 
+                    margin-left: 24px; 
+                    z-index: 4; 
+                    width: 22px; 
+                    height: 22px; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
+                ">
+                    <i class="fa-solid ${logoIcon}" style="
+                        font-size: 20px; 
+                        color: rgba(255,255,255,0.95);
+                    "></i>
+                </div>` : ''}
+
+                <!-- 5. NAME (الاسم) -->
+                <div class="shirt-text" style="
+                    position: absolute; 
+                    bottom: 10px; 
+                    z-index: 5;
+                    color: rgba(255,255,255,0.9); 
+                    font-family: 'Orbitron', sans-serif; 
+                    font-size: 11px; 
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    text-shadow: 0 1px 3px #000;
+                    letter-spacing: 1px;
+                    pointer-events: none;
+                ">
+                    ${shirtName || 'NOUB'}
+                </div>
+
+                <!-- 6. HEADGEAR (القبعة) -->
+                <!-- ارتفاع 155 آمن جداً ولن يتم قصه -->
+                ${headIcon ? `
+                <i class="fa-solid ${headIcon}" style="
+                    font-size: 60px; 
+                    color: #fff;
+                    text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
+                    position: absolute;
+                    bottom: 155px; 
+                    z-index: 6;
+                "></i>
+                ` : ''}
+
+            </div>
         `;
     }
-
     
     /**
      * CONFIG EXPORTER:
@@ -220,6 +240,7 @@ export class AvatarEngine {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
