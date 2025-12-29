@@ -1,7 +1,7 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: js/controllers/tournamentCtrl.js
- * Version: Noub Sports_beta 8.0.0 (GOLDEN MASTER: FULL AUTO-PILOT)
+ * Version: Noub Sports_beta 9.0.0 (FINAL INTEGRATED MASTER)
  * Status: Production Ready
  * 
  * -----------------------------------------------------------------------------
@@ -9,20 +9,22 @@
  * -----------------------------------------------------------------------------
  * The Master Controller for the Tournament System.
  * 
- * CORE CAPABILITIES:
- * 1. Registration Logic: Manages team entries and capacity.
- * 2. Group Stage Engine: 
- *    - Fisher-Yates Shuffle for Draws.
- *    - Round Robin Scheduling.
- *    - Live Standings Calculation.
- * 3. Knockout Automation (The Auto-Pilot):
- *    - Automatically detects when a round (QF/SF) ends.
- *    - Promotes winners to the next stage immediately.
- *    - Declares the Champion upon Final match completion.
- * 4. Referee Console (Bug-Free):
+ * COMPREHENSIVE FEATURE SET:
+ * 1. Registration System: Manages team entries, capacity checks, and role validation.
+ * 2. Floating Action Menu (FAB): Hijacks the main action button to show multi-options.
+ * 3. Group Stage Engine: 
+ *    - Fisher-Yates Shuffle for Random Draws.
+ *    - Hardcoded Round Robin Scheduling (No 'undefined' bugs).
+ *    - Live Standings Calculation (Points, GD, Goals).
+ * 4. Knockout Automation (Auto-Pilot):
+ *    - Automatically detects round completion.
+ *    - Promotes winners to next stages (QF -> SF -> Final).
+ * 5. Referee Console (Bug-Free):
  *    - Transactional score submission.
- *    - Auto-refresh mechanism without page reload.
- * 5. Notification System:
+ *    - Auto-refresh mechanism (CloneNode fix).
+ *    - Integration with NewsEngine (Headlines).
+ *    - Integration with Global Team Stats (Total Matches).
+ * 6. Notification System:
  *    - Alerts Captains and Organizers on every critical event.
  * -----------------------------------------------------------------------------
  */
@@ -86,9 +88,12 @@ class TournamentService {
     }
 
     async getTournamentData(tournamentId) {
+        // Parallel Fetch for maximum performance
         const [tRes, teamsRes, matchesRes] = await Promise.all([
+            // 1. Info
             supabase.from('tournaments').select('*').eq('id', tournamentId).single(),
             
+            // 2. Teams (Sorted for Standings Table)
             supabase.from('tournament_teams')
                 .select('*, teams(name, logo_dna)')
                 .eq('tournament_id', tournamentId)
@@ -96,6 +101,7 @@ class TournamentService {
                 .order('goal_diff', { ascending: false })
                 .order('goals_for', { ascending: false }),
 
+            // 3. Matches (Sorted by Date/Round)
             supabase.from('matches')
                 .select('*, team_a:teams!team_a_id(name), team_b:teams!team_b_id(name)')
                 .eq('tournament_id', tournamentId)
@@ -155,12 +161,16 @@ class TournamentService {
             await supabase.from('tournament_teams').update({ group_name: gName }).eq('id', teams[i].id);
         }
 
-        // Generate Fixtures (Hardcoded Round Robin)
+        // Generate Fixtures (Explicit Logic)
         const matchesToInsert = [];
         Object.keys(groups).forEach(gName => {
             const gt = groups[gName];
             if(gt.length === 2) {
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName, 'GROUP'));
+            } else if (gt.length === 3) {
+                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName, 'GROUP'));
+                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[1], gt[2], 2, gName, 'GROUP'));
+                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[2], gt[0], 3, gName, 'GROUP'));
             } else if (gt.length === 4) {
                 // R1
                 matchesToInsert.push(this._createMatchObj(tournamentId, gt[0], gt[1], 1, gName, 'GROUP'));
@@ -222,7 +232,7 @@ class TournamentService {
         return true;
     }
 
-    /* --- RESULTS & AUTO-PROGRESSION ENGINE --- */
+    /* --- [UPDATED] RESULTS & AUTO-PROGRESSION ENGINE --- */
 
     async submitMatchResult(matchId, scoreA, scoreB) {
         // 1. Get Match Info
@@ -236,11 +246,12 @@ class TournamentService {
         // 2. Generate News
         const news = NewsEngine.generateReport(match.team_a.name, match.team_b.name, scoreA, scoreB);
         
-        // 3. Update Match
+        // 3. Update Match Record
+        // [FIX]: Status is 'CONFIRMED' to enable Arena Badges and Headlines
         const { error: matchErr } = await supabase.from('matches').update({
             score_a: scoreA,
             score_b: scoreB,
-            status: 'FINISHED',
+            status: 'CONFIRMED', 
             match_data: { ...match.match_data, headline: news.headline, body: news.body },
             played_at: new Date().toISOString()
         }).eq('id', matchId);
@@ -252,13 +263,27 @@ class TournamentService {
             await this._updateTeamStats(match.tournament_id, match.team_a_id, scoreA, scoreB);
             await this._updateTeamStats(match.tournament_id, match.team_b_id, scoreB, scoreA);
         } else {
-            // Critical: Call the Auto-Pilot for Knockout
+            // Check for Progression (Auto-Pilot)
             await this._checkAndAdvanceKnockout(match.tournament_id, match.stage);
         }
 
-        // 5. Notify
+        // 5. [NEW] Update GLOBAL Stats for Teams (To fix the "0 Matches" issue)
+        await this._updateGlobalTeamStats(match.team_a_id);
+        await this._updateGlobalTeamStats(match.team_b_id);
+
+        // 6. Notify
         await this._sendTournamentResultNotification(match, scoreA, scoreB, news.headline);
         return true;
+    }
+
+    /**
+     * [NEW HELPER] Increments the global match counter for a team.
+     */
+    async _updateGlobalTeamStats(teamId) {
+        const { data: team } = await supabase.from('teams').select('total_matches').eq('id', teamId).single();
+        if(team) {
+            await supabase.from('teams').update({ total_matches: (team.total_matches || 0) + 1 }).eq('id', teamId);
+        }
     }
 
     async _updateTeamStats(tournId, teamId, goalsFor, goalsAgainst) {
@@ -284,18 +309,15 @@ class TournamentService {
     /* --- AUTO-PILOT LOGIC --- */
 
     async _checkAndAdvanceKnockout(tournamentId, currentStage) {
-        // Fetch all matches for this stage
         const { data: matches } = await supabase
             .from('matches')
             .select('*')
             .eq('tournament_id', tournamentId)
             .eq('stage', currentStage);
 
-        // Check if ALL matches in this round are FINISHED
-        const allFinished = matches.every(m => m.status === 'FINISHED');
+        const allFinished = matches.every(m => m.status === 'CONFIRMED' || m.status === 'FINISHED');
         if (!allFinished) return; 
 
-        // Advance
         if (currentStage === 'QUARTER') {
             await this._createNextRoundMatches(tournamentId, matches, 'SEMI');
         } else if (currentStage === 'SEMI') {
@@ -309,16 +331,13 @@ class TournamentService {
         const winners = [];
         prevMatches.forEach(m => {
             const winnerId = m.score_a > m.score_b ? m.team_a_id : m.team_b_id;
-            // Match data round (QF1, QF2...) is the slot key
             winners.push({ slot: m.match_data.round, teamId: winnerId });
         });
 
         const newMatches = [];
         if (nextStage === 'SEMI') {
-            // SF1 = Winner QF1 vs Winner QF2
             const w1 = winners.find(w => w.slot === 'QF1')?.teamId;
             const w2 = winners.find(w => w.slot === 'QF2')?.teamId;
-            // SF2 = Winner QF3 vs Winner QF4
             const w3 = winners.find(w => w.slot === 'QF3')?.teamId;
             const w4 = winners.find(w => w.slot === 'QF4')?.teamId;
 
@@ -348,7 +367,7 @@ class TournamentService {
             const notifs = Array.from(notifiedUsers).map(userId => ({
                 user_id: userId,
                 type: 'TOURNAMENT_RESULT',
-                title: '🏆 تحديث البطولة',
+                title: '🏆 نتيجة دورة رمضانية',
                 message: `${headline} ( ${matchData.team_a.name} ${scoreA} - ${scoreB} ${matchData.team_b.name} )`,
                 is_read: false,
                 created_at: new Date().toISOString()
@@ -372,7 +391,7 @@ export class TournamentController {
         this.activeDetailTab = 'STANDINGS'; 
     }
 
-    /* --- FAB MENU --- */
+    /* --- FAB MENU (Standard) --- */
     injectFloatingMenu() {
         const fab = document.getElementById('nav-action');
         if(!fab) return;
@@ -550,20 +569,14 @@ export class TournamentController {
 
             // Referee Binders (Organizer Only)
             if (!isOpen && isOrganizer) {
-                // Group Stage Referee Buttons
                 if (this.activeDetailTab === 'FIXTURES') {
                     container.querySelectorAll('.btn-referee').forEach(btn => {
-                        btn.onclick = () => this.openRefereeModal(
-                            btn.dataset.id, btn.dataset.ta, btn.dataset.tb, tournamentId
-                        );
+                        btn.onclick = () => this.openRefereeModal(btn.dataset.id, btn.dataset.ta, btn.dataset.tb, tournamentId);
                     });
                 }
-                // Knockout Referee Buttons
                 if (this.activeDetailTab === 'BRACKET') {
                     container.querySelectorAll('.btn-referee-mini').forEach(btn => {
-                        btn.onclick = () => this.openRefereeModal(
-                            btn.dataset.id, btn.dataset.ta, btn.dataset.tb, tournamentId
-                        );
+                        btn.onclick = () => this.openRefereeModal(btn.dataset.id, btn.dataset.ta, btn.dataset.tb, tournamentId);
                     });
                 }
             }
@@ -647,7 +660,7 @@ export class TournamentController {
 
             html += `<h4 class="round-title">${title}</h4>`;
             rounds[r].forEach(m => {
-                const isFinished = m.status === 'FINISHED';
+                const isFinished = m.status === 'CONFIRMED' || m.status === 'FINISHED';
                 html += `
                     <div class="fixture-card">
                         <div class="fix-team"><span>${m.team_a.name}</span></div>
@@ -683,13 +696,12 @@ export class TournamentController {
                 <h4 class="round-title" style="${isFinal ? 'color:var(--gold-main);' : ''}">${isFinal ? '🏆 ' : ''}${title}</h4>
                 <div class="bracket-round">
                     ${matches.map(m => {
-                        const isFinished = m.status === 'FINISHED';
+                        const isFinished = m.status === 'CONFIRMED' || m.status === 'FINISHED';
                         return `
-                        <div class="bracket-match" style="${isFinished ? 'opacity:0.8;' : ''}; position:relative; background:#222; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #333;">
-                            <div class="b-team" style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${m.team_a?.name || '???'}</span><span class="b-score" style="color:var(--gold-main); font-weight:bold;">${isFinished ? m.score_a : '-'}</span></div>
-                            <div class="b-team" style="display:flex; justify-content:space-between;"><span>${m.team_b?.name || '???'}</span><span class="b-score" style="color:var(--gold-main); font-weight:bold;">${isFinished ? m.score_b : '-'}</span></div>
-                            
-                            ${(isOrganizer && !isFinished) ? `<button class="btn-referee-mini" data-id="${m.id}" data-ta="${m.team_a?.name}" data-tb="${m.team_b?.name}" style="position:absolute; right:-10px; top:35%; width:25px; height:25px; border-radius:50%; background:var(--gold-main); border:none; cursor:pointer;"><i class="fa-solid fa-pen" style="font-size:0.7rem;"></i></button>` : ''}
+                        <div class="bracket-match" style="${isFinished ? 'opacity:0.8;' : ''}">
+                            <div class="b-team"><span>${m.team_a?.name || '???'}</span><span class="b-score">${isFinished ? m.score_a : '-'}</span></div>
+                            <div class="b-team"><span>${m.team_b?.name || '???'}</span><span class="b-score">${isFinished ? m.score_b : '-'}</span></div>
+                            ${(isOrganizer && !isFinished) ? `<button class="btn-referee-mini" data-id="${m.id}" data-ta="${m.team_a?.name}" data-tb="${m.team_b?.name}"><i class="fa-solid fa-pen"></i></button>` : ''}
                         </div>`;
                     }).join('')}
                 </div>
@@ -720,7 +732,7 @@ export class TournamentController {
         } catch (e) { alert("خطأ: " + e.message); }
     }
 
-    /* --- REFEREE MODAL (FIXED) --- */
+    /* --- REFEREE MODAL --- */
     openRefereeModal(matchId, teamA, teamB, tournamentId) {
         const modalId = 'modal-referee';
         if (!document.getElementById(modalId)) {
@@ -753,6 +765,7 @@ export class TournamentController {
         const modal = document.getElementById(modalId);
         modal.classList.remove('hidden');
 
+        // Clean replacement of the button to prevent event stacking
         const oldBtn = document.getElementById('btn-confirm-score');
         const newBtn = oldBtn.cloneNode(true);
         oldBtn.parentNode.replaceChild(newBtn, oldBtn);
@@ -768,7 +781,7 @@ export class TournamentController {
                 await this.service.submitMatchResult(matchId, sa, sb);
                 SoundManager.play('whistle');
                 modal.classList.add('hidden');
-                // The Fix: Pass ID directly
+                // The Fix: Pass ID directly to ensure correct refresh context
                 this.openTournamentDetails(tournamentId);
             } catch(e) { 
                 alert(e.message); 
@@ -779,7 +792,7 @@ export class TournamentController {
         };
     }
 
-    openCreateModal() { /* Standard Create Logic */
+    openCreateModal() {
         const modalId = 'modal-create-tourn';
         if (!document.getElementById(modalId)) {
             document.body.insertAdjacentHTML('beforeend', `
