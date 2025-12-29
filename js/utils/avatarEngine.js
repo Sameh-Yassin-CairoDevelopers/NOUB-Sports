@@ -142,92 +142,74 @@ static generateAvatarHTML(visualDna, shirtName) {
                 overflow: hidden; 
             ">
                 
-                <!-- 1. SHIRT (LAYER 1 - BACKGROUND) -->
-                <!-- القميص في الخلفية لكي يظهر الرأس فوقه -->
-                <!-- scale(0.9, 1.25): القميص طويل وممشوق -->
+                <!-- 1. SHIRT (BASE LAYER) -->
+                <!-- القميص في الخلفية، كبير وعريض ليشكل الأكتاف والجسم -->
                 <i class="fa-solid fa-shirt" style="
-                    font-size: 150px; 
+                    font-size: 160px; 
                     color: ${kitColor}; 
                     position: absolute; 
-                    bottom: -40px; 
-                    z-index: 1; /* الخلفية */
-                    transform: scale(0.9, 1.25); 
-                    transform-origin: bottom center;
+                    bottom: -45px; 
+                    z-index: 1; 
+                    transform: scaleY(1.1); /* تطويل بسيط */
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
 
-                <!-- 2. BODY (LAYER 2 - MIDDLE) -->
-                <!-- الرأس فوق القميص لتظهر الرقبة والذقن بوضوح -->
+                <!-- 2. BODY (HEAD & NECK) -->
+                <!-- الرأس فوق القميص، ولكن بحجم أصغر (80px) لكي لا يغطي الأكتاف، بل يظهر كأنه خارج من الياقة -->
                 <i class="fa-solid fa-user" style="
-                    font-size: 85px; 
+                    font-size: 80px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 72px; 
-                    z-index: 2; /* فوق القميص */
-                    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+                    bottom: 78px; /* ارتفاع دقيق لإظهار الرقبة */
+                    z-index: 2; 
+                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
                 "></i>
 
-                <!-- 3. LOGO (LAYER 3) -->
+                <!-- 3. LOGO -->
                 ${logoIcon ? `
-                <div style="
-                    position: absolute; 
-                    bottom: 55px; 
-                    left: 50%; 
-                    margin-left: 22px; 
-                    z-index: 3; /* فوق القميص */
-                    width: 20px; 
-                    height: 20px; 
-                    display: flex; 
-                    justify-content: center; 
-                    align-items: center; 
-                    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.6));
-                ">
-                    <i class="fa-solid ${logoIcon}" style="
-                        font-size: 18px; 
-                        color: rgba(255,255,255,0.95);
-                    "></i>
+                <div style="position:absolute; bottom:50px; left:50%; margin-left:25px; z-index:3; width:20px; height:20px; display:flex; justify-content:center; align-items:center; filter:drop-shadow(1px 1px 2px rgba(0,0,0,0.6));">
+                    <i class="fa-solid ${logoIcon}" style="font-size:18px; color:rgba(255,255,255,0.95);"></i>
                 </div>` : ''}
 
-                <!-- 4. FACE ACCESSORY (LAYER 4) -->
+                <!-- 4. FACE ACCESSORY -->
                 ${faceIcon ? `
                 <i class="fa-solid ${faceIcon}" style="
-                    font-size: 34px; 
+                    font-size: 32px; 
                     color: #222; 
                     position: absolute;
-                    bottom: 114px; 
-                    z-index: 4; /* فوق الرأس */
+                    bottom: 118px; 
+                    z-index: 4; 
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
-                <!-- 5. HEADGEAR (LAYER 5 - TOP) -->
+                <!-- 5. NAME -->
+                <div class="shirt-text" style="
+                    position: absolute; 
+                    bottom: 15px; 
+                    z-index: 5; 
+                    color: rgba(255,255,255,0.9); 
+                    font-family: 'Orbitron', sans-serif; 
+                    font-size: 11px; 
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    text-shadow: 0 1px 3px #000;
+                    pointer-events: none;
+                ">
+                    ${shirtName || 'NOUB'}
+                </div>
+
+                <!-- 6. HEADGEAR -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
                     font-size: 55px; 
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 150px; 
-                    z-index: 5; /* في القمة */
+                    bottom: 152px; 
+                    z-index: 6;
                 "></i>
                 ` : ''}
-
-                <!-- 6. NAME (LAYER 6 - OVERLAY) -->
-                <div class="shirt-text" style="
-                    position: absolute; 
-                    bottom: 12px; 
-                    z-index: 6;
-                    color: rgba(255,255,255,0.9); 
-                    font-family: 'Orbitron', sans-serif; 
-                    font-size: 10px; 
-                    font-weight: 900;
-                    text-transform: uppercase;
-                    text-shadow: 0 1px 3px #000;
-                    letter-spacing: 1px;
-                    pointer-events: none;
-                ">
-                    ${shirtName || 'NOUB'}
-                </div>
 
             </div>
         `;
@@ -240,6 +222,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
