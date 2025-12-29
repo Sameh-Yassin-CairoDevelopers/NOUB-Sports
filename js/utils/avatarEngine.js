@@ -164,7 +164,7 @@ static generateAvatarHTML(visualDna, shirtName) {
                     position: absolute; 
                     bottom: -40px; 
                     z-index: 2; 
-                    transform: scaleY(1.15);
+                    transform: scaleY(1.25);
                     transform-origin: bottom center;
                     filter: drop-shadow(0 -4px 12px rgba(0,0,0,0.5));
                 "></i>
@@ -242,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
