@@ -205,11 +205,11 @@ static generateAvatarHTML(visualDna, shirtName) {
                 <!-- 5. NAME (LAYER 5) -->
                 <div class="shirt-text" style="
                     position: absolute; 
-                    bottom: 15px; 
+                    bottom: 10px; 
                     z-index: 5; 
                     color: rgba(255,255,255,0.9); 
                     font-family: 'Orbitron', sans-serif; 
-                    font-size: 11px; 
+                    font-size: 8px; 
                     font-weight: 900;
                     text-transform: uppercase;
                     text-shadow: 0 1px 3px #000;
@@ -242,6 +242,7 @@ static generateAvatarHTML(visualDna, shirtName) {
         return AVATAR_CONFIG;
     }
 }
+
 
 
 
