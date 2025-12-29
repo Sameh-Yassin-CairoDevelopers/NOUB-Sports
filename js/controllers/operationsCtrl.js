@@ -296,7 +296,7 @@ export class OperationsController {
         // Theme Config
         const theme = {
             icon: isJoker ? 'fa-person-running' : (isRef ? 'fa-scale-balanced' : 'fa-hand-point-up'),
-            color: isJoker ? '#ef4444' : (isRef ? '#fbbf24' : '#10b981'),
+            color: isJoker ? '#D4AF37' : (isRef ? '#fbbf24' : '#10b981'),
             title: isJoker ? 'مطلوب جوكر' : (isRef ? 'مطلوب حكم' : 'عرض توفر'),
             btnText: isAvailable ? 'استدعاء' : 'قبول المهمة'
         };
