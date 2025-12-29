@@ -1,29 +1,77 @@
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-body { background: var(--bg-primary); color: var(--text-main); font-family: var(--font-primary); height: 100vh; width: 100vw; overflow: hidden; direction: rtl; }
+/*
+ * Filename: css/base/reset.css
+ * Version: 2.5.0 (ROYAL THEME & SCROLL FIX)
+ * Description: Global Reset, Body Styling, and Scrollbar Customization.
+ */
+
+/* 1. Global Reset */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; 
+    outline: none; 
+}
+
+/* 2. Body Styling (The Royal Green Theme) */
+body { 
+    /* الخلفية: تدرج دائري (أخضر ملكي في المنتصف -> أسود في الأطراف) */
+    background: radial-gradient(
+        circle at center, 
+        #0f2e1d 0%,    /* Emerald Green (Center) */
+        #09160e 50%,   /* Dark Forest (Mid) */
+        #000000 100%   /* Pure Black (Edges) */
+    );
+    
+    /* تثبيت الخلفية لمنعها من التحرك مع السكرول */
+    background-attachment: fixed;
+    background-size: cover;
+    background-repeat: no-repeat;
+
+    /* الخطوط والألوان الأساسية */
+    color: var(--text-main); 
+    font-family: var(--font-primary); 
+    
+    /* أبعاد الشاشة ومنع السكرول الخارجي */
+    /* هذا يمنع صفحة "هويتي" من التحرك لأعلى وأسفل */
+    height: 100vh; 
+    width: 100vw; 
+    overflow: hidden; 
+    
+    /* اتجاه النص */
+    direction: rtl; 
+}
+
+/* 3. Helper Classes for Visibility */
 .hidden { display: none !important; }
 .active { display: flex !important; }
 
-/* --- Custom Scrollbar (تجميل شريط التمرير) --- */
+/* --- 4. Custom Scrollbar (تجميل شريط التمرير للقوائم الداخلية) --- */
 
 /* لمستعرضات Webkit (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
-    width: 6px; /* رفيع جداً */
+    width: 5px; /* تم تصغير العرض ليكون أنيقاً */
 }
 
+/* مسار السكرول (الخلفية) */
 ::-webkit-scrollbar-track {
-    background: var(--bg-primary); 
+    background: rgba(0, 0, 0, 0.2); /* شفاف داكن */
+    margin: 5px; /* مسافة من الحواف */
+    border-radius: 10px;
 }
 
+/* مقبض السكرول (الجزء المتحرك) */
 ::-webkit-scrollbar-thumb {
     background: #333; 
     border-radius: 10px;
 }
 
+/* عند لمس السكرول */
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--gold-main); /* يلمع عند اللمس */
+    background: var(--gold-main); /* يلمع بالذهبي */
 }
 
-/* إخفاء السكرول في الموبايل لجمالية أكثر (اختياري) */
+/* إخفاء السكرول في الموبايل تماماً لجمالية أكثر (مع استمرار قابلية التمرير) */
 @media (max-width: 768px) {
     ::-webkit-scrollbar {
         width: 0px;
