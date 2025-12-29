@@ -122,7 +122,7 @@ export class AvatarEngine {
      * @param {string} shirtName - Player Name
      * @returns {string} HTML String
      */
-    static generateAvatarHTML(visualDna, shirtName) {
+static generateAvatarHTML(visualDna, shirtName) {
         // 1. Data Sanitization
         const dna = (typeof visualDna === 'string') ? JSON.parse(visualDna) : (visualDna || {});
         
@@ -148,12 +148,12 @@ export class AvatarEngine {
             ">
                 
                 <!-- LAYER 1: BODY (Head & Neck) -->
-                <!-- LIFTED UP SIGNIFICANTLY (+25px) -->
+                <!-- Raised to 75px to create neck space -->
                 <i class="fa-solid fa-user" style="
                     font-size: 95px; 
                     color: ${skinColor}; 
                     position: absolute; 
-                    bottom: 70px; 
+                    bottom: 75px; 
                     z-index: 1;
                     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
                 "></i>
@@ -165,14 +165,14 @@ export class AvatarEngine {
                     font-size: 38px;
                     color: #222; 
                     position: absolute;
-                    bottom: 118px; 
+                    bottom: 122px; 
                     z-index: 2;
                     opacity: 0.95;
                 "></i>
                 ` : ''}
 
                 <!-- LAYER 3: THE SHIRT (Kit) -->
-                <!-- Lowered slightly to expose neck -->
+                <!-- Lowered to -25px to reveal the neck -->
                 <i class="fa-solid fa-shirt" style="
                     font-size: 150px; 
                     color: ${kitColor}; 
@@ -183,7 +183,6 @@ export class AvatarEngine {
                 "></i>
 
                 <!-- LAYER 4: CHEST BADGE (Logo) -->
-                <!-- Lifted to match new shirt height -->
                 ${logoIcon ? `
                 <div style="
                     position: absolute;
@@ -220,14 +219,14 @@ export class AvatarEngine {
                 </div>
 
                 <!-- LAYER 6: HEADGEAR (Hat) -->
-                <!-- Lifted to sit on top of the head -->
+                <!-- Raised to 160px to sit on top of the head -->
                 ${headIcon ? `
                 <i class="fa-solid ${headIcon}" style="
                     font-size: 65px;
                     color: #fff;
                     text-shadow: 0 4px 8px rgba(0,0,0,0.5); 
                     position: absolute;
-                    bottom: 155px; 
+                    bottom: 160px; 
                     z-index: 6;
                 "></i>
                 ` : ''}
@@ -235,7 +234,6 @@ export class AvatarEngine {
             </div>
         `;
     }
-
     /**
      * CONFIG EXPORTER:
      */
@@ -243,4 +241,5 @@ export class AvatarEngine {
         return AVATAR_CONFIG;
     }
 }
+
 
