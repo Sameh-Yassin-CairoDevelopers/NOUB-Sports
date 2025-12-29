@@ -1,79 +1,103 @@
 /*
  * Project: NOUB SPORTS ECOSYSTEM
  * Filename: css/views/home.css
- * Version: Noub Sports_beta 0.0.7 (FULL VIEWPORT)
+ * Version: Noub Sports_beta 3.0.0 (ROYAL TRANSPARENCY MASTER)
  * Status: Production Ready
  * 
  * DESCRIPTION:
- * Styles specific to the User Dashboard (Home View).
+ * Styles specific to the User Dashboard (Home View / Identity).
  * 
- * CORE RESPONSIBILITIES:
- * 1. Viewport Management: Calculates exact height to fit between Header and Navbar without scrolling.
- * 2. Theming: Applies the Royal Green radial gradient background.
- * 3. Layout: Centers the Player Card and Action Buttons vertically and horizontally.
- * 4. Tab Styling: Defines the look of internal navigation tabs (Identity vs Album).
+ * ARCHITECTURAL NOTES:
+ * 1. Viewport Management: 
+ *    - This view acts as a "Showcase Container". 
+ *    - It strictly locks scrolling (overflow: hidden) to keep the 3D card stable.
+ *    - It relies on the Global Body Background (Royal Green) by forcing transparency.
+ * 
+ * 2. Layout Engine:
+ *    - Uses Flexbox Column for vertical centering.
+ *    - Offsets padding for Header (65px) and Navbar (80px) to prevent overlap.
  */
 
-/* 
- * 1. MAIN VIEW CONTAINER 
- * Fixed height calculation to prevent vertical scroll on mobile.
- */
+/* =========================================
+   1. MAIN VIEW CONTAINER (THE STAGE)
+   ========================================= */
 #view-home {
-    /* Height = 100vh - (Header 65px + Navbar 80px) */
-    height: calc(100vh - 145px); 
-    margin-top: 65px; /* Offset for fixed header */
+    /* Positioning: Occupy full relative space of #main-content */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* 
+     * TRANSPARENCY FIX (CRITICAL)
+     * We remove any local background so the Body's Royal Gradient shines through.
+     */
+    background: transparent !important;
     
-    /* Flexbox Centering */
+    /* 
+     * SCROLL LOCK
+     * Prevents the identity page from bouncing or scrolling.
+     * The card should feel like a fixed UI element.
+     */
+    overflow: hidden;
+
+    /* 
+     * CENTERING ENGINE
+     * Aligns the content (The Card) perfectly in the middle of the available safe area.
+     */
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: center;     /* Horizontal Center */
+    justify-content: center; /* Vertical Center */
     
-    position: relative;
-    overflow: hidden; /* Lock scrollbars strictly */
-
-    /* ROYAL GREEN BACKGROUND THEME */
-    background: radial-gradient(
-        circle at center, 
-        #0f2e1d 0%,    /* <--- هذا هو كود الأخضر الملكي (Emerald Green) */
-        #09160e 50%,   /* أخضر غامق جداً */
-        #000000 100%   /* أسود في الأطراف */
-    );
+    /* Safety Margins for Fixed UI Elements */
+    padding-top: 10px;    /* Slight offset from Header */
+    padding-bottom: 20px; /* Slight offset from Navbar */
 }
 
-/* 
- * 2. CONTENT WRAPPER 
- * Holds the Tabs and the Dynamic Content Area (Card/Album).
- */
+/* =========================================
+   2. CONTENT WRAPPER
+   ========================================= */
 .home-wrapper {
     width: 100%;
     height: 100%;
+    
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 15px; /* Spacing between elements */
+    
+    /* Gap between Tabs and Card */
+    gap: 15px; 
 }
 
+/* =========================================
+   3. NAVIGATION TABS (Identity / Album)
+   ========================================= */
 /* 
- * 3. NAVIGATION TABS (Identity / Album) 
- * Minimalist text-only tabs with underline indicator.
+ * NOTE: Even though Album is now an overlay, these tabs remain
+ * for potential sub-section navigation or legacy support.
  */
 .home-tabs { 
     display: flex; 
     gap: 40px; 
-    margin-bottom: 5px; /* Reduced margin for compact view */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
-    padding-bottom: 8px; 
+    
+    /* Positioning */
     width: 80%; 
     justify-content: center;
+    margin-bottom: 5px; 
+    padding-bottom: 8px; 
+    
+    /* Subtle Separator */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
     z-index: 10;
 }
 
 .htab { 
     background: none; 
     border: none; 
-    color: var(--text-grey); 
+    color: var(--text-muted); /* Grey by default */
     font-family: var(--font-primary); 
     font-weight: bold; 
     cursor: pointer; 
@@ -83,12 +107,13 @@
     transition: color 0.3s ease;
 }
 
+/* Active State */
 .htab.active { 
     color: var(--gold-main); 
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
 }
 
-/* Gold Underline Indicator */
+/* The Gold Underline Indicator */
 .htab.active::after {
     content: ''; 
     position: absolute; 
@@ -96,27 +121,31 @@
     left: 0; 
     width: 100%; 
     height: 3px; 
+    
     background: var(--gold-main);
     box-shadow: 0 0 10px var(--gold-main);
     border-radius: 2px;
 }
 
-/* 
- * 4. DYNAMIC CONTENT CONTAINER 
- * Where the Player Card or Album Grid is injected.
- */
+/* =========================================
+   4. DYNAMIC CONTENT AREA
+   ========================================= */
+/* This is where the 3D Card is injected */
 #home-dynamic-content { 
     width: 100%; 
+    height: auto;
+    
     display: flex; 
     justify-content: center; 
     align-items: center;
-    perspective: 1000px; /* Prepares 3D space for the card */
+    
+    /* 3D Space Preparation */
+    perspective: 1000px; 
 }
 
-/* 
- * 5. SECONDARY ACTION BUTTONS 
- * Floating buttons below the card (e.g., Edit Look, Share).
- */
+/* =========================================
+   5. SECONDARY ACTIONS (Below Card)
+   ========================================= */
 .home-actions {
     display: flex;
     gap: 12px;
@@ -124,7 +153,7 @@
     justify-content: center;
     margin-top: 15px;
     
-    /* Ensure transparency and no borders/shadows on the container itself */
+    /* Ensure transparency */
     background: none !important; 
     border: none !important; 
     box-shadow: none !important;
@@ -132,12 +161,15 @@
 }
 
 .btn-action-secondary {
+    /* Glass Effect */
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-muted);
-    padding: 8px 16px; /* Compact padding */
+    
+    padding: 8px 16px;
     border-radius: 20px;
-    font-family: var(--font-cairo);
+    
+    font-family: var(--font-primary);
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -149,7 +181,7 @@
 
 .btn-action-secondary:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: var(--text-white);
+    color: #fff;
     border-color: var(--gold-main);
 }
 
@@ -157,10 +189,9 @@
     color: var(--gold-main); 
 }
 
-/* 
- * 6. ANIMATIONS 
- * Smooth entry effect for content.
- */
+/* =========================================
+   6. ANIMATIONS
+   ========================================= */
 .fade-in { 
     animation: fadeInScale 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); 
 }
